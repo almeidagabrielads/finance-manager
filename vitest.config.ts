@@ -7,6 +7,10 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    environmentMatchGlobs: [
+      // Testes de integração com banco rodam em Node, não em jsdom
+      ["src/**/*.integration.test.ts", "node"],
+    ],
   },
   resolve: {
     alias: {

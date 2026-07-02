@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,251 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum TipoPessoa {
+  INDIVIDUAL
+  CASAL
+  FAMILIA
+  OUTRO
+}
+
+enum SubtipoReceita {
+  SALARIO
+  VOUCHER
+  OUTROS
+}
+
+enum TipoInvestimento {
+  RENDA_FIXA
+  FUNDO
+  FGTS
+  OUTRO
+}
+
+// ─── Tenant ───────────────────────────────────────────────────────────────────
+
+model Household {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  pessoas            Pessoa[]
+  categorias         Categoria[]
+  bancos             Banco[]
+  lancamentos        Lancamento[]
+  receitas           Receita[]
+  orcamentos         OrcamentoPlanejado[]
+  investimentos      Investimento[]
+  posicoesPatrimonio PosicaoPatrimonio[]
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  nome        String
+  householdId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+}
+
+// ─── Cadastros ────────────────────────────────────────────────────────────────
+
+model Pessoa {
+  id          String     @id @default(cuid())
+  nome        String
+  tipo        TipoPessoa
+  householdId String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  // Um lançamento tem dois papéis de Pessoa: dono do gasto e quem pagou (RF11)
+  lancamentosDivisao Lancamento[]         @relation("LancamentoDivisao")
+  lancamentosPagou   Lancamento[]         @relation("LancamentoPagou")
+  receitas           Receita[]
+  orcamentos         OrcamentoPlanejado[]
+  investimentos      Investimento[]
+
+  @@unique([householdId, nome])
+}
+
+model Categoria {
+  id                  String   @id @default(cuid())
+  nome                String
+  // Percentual do orçamento total sugerido para esta categoria (ex.: 15.50 = 15,5%)
+  percentualOrcamento Decimal? @db.Decimal(5, 2)
+  householdId         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  household     Household            @relation(fields: [householdId], references: [id])
+  subcategorias Subcategoria[]
+  lancamentos   Lancamento[]
+  orcamentos    OrcamentoPlanejado[]
+
+  @@unique([householdId, nome])
+}
+
+model Subcategoria {
+  id          String   @id @default(cuid())
+  nome        String
+  categoriaId String
+  householdId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoria   Categoria            @relation(fields: [categoriaId], references: [id])
+  lancamentos Lancamento[]
+  orcamentos  OrcamentoPlanejado[]
+
+  @@unique([categoriaId, nome])
+  @@index([householdId])
+}
+
+model Banco {
+  id          String   @id @default(cuid())
+  nome        String
+  householdId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household          Household           @relation(fields: [householdId], references: [id])
+  lancamentos        Lancamento[]
+  investimentos      Investimento[]
+  posicoesPatrimonio PosicaoPatrimonio[]
+
+  @@unique([householdId, nome])
+}
+
+// ─── Lançamentos ──────────────────────────────────────────────────────────────
+
+model Lancamento {
+  id               String   @id @default(cuid())
+  data             DateTime @db.Date
+  // Texto vindo do extrato/fatura (origem)
+  descricaoOrigem  String?
+  // Descrição editada/renomeada pelo usuário
+  descricaoPropria String?
+  // Positivo = despesa; negativo = estorno ou crédito (RF05)
+  valorCentavos    Int
+  descontoCentavos Int      @default(0)
+  categoriaId      String?
+  subcategoriaId   String?
+  bancoId          String
+  // Pessoa "dona" da despesa — define a quem o gasto pertence (RF11: divisão)
+  pessoaDivisaoId  String
+  // Pessoa que efetivamente desembolsou o valor (RF11: quem pagou)
+  pessoaPagouId    String
+  householdId      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdByUserId  String?
+  updatedByUserId  String?
+
+  household    Household     @relation(fields: [householdId], references: [id])
+  categoria    Categoria?    @relation(fields: [categoriaId], references: [id])
+  subcategoria Subcategoria? @relation(fields: [subcategoriaId], references: [id])
+  banco        Banco         @relation(fields: [bancoId], references: [id])
+  pessoaDivisao Pessoa       @relation("LancamentoDivisao", fields: [pessoaDivisaoId], references: [id])
+  pessoaPagou  Pessoa        @relation("LancamentoPagou", fields: [pessoaPagouId], references: [id])
+
+  @@index([householdId, data])
+  @@index([householdId, categoriaId])
+  @@index([householdId, pessoaDivisaoId])
+  @@index([householdId, pessoaPagouId])
+}
+
+// ─── Receitas ─────────────────────────────────────────────────────────────────
+
+model Receita {
+  id            String         @id @default(cuid())
+  pessoaId      String
+  subtipo       SubtipoReceita
+  valorCentavos Int
+  // Sempre o 1º dia do mês em UTC; representa o mês de competência
+  mes           DateTime       @db.Date
+  householdId   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+  pessoa    Pessoa    @relation(fields: [pessoaId], references: [id])
+
+  @@index([householdId, mes])
+}
+
+// ─── Orçamento ────────────────────────────────────────────────────────────────
+
+model OrcamentoPlanejado {
+  id             String   @id @default(cuid())
+  // null = orçamento do household (casal/família); não-null = orçamento individual
+  pessoaId       String?
+  categoriaId    String
+  subcategoriaId String?
+  // 1–12; null = orçamento anual (sem mês específico)
+  mes            Int?
+  ano            Int
+  valorCentavos  Int
+  householdId    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  household    Household     @relation(fields: [householdId], references: [id])
+  pessoa       Pessoa?       @relation(fields: [pessoaId], references: [id])
+  categoria    Categoria     @relation(fields: [categoriaId], references: [id])
+  subcategoria Subcategoria? @relation(fields: [subcategoriaId], references: [id])
+
+  @@unique([householdId, pessoaId, categoriaId, subcategoriaId, mes, ano])
+  @@index([householdId, ano, mes])
+}
+
+// ─── Investimentos e Patrimônio ───────────────────────────────────────────────
+
+model Investimento {
+  id                 String           @id @default(cuid())
+  bancoId            String
+  tipo               TipoInvestimento
+  produto            String
+  valorAtualCentavos Int
+  // Data de vencimento do título/produto (quando aplicável)
+  vencimento         DateTime?        @db.Date
+  // Prazo de resgate em dias úteis — D+0, D+1, D+30, etc. (RF15)
+  liquidezDias       Int?
+  observacao         String?
+  pessoaId           String
+  householdId        String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+  banco     Banco     @relation(fields: [bancoId], references: [id])
+  pessoa    Pessoa    @relation(fields: [pessoaId], references: [id])
+
+  @@index([householdId])
+  @@index([householdId, pessoaId])
+}
+
+model PosicaoPatrimonio {
+  id            String   @id @default(cuid())
+  bancoId       String
+  // Sempre o 1º dia do mês em UTC; representa o mês de referência da posição
+  mes           DateTime @db.Date
+  valorCentavos Int
+  householdId   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+  banco     Banco     @relation(fields: [bancoId], references: [id])
+
+  @@unique([householdId, bancoId, mes])
+  @@index([householdId, mes])
 }
