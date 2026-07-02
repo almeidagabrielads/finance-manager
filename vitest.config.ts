@@ -11,6 +11,9 @@ export default defineConfig({
       // Testes de integração com banco rodam em Node, não em jsdom
       ["src/**/*.integration.test.ts", "node"],
     ],
+    // Testes de integração truncam o banco de teste inteiro em beforeAll/afterEach;
+    // rodar arquivos em paralelo causa truncagem cruzada entre suites concorrentes.
+    fileParallelism: false,
   },
   resolve: {
     alias: {
