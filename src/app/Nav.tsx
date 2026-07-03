@@ -42,6 +42,7 @@ export function Nav() {
         <Link href="/investimentos">Investimentos</Link>
         <Link href="/divisao">Divisão</Link>
         <Link href="/importacao">Importar</Link>
+        <Link href="/relatorio-anual">Relatório Anual</Link>
       </div>
       <div className="text-sm">
         {usuario === undefined ? null : usuario ? (

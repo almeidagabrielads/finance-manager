@@ -24,7 +24,7 @@ Pré-requisito: stack ainda não definida. O primeiro prompt resolve isso antes 
 - [x] 11. Divisão de despesas do casal (split e saldo a acertar)
 - [x] 12. Módulo de Investimentos (CRUD + posição atual)
 - [x] 13. Histórico de patrimônio e rendimento (real vs. esperado vs. CDI)
-- [ ] 14. Relatórios anuais consolidados (equivalente às abas Sum)
+- [x] 14. Relatórios anuais consolidados (equivalente às abas Sum)
 - [ ] 15. Importação dos dados históricos da planilha (migração única)
 - [ ] 16. Testes end-to-end dos fluxos críticos
 - [ ] 17. Hardening de segurança (auth, dados financeiros sensíveis)
