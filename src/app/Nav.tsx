@@ -39,6 +39,7 @@ export function Nav() {
         <Link href="/categorias">Categorias</Link>
         <Link href="/bancos">Bancos</Link>
         <Link href="/orcamento">Orçamento</Link>
+        <Link href="/divisao">Divisão</Link>
         <Link href="/importacao">Importar</Link>
       </div>
       <div className="text-sm">
