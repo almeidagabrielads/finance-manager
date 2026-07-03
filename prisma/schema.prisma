@@ -29,6 +29,14 @@ enum TipoInvestimento {
   OUTRO
 }
 
+enum TipoBanco {
+  CARTAO_CREDITO
+  CONTA_CORRENTE
+  CORRETORA
+  DINHEIRO
+  OUTRO
+}
+
 // ─── Tenant ───────────────────────────────────────────────────────────────────
 
 model Household {
@@ -120,11 +128,14 @@ model Subcategoria {
 }
 
 model Banco {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   nome        String
+  tipo        TipoBanco
+  // Inativação lógica — lançamentos/investimentos antigos podem referenciar, então nunca excluir fisicamente.
+  ativo       Boolean   @default(true)
   householdId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   household          Household           @relation(fields: [householdId], references: [id])
   lancamentos        Lancamento[]

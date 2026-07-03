@@ -16,7 +16,9 @@ async function criarPessoa(
 }
 
 async function criarBanco(householdId: string, nome = "Nubank") {
-  return prismaTest.banco.create({ data: { nome, householdId } });
+  return prismaTest.banco.create({
+    data: { nome, tipo: "CONTA_CORRENTE", householdId },
+  });
 }
 
 async function criarCategoria(householdId: string, nome = "Alimentação") {

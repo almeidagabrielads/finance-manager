@@ -4,7 +4,7 @@ config({ path: ".env" });
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, type TipoBanco } from "../src/generated/prisma/client";
 import { hashPassword } from "../src/lib/auth/password";
 
 const url = process.env.DATABASE_URL;
@@ -81,6 +81,14 @@ async function main() {
         },
       });
     }
+  }
+
+  for (const b of bancosSeed) {
+    await prisma.banco.upsert({
+      where: { householdId_nome: { householdId: household.id, nome: b.nome } },
+      update: { tipo: b.tipo },
+      create: { nome: b.nome, tipo: b.tipo, householdId: household.id },
+    });
   }
 
   console.log(`Seed concluído para o household "${household.nome}".`);
@@ -224,6 +232,19 @@ const categoriasSeed: {
       "Outros-Viagem",
     ],
   },
+];
+
+// Bancos/meios de pagamento reais, extraídos da coluna "Banco" de
+// docs/planilha-origem/Financas-2026/Lançamentos.html (cartões usados nos
+// lançamentos) e das colunas "Banco" de Histórico Patrimônio.html /
+// Liquidez investimentos.html (instituições usadas para investimentos).
+const bancosSeed: { nome: string; tipo: TipoBanco }[] = [
+  { nome: "BB Crédito", tipo: "CARTAO_CREDITO" },
+  { nome: "Itaú Crédito", tipo: "CARTAO_CREDITO" },
+  { nome: "Nubank Crédito", tipo: "CARTAO_CREDITO" },
+  { nome: "Itaú", tipo: "CONTA_CORRENTE" },
+  { nome: "Nubank", tipo: "CONTA_CORRENTE" },
+  { nome: "XP", tipo: "CORRETORA" },
 ];
 
 main()
