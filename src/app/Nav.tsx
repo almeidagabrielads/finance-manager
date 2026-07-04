@@ -45,22 +45,29 @@ export function Nav() {
     router.refresh();
   }
 
+  if (pathname === "/login" || pathname === "/cadastro") {
+    return null;
+  }
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface shadow-sm">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-lg">
-        <div className="flex items-center gap-xl">
-          <span className="text-lg font-bold text-primary">FINANCO</span>
-          <nav className="hidden items-center gap-xs md:flex">
+    <header className="border-outline-variant bg-surface sticky top-0 z-50 w-full border-b shadow-sm">
+      <div className="px-lg mx-auto flex h-16 max-w-[1400px] items-center justify-between">
+        <div className="gap-xl flex items-center">
+          <span className="text-primary text-lg font-bold">FINANCO</span>
+          <nav className="gap-xs hidden items-center md:flex">
             {LINKS.map((link) => {
-              const ativo = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              const ativo =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={
                     ativo
-                      ? "rounded-full bg-primary/10 px-md py-1.5 text-xs font-bold text-primary"
-                      : "rounded-full px-md py-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:text-primary"
+                      ? "bg-primary/10 px-md text-primary rounded-full py-1.5 text-xs font-bold"
+                      : "px-md text-on-surface-variant hover:text-primary rounded-full py-1.5 text-xs font-medium transition-colors"
                   }
                 >
                   {link.label}
@@ -69,13 +76,13 @@ export function Nav() {
             })}
           </nav>
         </div>
-        <div className="flex items-center gap-md text-sm">
+        <div className="gap-md flex items-center text-sm">
           {usuario === undefined ? null : usuario ? (
-            <div className="flex items-center gap-md">
+            <div className="gap-md flex items-center">
               <span className="text-on-surface-variant">{usuario.nome}</span>
               <button
                 onClick={sair}
-                className="rounded-full border border-outline-variant px-md py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                className="border-outline-variant px-md text-primary hover:bg-primary/10 rounded-full border py-1.5 text-xs font-semibold transition-colors"
               >
                 Sair
               </button>
@@ -83,7 +90,7 @@ export function Nav() {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
+              className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
             >
               Entrar
             </Link>

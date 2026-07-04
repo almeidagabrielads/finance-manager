@@ -7,6 +7,7 @@ import { setSessionCookie } from "@/lib/auth/session";
 const LoginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
+  lembrar: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, password } = validatedFields.data;
+  const { email, password, lembrar } = validatedFields.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
   const isValid = user
@@ -39,6 +40,6 @@ export async function POST(request: Request) {
     email: user.email,
     nome: user.nome,
   });
-  setSessionCookie(response, user.id, user.householdId);
+  setSessionCookie(response, user.id, user.householdId, lembrar ?? false);
   return response;
 }

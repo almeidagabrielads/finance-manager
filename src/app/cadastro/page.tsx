@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { LoginClient } from "./LoginClient";
+import { CadastroClient } from "./CadastroClient";
 
-export default function LoginPage() {
+export default function CadastroPage() {
   return (
     <main className="flex flex-1">
       <section className="bg-primary p-xl text-on-primary hidden flex-1 flex-col justify-between lg:flex">
@@ -35,17 +35,17 @@ export default function LoginPage() {
           </div>
           <header className="space-y-xs">
             <h2 className="text-on-surface text-2xl font-bold">
-              Bem-vindos de volta
+              Comecem agora
             </h2>
             <p className="text-on-surface-variant text-sm">
-              Acesse sua gestão compartilhada
+              Criem a gestão financeira compartilhada do casal
             </p>
           </header>
-          <LoginClient />
+          <CadastroClient />
           <p className="text-on-surface-variant text-center text-sm">
-            Ainda não têm uma conta?{" "}
-            <Link href="/cadastro" className="text-primary font-semibold">
-              Comecem agora
+            Já têm uma conta?{" "}
+            <Link href="/login" className="text-primary font-semibold">
+              Entrar
             </Link>
           </p>
         </div>

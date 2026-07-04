@@ -66,6 +66,7 @@ export function setSessionCookie(
   response: NextResponse,
   userId: string,
   householdId: string,
+  persistir = true,
 ) {
   const expiresAt = Date.now() + SESSION_DURATION_MS;
   const token = encryptSession({ userId, householdId, expiresAt });
@@ -75,7 +76,9 @@ export function setSessionCookie(
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: new Date(expiresAt),
+    // Sem "lembrar de mim": cookie de sessão (some ao fechar o navegador),
+    // mas o token continua válido por SESSION_DURATION_MS enquanto durar.
+    ...(persistir ? { expires: new Date(expiresAt) } : {}),
   });
 }
 
