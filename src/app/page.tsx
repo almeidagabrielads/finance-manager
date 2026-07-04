@@ -1,10 +1,23 @@
+import Link from "next/link";
 import { DashboardClient } from "./DashboardClient";
+import { PeriodoTabs } from "./PeriodoTabs";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-lg p-lg">
-      <h1 className="text-2xl font-bold text-on-surface">Visão geral</h1>
-      <DashboardClient />
+    <main className="flex w-full flex-col">
+      <PeriodoTabs />
+
+      <div className="gap-lg p-lg mx-auto flex w-full max-w-6xl flex-col">
+        <DashboardClient />
+      </div>
+
+      <Link
+        href="/lancamentos"
+        aria-label="Nova transação"
+        className="bottom-lg right-lg bg-primary text-on-primary fixed flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold shadow-lg hover:opacity-90 sm:hidden"
+      >
+        +
+      </Link>
     </main>
   );
 }

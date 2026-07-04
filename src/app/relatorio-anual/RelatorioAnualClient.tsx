@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 const MESES = [
   "Jan",
@@ -29,9 +30,12 @@ type IndicadorPlanejado = {
   dentroDoPlanejado: boolean;
 };
 
+type LinhaMensalPlanejadoReal = IndicadorPlanejado & { mes: number };
+
 type PlanejadoVsRealCategoria = {
   categoriaId: string;
   subcategoriaId: string | null;
+  meses: LinhaMensalPlanejadoReal[];
   acumulado: IndicadorPlanejado;
 };
 
@@ -56,25 +60,16 @@ type SaldoAnual = {
   porMes: SaldoMensal[];
 };
 
-type ResumoAgregado = {
+type ResumoCategoria = {
+  categoriaId: string;
   totalCentavos: number;
   percentualDoTotal: number;
   mediaMensalCentavos: number;
 };
 
-type ResumoCategoria = ResumoAgregado & { categoriaId: string };
-type ResumoSubcategoria = ResumoAgregado & {
-  categoriaId: string;
-  subcategoriaId: string;
-};
-
-type PosicaoMensalTotal = { mes: string; valorCentavos: number };
-
 type SaldoDivisao = {
   pessoaAId: string;
   pessoaBId: string;
-  pagouPeloOutroCentavos: Record<string, number>;
-  diferencaCentavos: number;
   pessoaDevedoraId: string | null;
   valorDevidoCentavos: number;
 };
@@ -84,8 +79,6 @@ type RelatorioAnual = {
   saldo: SaldoAnual;
   planejadoVsReal: SecaoPlanejadoVsReal[];
   resumoPorCategoria: ResumoCategoria[];
-  resumoPorSubcategoria: ResumoSubcategoria[];
-  evolucaoPatrimonio: PosicaoMensalTotal[];
   divisaoDespesas: SaldoDivisao | null;
 };
 
@@ -96,9 +89,50 @@ function formatarReais(centavos: number): string {
   });
 }
 
-function formatarMes(mesIso: string): string {
-  const data = new Date(mesIso);
-  return `${MESES[data.getUTCMonth()]}/${data.getUTCFullYear()}`;
+function formatarReaisCompacto(centavos: number): string {
+  return (centavos / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function chave(categoriaId: string, subcategoriaId: string | null) {
+  return `${categoriaId}::${subcategoriaId ?? ""}`;
+}
+
+function somarItens(secoes: SecaoPlanejadoVsReal[]) {
+  const consolidado = new Map<
+    string,
+    {
+      categoriaId: string;
+      subcategoriaId: string | null;
+      meses: { planejadoCentavos: number; realCentavos: number }[];
+      planejadoAnoCentavos: number;
+      realAnoCentavos: number;
+    }
+  >();
+
+  for (const secao of secoes) {
+    for (const item of secao.itens) {
+      const k = chave(item.categoriaId, item.subcategoriaId);
+      const atual = consolidado.get(k) ?? {
+        categoriaId: item.categoriaId,
+        subcategoriaId: item.subcategoriaId,
+        meses: Array.from({ length: 12 }, () => ({
+          planejadoCentavos: 0,
+          realCentavos: 0,
+        })),
+        planejadoAnoCentavos: 0,
+        realAnoCentavos: 0,
+      };
+      for (const mes of item.meses) {
+        atual.meses[mes.mes - 1].planejadoCentavos += mes.planejadoCentavos;
+        atual.meses[mes.mes - 1].realCentavos += mes.realCentavos;
+      }
+      atual.planejadoAnoCentavos += item.acumulado.planejadoCentavos;
+      atual.realAnoCentavos += item.acumulado.realCentavos;
+      consolidado.set(k, atual);
+    }
+  }
+
+  return [...consolidado.values()];
 }
 
 export function RelatorioAnualClient() {
@@ -107,7 +141,9 @@ export function RelatorioAnualClient() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [relatorio, setRelatorio] = useState<RelatorioAnual | null>(null);
-  const [secaoAtiva, setSecaoAtiva] = useState<string>("");
+  const [receitaAnoAnterior, setReceitaAnoAnterior] = useState<number | null>(
+    null,
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
 
@@ -137,22 +173,30 @@ export function RelatorioAnualClient() {
 
   useEffect(() => {
     let cancelado = false;
-    fetch(`/api/relatorios/anual?ano=${ano}`)
-      .then(async (response) => {
+    Promise.all([
+      fetch(`/api/relatorios/anual?ano=${ano}`),
+      fetch(`/api/relatorios/saldo?ano=${ano - 1}`),
+    ])
+      .then(async ([relatorioRes, saldoAnteriorRes]) => {
         if (cancelado) return;
-        if (response.status === 401) {
+        if (relatorioRes.status === 401) {
           setNaoAutenticado(true);
           return;
         }
         setNaoAutenticado(false);
-        const body = await response.json();
-        if (!response.ok) {
+        const body = await relatorioRes.json();
+        if (!relatorioRes.ok) {
           setErro(body.error ?? "Não foi possível carregar o relatório.");
           setRelatorio(null);
           return;
         }
         setErro(null);
         setRelatorio(body);
+        setReceitaAnoAnterior(
+          saldoAnteriorRes.ok
+            ? (await saldoAnteriorRes.json()).receitaCentavos
+            : null,
+        );
       })
       .catch(() => {
         if (!cancelado) setErro("Não foi possível carregar o relatório.");
@@ -161,12 +205,6 @@ export function RelatorioAnualClient() {
       cancelado = true;
     };
   }, [ano]);
-
-  const secaoAtivaEfetiva = relatorio?.planejadoVsReal.some(
-    (s) => s.label === secaoAtiva,
-  )
-    ? secaoAtiva
-    : (relatorio?.planejadoVsReal[0]?.label ?? "");
 
   const nomeCategoria = useMemo(() => {
     const mapa = new Map<string, string>();
@@ -187,11 +225,6 @@ export function RelatorioAnualClient() {
     return mapa;
   }, [pessoas]);
 
-  function nome(id: string | null): string {
-    if (!id) return "";
-    return nomePessoa.get(id) ?? id;
-  }
-
   if (naoAutenticado) {
     return (
       <p className="text-on-surface-variant">
@@ -200,350 +233,485 @@ export function RelatorioAnualClient() {
     );
   }
 
-  const secao = relatorio?.planejadoVsReal.find(
-    (s) => s.label === secaoAtivaEfetiva,
+  if (!relatorio) {
+    return erro ? (
+      <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+        {erro}
+      </p>
+    ) : (
+      <p className="text-on-surface-variant text-sm">Carregando…</p>
+    );
+  }
+
+  const { saldo, resumoPorCategoria, divisaoDespesas } = relatorio;
+
+  const taxaPoupanca =
+    saldo.receitaCentavos > 0
+      ? (saldo.saldoCentavos / saldo.receitaCentavos) * 100
+      : 0;
+  const despesaPercentualReceita =
+    saldo.receitaCentavos > 0
+      ? (saldo.despesaCentavos / saldo.receitaCentavos) * 100
+      : 0;
+  const variacaoReceita =
+    receitaAnoAnterior && receitaAnoAnterior > 0
+      ? ((saldo.receitaCentavos - receitaAnoAnterior) / receitaAnoAnterior) *
+        100
+      : null;
+
+  const maioresGastos = [...resumoPorCategoria]
+    .sort((a, b) => b.totalCentavos - a.totalCentavos)
+    .slice(0, 5);
+  const maiorGastoCentavos = maioresGastos[0]?.totalCentavos ?? 1;
+
+  const maxFluxoMensal = Math.max(
+    1,
+    ...saldo.porMes.flatMap((m) => [m.receitaCentavos, m.despesaCentavos]),
   );
 
+  const secoesComItens = relatorio.planejadoVsReal.filter(
+    (s) => s.itens.length > 0,
+  );
+  const totalPorSecao = secoesComItens.map((s) => ({
+    label: s.pessoaId ? nomePessoa.get(s.pessoaId) : "Compartilhado",
+    totalCentavos: s.itens.reduce(
+      (soma, i) => soma + i.acumulado.realCentavos,
+      0,
+    ),
+  }));
+  const totalGeralSecoes = totalPorSecao.reduce(
+    (soma, s) => soma + s.totalCentavos,
+    0,
+  );
+
+  const itensConsolidados = somarItens(relatorio.planejadoVsReal);
+  const totalPlanejadoAno = itensConsolidados.reduce(
+    (s, i) => s + i.planejadoAnoCentavos,
+    0,
+  );
+  const totalRealAno = itensConsolidados.reduce(
+    (s, i) => s + i.realAnoCentavos,
+    0,
+  );
+  const economiaTotalAno = totalPlanejadoAno - totalRealAno;
+
+  const categoriasComItens = categorias
+    .map((c) => ({
+      categoria: c,
+      itens: itensConsolidados.filter((i) => i.categoriaId === c.id),
+    }))
+    .filter((c) => c.itens.length > 0);
+
+  const totalConsolidadoPorMes = Array.from({ length: 12 }, (_, mesIdx) =>
+    itensConsolidados.reduce(
+      (soma, i) => soma + i.meses[mesIdx].realCentavos,
+      0,
+    ),
+  );
+
+  const mesMaisCaro = totalConsolidadoPorMes.reduce(
+    (maiorIdx, valor, idx) =>
+      valor > totalConsolidadoPorMes[maiorIdx] ? idx : maiorIdx,
+    0,
+  );
+  const mesMaisBarato = totalConsolidadoPorMes.reduce(
+    (menorIdx, valor, idx) =>
+      valor > 0 &&
+      (totalConsolidadoPorMes[menorIdx] === 0 ||
+        valor < totalConsolidadoPorMes[menorIdx])
+        ? idx
+        : menorIdx,
+    0,
+  );
+
+  const cardClass =
+    "flex flex-col gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg shadow-sm";
+
   return (
-    <div className="flex flex-col gap-xl">
+    <div className="gap-xl flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-on-surface-variant" htmlFor="ano">
-          Ano
-        </label>
-        <input
-          id="ano"
-          type="number"
-          className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-          value={ano}
-          onChange={(e) => setAno(Number(e.target.value))}
-        />
+      <div className="gap-md flex flex-wrap items-end justify-between">
+        <div>
+          <h1 className="text-on-surface text-2xl font-bold">Visão anual</h1>
+          <p className="text-on-surface-variant text-sm">
+            Resumo financeiro compartilhado de {ano}
+          </p>
+        </div>
+        <div className="gap-md flex items-center">
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="ano"
+            >
+              Ano
+            </label>
+            <input
+              id="ano"
+              type="number"
+              className="border-outline-variant bg-surface-container-lowest w-24 rounded-lg border px-2 py-1"
+              value={ano}
+              onChange={(e) => setAno(Number(e.target.value))}
+            />
+          </div>
+          <Link
+            href="/configuracoes/exportar-dados"
+            className="bg-primary px-md py-sm text-on-primary rounded-xl text-sm font-semibold hover:opacity-90"
+          >
+            Exportar dados
+          </Link>
+        </div>
       </div>
 
-      {relatorio && (
-        <>
-          {/* Saldo final do ano */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">Saldo do ano</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
-                <p className="text-sm text-on-surface-variant">Receita</p>
-                <p className="text-xl font-semibold">
-                  {formatarReais(relatorio.saldo.receitaCentavos)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
-                <p className="text-sm text-on-surface-variant">Despesa</p>
-                <p className="text-xl font-semibold">
-                  {formatarReais(relatorio.saldo.despesaCentavos)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
-                <p className="text-sm text-on-surface-variant">Saldo</p>
-                <p className="text-xl font-semibold">
-                  {formatarReais(relatorio.saldo.saldoCentavos)}
-                </p>
-              </div>
-            </div>
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                  <th className="p-2 text-left">Mês</th>
-                  <th className="p-2 text-right">Receita</th>
-                  <th className="p-2 text-right">Despesa</th>
-                  <th className="p-2 text-right">Saldo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relatorio.saldo.porMes.map((m) => (
-                  <tr
-                    key={m.mes}
-                    className="border-b border-outline-variant/60"
-                  >
-                    <td className="p-2">{MESES[m.mes - 1]}</td>
-                    <td className="p-2 text-right">
-                      {formatarReais(m.receitaCentavos)}
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(m.despesaCentavos)}
-                    </td>
-                    <td className="p-2 text-right font-medium">
-                      {formatarReais(m.saldoCentavos)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+      {/* Resumo do ano */}
+      <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg grid grid-cols-1 rounded-xl border md:grid-cols-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-on-surface-variant text-sm">Receita total</p>
+          <p className="data-tabular text-on-surface text-2xl font-bold">
+            {formatarReais(saldo.receitaCentavos)}
+          </p>
+          {variacaoReceita !== null && (
+            <span
+              className={`px-sm w-fit rounded-full py-0.5 text-xs font-semibold ${
+                variacaoReceita >= 0
+                  ? "bg-success/15 text-success"
+                  : "bg-danger-container text-on-danger-container"
+              }`}
+            >
+              {variacaoReceita >= 0 ? "+" : ""}
+              {variacaoReceita.toFixed(0)}% vs. {ano - 1}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-on-surface-variant text-sm">Despesas totais</p>
+          <p className="data-tabular text-on-surface text-2xl font-bold">
+            {formatarReais(saldo.despesaCentavos)}
+          </p>
+          <span className="text-on-surface-variant text-xs">
+            {despesaPercentualReceita.toFixed(0)}% da receita
+          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-on-surface-variant text-sm">Taxa de poupança</p>
+          <p className="data-tabular text-secondary text-2xl font-bold">
+            {taxaPoupanca.toFixed(1)}%
+          </p>
+          <div className="bg-surface-container h-2 w-full overflow-hidden rounded-full">
+            <div
+              className="bg-secondary h-full rounded-full"
+              style={{ width: `${Math.min(Math.max(taxaPoupanca, 0), 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
 
-          {/* Orçamento planejado vs. real */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">
-              Orçamento planejado vs. real (acumulado do ano)
-            </h2>
-            <div className="flex gap-2">
-              {relatorio.planejadoVsReal.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => setSecaoAtiva(s.label)}
-                  className={`rounded-full px-md py-1 text-xs font-semibold ${
-                    secaoAtivaEfetiva === s.label
-                      ? "bg-primary text-on-primary"
-                      : "border border-outline-variant text-on-surface-variant"
-                  }`}
-                >
-                  {s.label}
-                </button>
+      {/* Fluxo de caixa mensal + Maiores gastos */}
+      <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
+        <div className={`${cardClass} lg:col-span-2`}>
+          <h2 className="text-on-surface text-base font-semibold">
+            Fluxo de caixa mensal
+          </h2>
+          <div className="flex h-40 items-end gap-2">
+            {saldo.porMes.map((m) => (
+              <div
+                key={m.mes}
+                className="flex flex-1 flex-col items-center gap-1"
+              >
+                <div className="flex h-32 w-full items-end justify-center gap-0.5">
+                  <div
+                    className="bg-primary w-1/2 rounded-t"
+                    style={{
+                      height: `${(m.receitaCentavos / maxFluxoMensal) * 100}%`,
+                    }}
+                    title={`Receita: ${formatarReais(m.receitaCentavos)}`}
+                  />
+                  <div
+                    className="bg-outline-variant w-1/2 rounded-t"
+                    style={{
+                      height: `${(m.despesaCentavos / maxFluxoMensal) * 100}%`,
+                    }}
+                    title={`Despesa: ${formatarReais(m.despesaCentavos)}`}
+                  />
+                </div>
+                <span className="text-on-surface-variant text-[10px] font-medium">
+                  {MESES[m.mes - 1].toUpperCase()}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="gap-md text-on-surface-variant flex items-center text-xs">
+            <span className="flex items-center gap-1">
+              <span className="bg-primary h-2.5 w-2.5 rounded-sm" /> Receita
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="bg-outline-variant h-2.5 w-2.5 rounded-sm" />{" "}
+              Despesa
+            </span>
+          </div>
+        </div>
+
+        <div className={cardClass}>
+          <h2 className="text-on-surface text-base font-semibold">
+            Maiores gastos
+          </h2>
+          {maioresGastos.length > 0 ? (
+            <div className="gap-md flex flex-col">
+              {maioresGastos.map((g) => (
+                <div key={g.categoriaId} className="flex flex-col gap-1">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="text-on-surface font-medium">
+                      {nomeCategoria.get(g.categoriaId) ?? g.categoriaId}
+                    </span>
+                    <span className="data-tabular text-on-surface-variant">
+                      {formatarReais(g.totalCentavos)}
+                    </span>
+                  </div>
+                  <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
+                    <div
+                      className="bg-primary h-full rounded-full"
+                      style={{
+                        width: `${(g.totalCentavos / maiorGastoCentavos) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                  <th className="p-2 text-left">Categoria / Subcategoria</th>
-                  <th className="p-2 text-right">Planejado</th>
-                  <th className="p-2 text-right">Real</th>
-                  <th className="p-2 text-right">Diferença</th>
-                  <th className="p-2 text-right">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {secao?.itens.map((item) => (
-                  <tr
-                    key={`${item.categoriaId}|${item.subcategoriaId ?? ""}`}
-                    className="border-b border-outline-variant/60"
-                  >
-                    <td className="p-2">
-                      {nomeCategoria.get(item.categoriaId) ?? item.categoriaId}
-                      {item.subcategoriaId && (
-                        <span className="text-on-surface-variant">
-                          {" › "}
-                          {nomeSubcategoria.get(item.subcategoriaId) ??
-                            item.subcategoriaId}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(item.acumulado.planejadoCentavos)}
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(item.acumulado.realCentavos)}
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(item.acumulado.diferencaCentavos)}
-                    </td>
+          ) : (
+            <p className="text-on-surface-variant text-sm">
+              Nenhum lançamento em {ano}.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Análise anual de despesas */}
+      <div className="gap-md flex flex-col">
+        <div>
+          <h2 className="text-on-surface text-xl font-bold">
+            Análise anual de despesas
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            Média mensal e consolidado de {ano}
+          </p>
+        </div>
+
+        <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={cardClass}>
+            <p className="text-on-surface-variant text-xs font-semibold uppercase">
+              Total anual planejado
+            </p>
+            <p className="data-tabular text-on-surface text-xl font-bold">
+              {formatarReais(totalPlanejadoAno)}
+            </p>
+            <p className="text-on-surface-variant text-xs">
+              Meta: {formatarReaisCompacto(totalPlanejadoAno / 12)}/mês
+            </p>
+          </div>
+          <div className={cardClass}>
+            <p className="text-on-surface-variant text-xs font-semibold uppercase">
+              Total anual realizado
+            </p>
+            <p className="data-tabular text-on-surface text-xl font-bold">
+              {formatarReais(totalRealAno)}
+            </p>
+            <p
+              className={`text-xs ${economiaTotalAno >= 0 ? "text-success" : "text-danger"}`}
+            >
+              {totalPlanejadoAno > 0
+                ? `${Math.abs(((totalRealAno - totalPlanejadoAno) / totalPlanejadoAno) * 100).toFixed(1)}% ${
+                    economiaTotalAno >= 0 ? "abaixo" : "acima"
+                  } do planejado`
+                : "—"}
+            </p>
+          </div>
+          <div className={cardClass}>
+            <p className="text-on-surface-variant text-xs font-semibold uppercase">
+              Média mensal de gastos
+            </p>
+            <p className="data-tabular text-on-surface text-xl font-bold">
+              {formatarReais(totalRealAno / 12)}
+            </p>
+            <p className="text-on-surface-variant text-xs">
+              Nos 12 meses de {ano}
+            </p>
+          </div>
+          <div className={cardClass}>
+            <p className="text-on-surface-variant text-xs font-semibold uppercase">
+              Economia total no ano
+            </p>
+            <p
+              className={`data-tabular text-xl font-bold ${
+                economiaTotalAno >= 0 ? "text-secondary" : "text-danger"
+              }`}
+            >
+              {formatarReais(economiaTotalAno)}
+            </p>
+            <p className="text-on-surface-variant text-xs">
+              Planejado − realizado
+            </p>
+          </div>
+        </div>
+
+        <div className="border-outline-variant bg-surface-container-lowest overflow-x-auto rounded-xl border">
+          <table className="min-w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-outline-variant text-on-surface-variant border-b text-xs font-semibold tracking-wide uppercase">
+                <th className="p-2 text-left">Categoria</th>
+                {MESES.map((m) => (
+                  <th key={m} className="p-2 text-right">
+                    {m}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {categoriasComItens.map(({ categoria, itens }) => (
+                <Fragment key={categoria.id}>
+                  <tr className="bg-surface-container-low">
                     <td
-                      className={`p-2 text-right font-medium ${
-                        item.acumulado.dentroDoPlanejado
-                          ? "text-success"
-                          : "text-danger"
-                      }`}
+                      className="text-on-surface p-2 font-semibold"
+                      colSpan={13}
                     >
-                      {item.acumulado.percentual === null
-                        ? "—"
-                        : `${item.acumulado.percentual.toFixed(0)}%`}
+                      {categoria.nome}
                     </td>
                   </tr>
-                ))}
-                {secao?.itens.length === 0 && (
-                  <tr>
-                    <td className="p-2 text-on-surface-variant" colSpan={5}>
-                      Nenhum orçamento ou lançamento neste ano.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </section>
-
-          {/* Resumo por categoria e subcategoria */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">Resumo por categoria</h2>
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                  <th className="p-2 text-left">Categoria</th>
-                  <th className="p-2 text-right">Total</th>
-                  <th className="p-2 text-right">% do total</th>
-                  <th className="p-2 text-right">Média mensal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relatorio.resumoPorCategoria.map((r) => (
-                  <tr
-                    key={r.categoriaId}
-                    className="border-b border-outline-variant/60"
-                  >
-                    <td className="p-2">
-                      {nomeCategoria.get(r.categoriaId) ?? r.categoriaId}
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(r.totalCentavos)}
-                    </td>
-                    <td className="p-2 text-right">
-                      {r.percentualDoTotal.toFixed(1)}%
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(r.mediaMensalCentavos)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">Resumo por subcategoria</h2>
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                  <th className="p-2 text-left">Categoria / Subcategoria</th>
-                  <th className="p-2 text-right">Total</th>
-                  <th className="p-2 text-right">% do total</th>
-                  <th className="p-2 text-right">Média mensal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relatorio.resumoPorSubcategoria.map((r) => (
-                  <tr
-                    key={`${r.categoriaId}|${r.subcategoriaId}`}
-                    className="border-b border-outline-variant/60"
-                  >
-                    <td className="p-2">
-                      {nomeCategoria.get(r.categoriaId) ?? r.categoriaId}
-                      <span className="text-on-surface-variant">
-                        {" › "}
-                        {nomeSubcategoria.get(r.subcategoriaId) ??
-                          r.subcategoriaId}
-                      </span>
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(r.totalCentavos)}
-                    </td>
-                    <td className="p-2 text-right">
-                      {r.percentualDoTotal.toFixed(1)}%
-                    </td>
-                    <td className="p-2 text-right">
-                      {formatarReais(r.mediaMensalCentavos)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {/* Evolução de patrimônio total */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">
-              Evolução de patrimônio total
-            </h2>
-            {relatorio.evolucaoPatrimonio.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">
-                Nenhuma posição de patrimônio lançada neste ano.
-              </p>
-            ) : (
-              <table className="min-w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                    <th className="p-2 text-left">Mês</th>
-                    <th className="p-2 text-right">Patrimônio total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {relatorio.evolucaoPatrimonio.map((p) => (
+                  {itens.map((item) => (
                     <tr
-                      key={p.mes}
-                      className="border-b border-outline-variant/60"
+                      key={chave(item.categoriaId, item.subcategoriaId)}
+                      className="border-outline-variant/60 border-b"
                     >
-                      <td className="p-2">{formatarMes(p.mes)}</td>
-                      <td className="p-2 text-right font-medium">
-                        {formatarReais(p.valorCentavos)}
+                      <td className="pl-lg text-on-surface-variant p-2">
+                        {item.subcategoriaId
+                          ? (nomeSubcategoria.get(item.subcategoriaId) ??
+                            item.subcategoriaId)
+                          : "Geral"}
                       </td>
+                      {item.meses.map((mes, idx) => (
+                        <td
+                          key={idx}
+                          className={`data-tabular p-2 text-right ${
+                            mes.planejadoCentavos > 0 &&
+                            mes.realCentavos > mes.planejadoCentavos
+                              ? "text-danger font-semibold"
+                              : "text-on-surface"
+                          }`}
+                        >
+                          {formatarReaisCompacto(mes.realCentavos)}
+                        </td>
+                      ))}
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            )}
-          </section>
+                </Fragment>
+              ))}
+              <tr className="border-outline-variant border-t-2 font-semibold">
+                <td className="text-on-surface p-2">Total consolidado</td>
+                {totalConsolidadoPorMes.map((total, idx) => (
+                  <td
+                    key={idx}
+                    className="data-tabular text-on-surface p-2 text-right"
+                  >
+                    {formatarReaisCompacto(total)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          {/* Divisão de despesas acumulada do ano */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">
-              Divisão de despesas do ano
-            </h2>
-            {relatorio.divisaoDespesas === null ? (
-              <p className="text-sm text-on-surface-variant">
-                É preciso cadastrar duas pessoas do tipo Individual (ex.: Isa e
-                Gabi) para calcular a divisão de despesas.
+        <div className="gap-md grid grid-cols-1 lg:grid-cols-2">
+          <div className={cardClass}>
+            <h3 className="text-on-surface text-base font-semibold">
+              Distribuição por responsável
+            </h3>
+            {totalPorSecao.length > 0 && totalGeralSecoes > 0 ? (
+              <div className="gap-md flex flex-col">
+                {totalPorSecao.map((s) => (
+                  <div key={s.label} className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between text-sm">
+                      <span className="text-on-surface font-medium">
+                        {s.label}
+                      </span>
+                      <span className="data-tabular text-on-surface-variant">
+                        {((s.totalCentavos / totalGeralSecoes) * 100).toFixed(
+                          0,
+                        )}
+                        % ({formatarReais(s.totalCentavos)})
+                      </span>
+                    </div>
+                    <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
+                      <div
+                        className="bg-secondary h-full rounded-full"
+                        style={{
+                          width: `${(s.totalCentavos / totalGeralSecoes) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-on-surface-variant text-sm">
+                Sem lançamentos com pessoa vinculada em {ano}.
+              </p>
+            )}
+            {divisaoDespesas?.pessoaDevedoraId && (
+              <p className="text-on-surface-variant mt-auto text-xs">
+                {nomePessoa.get(divisaoDespesas.pessoaDevedoraId)} deve{" "}
+                {formatarReais(divisaoDespesas.valorDevidoCentavos)} para
+                equilibrar o ano.
+              </p>
+            )}
+          </div>
+
+          <div className={cardClass}>
+            <h3 className="text-on-surface text-base font-semibold">
+              Visão de tendência {ano}
+            </h3>
+            {totalConsolidadoPorMes.some((v) => v > 0) ? (
+              <p className="text-on-surface-variant text-sm">
+                O mês com maior gasto consolidado foi{" "}
+                <span className="text-on-surface font-semibold">
+                  {MESES[mesMaisCaro]}
+                </span>{" "}
+                ({formatarReais(totalConsolidadoPorMes[mesMaisCaro])}), enquanto{" "}
+                <span className="text-on-surface font-semibold">
+                  {MESES[mesMaisBarato]}
+                </span>{" "}
+                teve o menor consolidado (
+                {formatarReais(totalConsolidadoPorMes[mesMaisBarato])}).
               </p>
             ) : (
-              <div className="flex flex-col gap-4">
-                <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg text-center">
-                  {relatorio.divisaoDespesas.pessoaDevedoraId === null ? (
-                    <p className="text-lg font-semibold">Contas quitadas 🎉</p>
-                  ) : (
-                    <p className="text-lg font-semibold">
-                      {nome(relatorio.divisaoDespesas.pessoaDevedoraId)} deve{" "}
-                      {formatarReais(
-                        relatorio.divisaoDespesas.valorDevidoCentavos,
-                      )}{" "}
-                      para{" "}
-                      {nome(
-                        relatorio.divisaoDespesas.pessoaDevedoraId ===
-                          relatorio.divisaoDespesas.pessoaAId
-                          ? relatorio.divisaoDespesas.pessoaBId
-                          : relatorio.divisaoDespesas.pessoaAId,
-                      )}
-                    </p>
-                  )}
-                </div>
-                <table className="min-w-full border-collapse text-sm">
-                  <tbody>
-                    <tr className="border-b border-outline-variant/60">
-                      <td className="p-2">
-                        Quanto {nome(relatorio.divisaoDespesas.pessoaAId)} pagou
-                        pela {nome(relatorio.divisaoDespesas.pessoaBId)}
-                      </td>
-                      <td className="p-2 text-right font-medium">
-                        {formatarReais(
-                          relatorio.divisaoDespesas.pagouPeloOutroCentavos[
-                            relatorio.divisaoDespesas.pessoaAId
-                          ] ?? 0,
-                        )}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-outline-variant/60">
-                      <td className="p-2">
-                        Quanto {nome(relatorio.divisaoDespesas.pessoaBId)} pagou
-                        pela {nome(relatorio.divisaoDespesas.pessoaAId)}
-                      </td>
-                      <td className="p-2 text-right font-medium">
-                        {formatarReais(
-                          relatorio.divisaoDespesas.pagouPeloOutroCentavos[
-                            relatorio.divisaoDespesas.pessoaBId
-                          ] ?? 0,
-                        )}
-                      </td>
-                    </tr>
-                    <tr className="bg-surface-container-low font-medium">
-                      <td className="p-2">Diferença</td>
-                      <td className="p-2 text-right">
-                        {formatarReais(
-                          relatorio.divisaoDespesas.diferencaCentavos,
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <p className="text-on-surface-variant text-sm">
+                Sem lançamentos com orçamento planejado em {ano}.
+              </p>
             )}
-          </section>
-        </>
-      )}
+          </div>
+        </div>
+      </div>
+
+      {/* Harmonia financeira */}
+      <div className="gap-md bg-primary p-lg text-on-primary flex flex-col items-start justify-between rounded-xl sm:flex-row sm:items-center">
+        <div>
+          <h3 className="text-lg font-bold">Harmonia financeira</h3>
+          <p className="text-on-primary/85 text-sm">
+            {economiaTotalAno >= 0
+              ? `Em ${ano}, vocês economizaram ${formatarReais(economiaTotalAno)} em relação ao planejado, com taxa de poupança de ${taxaPoupanca.toFixed(1)}%. Parabéns pela parceria!`
+              : `Em ${ano}, os gastos ficaram ${formatarReais(Math.abs(economiaTotalAno))} acima do planejado. Vale revisar o orçamento juntos.`}
+          </p>
+        </div>
+        <Link
+          href="/relatorios"
+          className="bg-on-primary/10 px-md py-sm hover:bg-on-primary/20 rounded-xl text-sm font-semibold"
+        >
+          Ver relatório detalhado
+        </Link>
+      </div>
     </div>
   );
 }

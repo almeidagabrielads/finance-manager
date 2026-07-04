@@ -25,29 +25,39 @@ type SaldoDivisao = {
   valorDevidoCentavos: number;
 };
 
-type ResumoCategoria = {
-  categoriaId: string;
-  totalCentavos: number;
-  percentualDoTotal: number;
-};
-
 type LiquidezFaixa = {
   faixa: string;
   totalCentavos: number;
 };
 
+type PosicaoPatrimonio = {
+  mes: string;
+  valorCentavos: number;
+};
+
+type MesPlanejadoVsReal = {
+  mes: number;
+  planejadoCentavos: number;
+  realCentavos: number;
+};
+
+type PlanejadoVsRealCategoria = {
+  categoriaId: string;
+  meses: MesPlanejadoVsReal[];
+};
+
+type Lancamento = {
+  id: string;
+  data: string;
+  descricaoOrigem: string | null;
+  descricaoPropria: string | null;
+  valorCentavos: number;
+  pessoaDivisaoId: string;
+  pessoaPagouId: string;
+};
+
 type Pessoa = { id: string; nome: string };
 type Categoria = { id: string; nome: string };
-
-const LABEL_FAIXA: Record<string, string> = {
-  IMEDIATO: "Imediato",
-  ATE_30_DIAS: "Até 30 dias",
-  ATE_90_DIAS: "Até 90 dias",
-  ATE_180_DIAS: "Até 180 dias",
-  ATE_365_DIAS: "Até 1 ano",
-  MAIS_DE_1_ANO: "Mais de 1 ano",
-  INDEFINIDO: "Indefinido",
-};
 
 function centavosParaReais(valor: number): string {
   return (valor / 100).toLocaleString("pt-BR", {
@@ -65,6 +75,27 @@ function primeiroEUltimoDiaDoMes(): { inicio: string; fim: string } {
   return { inicio, fim };
 }
 
+function agruparPatrimonioPorMes(posicoes: PosicaoPatrimonio[]): {
+  atual: number;
+  anterior: number | null;
+} {
+  const totaisPorMes = new Map<string, number>();
+  for (const posicao of posicoes) {
+    const chave = posicao.mes.slice(0, 7);
+    totaisPorMes.set(
+      chave,
+      (totaisPorMes.get(chave) ?? 0) + posicao.valorCentavos,
+    );
+  }
+  const chavesOrdenadas = [...totaisPorMes.keys()].sort();
+  const chaveAtual = chavesOrdenadas.at(-1);
+  const chaveAnterior = chavesOrdenadas.at(-2);
+  return {
+    atual: chaveAtual ? (totaisPorMes.get(chaveAtual) ?? 0) : 0,
+    anterior: chaveAnterior ? (totaisPorMes.get(chaveAnterior) ?? 0) : null,
+  };
+}
+
 export function DashboardClient() {
   const anoAtual = new Date().getUTCFullYear();
   const mesAtual = new Date().getUTCMonth() + 1;
@@ -72,10 +103,14 @@ export function DashboardClient() {
   const [saldo, setSaldo] = useState<SaldoAnual | null>(null);
   const [divisao, setDivisao] = useState<SaldoDivisao | null>(null);
   const [divisaoIndisponivel, setDivisaoIndisponivel] = useState(false);
-  const [resumoCategorias, setResumoCategorias] = useState<
-    ResumoCategoria[] | null
-  >(null);
   const [liquidez, setLiquidez] = useState<LiquidezFaixa[] | null>(null);
+  const [patrimonio, setPatrimonio] = useState<PosicaoPatrimonio[] | null>(
+    null,
+  );
+  const [orcamento, setOrcamento] = useState<PlanejadoVsRealCategoria[] | null>(
+    null,
+  );
+  const [lancamentos, setLancamentos] = useState<Lancamento[] | null>(null);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
@@ -88,8 +123,10 @@ export function DashboardClient() {
     Promise.all([
       fetch(`/api/relatorios/saldo?ano=${anoAtual}`),
       fetch(`/api/relatorios/divisao?dataInicio=${inicio}&dataFim=${fim}`),
-      fetch(`/api/relatorios/resumo-categorias?ano=${anoAtual}`),
       fetch("/api/investimentos/liquidez"),
+      fetch(`/api/patrimonio?ano=${anoAtual}`),
+      fetch(`/api/relatorios/planejado-vs-real?ano=${anoAtual}`),
+      fetch(`/api/lancamentos?dataInicio=${inicio}&dataFim=${fim}`),
       fetch("/api/pessoas"),
       fetch("/api/categorias"),
     ])
@@ -98,16 +135,20 @@ export function DashboardClient() {
         const [
           saldoRes,
           divisaoRes,
-          resumoRes,
           liquidezRes,
+          patrimonioRes,
+          orcamentoRes,
+          lancamentosRes,
           pessoasRes,
           categoriasRes,
         ] = responses;
 
         if (
           saldoRes.status === 401 ||
-          resumoRes.status === 401 ||
           liquidezRes.status === 401 ||
+          patrimonioRes.status === 401 ||
+          orcamentoRes.status === 401 ||
+          lancamentosRes.status === 401 ||
           pessoasRes.status === 401 ||
           categoriasRes.status === 401
         ) {
@@ -116,8 +157,10 @@ export function DashboardClient() {
         }
 
         setSaldo(saldoRes.ok ? await saldoRes.json() : null);
-        setResumoCategorias(resumoRes.ok ? await resumoRes.json() : []);
         setLiquidez(liquidezRes.ok ? await liquidezRes.json() : []);
+        setPatrimonio(patrimonioRes.ok ? await patrimonioRes.json() : []);
+        setOrcamento(orcamentoRes.ok ? await orcamentoRes.json() : []);
+        setLancamentos(lancamentosRes.ok ? await lancamentosRes.json() : []);
         setPessoas(pessoasRes.ok ? await pessoasRes.json() : []);
         setCategorias(categoriasRes.ok ? await categoriasRes.json() : []);
 
@@ -140,7 +183,10 @@ export function DashboardClient() {
     return (
       <p className="text-on-surface-variant">
         Não autenticado —{" "}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link
+          href="/login"
+          className="text-primary font-medium hover:underline"
+        >
           faça login
         </Link>{" "}
         para ver a visão geral.
@@ -150,14 +196,46 @@ export function DashboardClient() {
 
   const nomePessoa = (id: string) =>
     pessoas.find((p) => p.id === id)?.nome ?? "—";
-  const nomeCategoria = (id: string) =>
-    categorias.find((c) => c.id === id)?.nome ?? "—";
+  const nomeCategoria = (id: string | null) =>
+    categorias.find((c) => c.id === id)?.nome ?? "Sem categoria";
 
   const saldoDoMes = saldo?.porMes.find((m) => m.mes === mesAtual) ?? null;
-  const topCategorias = [...(resumoCategorias ?? [])]
-    .sort((a, b) => b.totalCentavos - a.totalCentavos)
-    .slice(0, 5);
-  const faixasComSaldo = (liquidez ?? []).filter((f) => f.totalCentavos > 0);
+  const investimentosCentavos = (liquidez ?? []).reduce(
+    (soma, f) => soma + f.totalCentavos,
+    0,
+  );
+  const {
+    atual: patrimonioAtualCentavos,
+    anterior: patrimonioAnteriorCentavos,
+  } = agruparPatrimonioPorMes(patrimonio ?? []);
+  const ativosLiquidosCentavos =
+    patrimonioAtualCentavos - investimentosCentavos;
+  const variacaoPercentual =
+    patrimonioAnteriorCentavos && patrimonioAnteriorCentavos !== 0
+      ? ((patrimonioAtualCentavos - patrimonioAnteriorCentavos) /
+          Math.abs(patrimonioAnteriorCentavos)) *
+        100
+      : null;
+
+  const categoriasOrcamento = (orcamento ?? [])
+    .map((c) => ({
+      categoriaId: c.categoriaId,
+      ...(c.meses.find((m) => m.mes === mesAtual) ?? {
+        planejadoCentavos: 0,
+        realCentavos: 0,
+      }),
+    }))
+    .filter((c) => c.planejadoCentavos > 0 || c.realCentavos > 0);
+  const totalPlanejadoCentavos = categoriasOrcamento.reduce(
+    (soma, c) => soma + c.planejadoCentavos,
+    0,
+  );
+  const totalRealCentavos = categoriasOrcamento.reduce(
+    (soma, c) => soma + c.realCentavos,
+    0,
+  );
+
+  const transacoesRecentes = (lancamentos ?? []).slice(0, 5);
 
   const cardClass =
     "flex flex-col gap-md rounded-xl border border-outline-variant bg-surface-container-lowest p-lg shadow-sm";
@@ -166,134 +244,232 @@ export function DashboardClient() {
   const linkClass = "mt-auto text-sm font-medium text-primary hover:underline";
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-md md:grid-cols-2">
-        <div className={cardClass}>
-          <h2 className={cardTitleClass}>Saldo de {anoAtual}</h2>
-          {saldo ? (
-            <>
-              <p
-                className={`data-tabular text-3xl font-semibold ${
-                  saldo.saldoCentavos < 0 ? "text-danger" : "text-on-surface"
+      <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
+        <div className={`${cardClass} lg:col-span-2`}>
+          <div className="gap-md flex items-start justify-between">
+            <h2 className={cardTitleClass}>Patrimônio consolidado</h2>
+            {variacaoPercentual !== null && (
+              <span
+                className={`px-sm rounded-full py-0.5 text-xs font-semibold ${
+                  variacaoPercentual >= 0
+                    ? "bg-success/15 text-success"
+                    : "bg-danger-container text-on-danger-container"
                 }`}
               >
-                {centavosParaReais(saldo.saldoCentavos)}
+                {variacaoPercentual >= 0 ? "↗" : "↘"}{" "}
+                {Math.abs(variacaoPercentual).toFixed(1)}% este mês
+              </span>
+            )}
+          </div>
+          <p className="data-tabular text-on-surface text-3xl font-semibold">
+            {centavosParaReais(patrimonioAtualCentavos)}
+          </p>
+          <div className="gap-sm border-outline-variant pt-md grid grid-cols-1 border-t sm:grid-cols-3">
+            <div>
+              <p className="text-on-surface-variant text-xs">Ativos líquidos</p>
+              <p className="data-tabular text-on-surface font-semibold">
+                {centavosParaReais(ativosLiquidosCentavos)}
               </p>
-              <dl className="flex flex-col gap-1 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-on-surface-variant">Receitas</dt>
-                  <dd className="data-tabular text-on-surface">
-                    {centavosParaReais(saldo.receitaCentavos)}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-on-surface-variant">Despesas</dt>
-                  <dd className="data-tabular text-on-surface">
-                    {centavosParaReais(saldo.despesaCentavos)}
-                  </dd>
-                </div>
-                {saldoDoMes && (
-                  <div className="flex justify-between border-t border-outline-variant pt-1">
-                    <dt className="text-on-surface-variant">Mês atual</dt>
-                    <dd className="data-tabular text-on-surface">
-                      {centavosParaReais(saldoDoMes.saldoCentavos)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </>
-          ) : (
-            <p className="text-sm text-on-surface-variant">Sem dados para {anoAtual}.</p>
-          )}
+            </div>
+            <div>
+              <p className="text-on-surface-variant text-xs">Investimentos</p>
+              <p className="data-tabular text-on-surface font-semibold">
+                {centavosParaReais(investimentosCentavos)}
+              </p>
+            </div>
+            <div>
+              <p className="text-on-surface-variant text-xs">Saldo do mês</p>
+              <p
+                className={`data-tabular font-semibold ${
+                  saldoDoMes && saldoDoMes.saldoCentavos < 0
+                    ? "text-danger"
+                    : "text-on-surface"
+                }`}
+              >
+                {saldoDoMes ? centavosParaReais(saldoDoMes.saldoCentavos) : "—"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className={cardClass}>
-          <h2 className={cardTitleClass}>Divisão do casal (mês atual)</h2>
+        <div className="gap-md bg-primary p-lg text-on-primary flex flex-col justify-between rounded-xl shadow-sm">
+          <h2 className="text-on-primary/70 text-center text-xs font-semibold tracking-wide uppercase">
+            Acerto de contas
+          </h2>
           {divisaoIndisponivel ? (
-            <p className="text-sm text-on-surface-variant">
+            <p className="text-on-primary/90 text-center text-sm">
               Cadastre duas pessoas do tipo Individual em{" "}
-              <Link href="/pessoas" className="font-medium text-primary hover:underline">
+              <Link href="/pessoas" className="font-semibold underline">
                 Pessoas
               </Link>{" "}
               para calcular a divisão.
             </p>
           ) : divisao ? (
-            divisao.pessoaDevedoraId ? (
-              <p className="text-sm text-on-surface-variant">
-                <span className="font-semibold text-on-surface">
-                  {nomePessoa(divisao.pessoaDevedoraId)}
-                </span>{" "}
-                deve{" "}
-                <span className="data-tabular font-semibold text-on-surface">
-                  {centavosParaReais(divisao.valorDevidoCentavos)}
+            <>
+              <div className="gap-md flex items-center justify-center">
+                <span className="bg-tertiary-container text-on-tertiary-container flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold">
+                  {nomePessoa(divisao.pessoaAId).charAt(0).toUpperCase()}
                 </span>
-              </p>
-            ) : (
-              <p className="text-sm text-on-surface-variant">Saldo zerado.</p>
-            )
+                <span className="text-on-primary/60">→</span>
+                <span className="bg-secondary text-on-secondary flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold">
+                  {nomePessoa(divisao.pessoaBId).charAt(0).toUpperCase()}
+                </span>
+              </div>
+              {divisao.pessoaDevedoraId ? (
+                <div className="text-center">
+                  <p className="text-lg font-bold">
+                    {nomePessoa(divisao.pessoaDevedoraId)} deve{" "}
+                    {centavosParaReais(divisao.valorDevidoCentavos)}
+                  </p>
+                  <p className="text-on-primary/70 text-sm">
+                    Para equilibrar os gastos compartilhados
+                  </p>
+                </div>
+              ) : (
+                <p className="text-on-primary/90 text-center text-sm">
+                  Saldo zerado.
+                </p>
+              )}
+            </>
           ) : (
-            <p className="text-sm text-on-surface-variant">Carregando…</p>
+            <p className="text-on-primary/80 text-center text-sm">
+              Carregando…
+            </p>
           )}
-          <Link href="/divisao" className={linkClass}>
-            Ver detalhes →
+          <Link
+            href="/divisao"
+            className="bg-on-primary/10 px-md py-sm hover:bg-on-primary/20 rounded-xl text-center text-sm font-semibold"
+          >
+            Ver detalhes
           </Link>
         </div>
+      </div>
 
+      <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
         <div className={cardClass}>
-          <h2 className={cardTitleClass}>Top categorias em {anoAtual}</h2>
-          {topCategorias.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-outline-variant/60">
-              {topCategorias.map((c) => (
-                <li
-                  key={c.categoriaId}
-                  className="flex justify-between py-1.5 text-sm first:pt-0 last:pb-0"
-                >
-                  <span className="text-on-surface-variant">
-                    {nomeCategoria(c.categoriaId)}
-                  </span>
-                  <span className="data-tabular font-medium text-on-surface">
-                    {centavosParaReais(c.totalCentavos)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="flex items-center justify-between">
+            <h2 className={cardTitleClass}>Orçamento do mês</h2>
+            <Link
+              href="/orcamento"
+              className="text-primary text-xs font-medium hover:underline"
+            >
+              Ver tudo
+            </Link>
+          </div>
+          {categoriasOrcamento.length > 0 ? (
+            <div className="gap-md flex flex-col">
+              {categoriasOrcamento.map((c) => {
+                const estourou =
+                  c.realCentavos > c.planejadoCentavos &&
+                  c.planejadoCentavos > 0;
+                const percentual =
+                  c.planejadoCentavos > 0
+                    ? Math.min(
+                        (c.realCentavos / c.planejadoCentavos) * 100,
+                        100,
+                      )
+                    : 100;
+                return (
+                  <div key={c.categoriaId} className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between text-sm">
+                      <span className="text-on-surface">
+                        {nomeCategoria(c.categoriaId)}
+                      </span>
+                      <span
+                        className={`data-tabular text-xs font-medium ${
+                          estourou ? "text-danger" : "text-on-surface-variant"
+                        }`}
+                      >
+                        {centavosParaReais(c.realCentavos)} /{" "}
+                        {centavosParaReais(c.planejadoCentavos)}
+                      </span>
+                    </div>
+                    <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
+                      <div
+                        className={`h-full rounded-full ${estourou ? "bg-danger" : "bg-primary"}`}
+                        style={{ width: `${percentual}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
-            <p className="text-sm text-on-surface-variant">Nenhum lançamento em {anoAtual}.</p>
+            <p className="text-on-surface-variant text-sm">
+              Nenhum orçamento planejado para este mês.
+            </p>
           )}
-          <Link href="/relatorio-anual" className={linkClass}>
-            Ver relatório anual →
-          </Link>
+          <div className="bg-surface-container-low p-sm mt-auto flex items-center justify-between rounded-lg text-sm">
+            <span className="text-on-surface-variant">
+              Total planejado: {centavosParaReais(totalPlanejadoCentavos)}
+            </span>
+            <span
+              className={`data-tabular font-semibold ${
+                totalPlanejadoCentavos - totalRealCentavos < 0
+                  ? "text-danger"
+                  : "text-on-surface"
+              }`}
+            >
+              Saldo:{" "}
+              {centavosParaReais(totalPlanejadoCentavos - totalRealCentavos)}
+            </span>
+          </div>
         </div>
 
-        <div className={cardClass}>
-          <h2 className={cardTitleClass}>Liquidez dos investimentos</h2>
-          {faixasComSaldo.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-outline-variant/60">
-              {faixasComSaldo.map((f) => (
-                <li
-                  key={f.faixa}
-                  className="flex justify-between py-1.5 text-sm first:pt-0 last:pb-0"
+        <div className={`${cardClass} lg:col-span-2`}>
+          <div className="flex items-center justify-between">
+            <h2 className={cardTitleClass}>Transações recentes</h2>
+          </div>
+          {transacoesRecentes.length > 0 ? (
+            <div className="divide-outline-variant/60 flex flex-col divide-y">
+              <div className="gap-sm pb-sm text-on-surface-variant grid grid-cols-5 text-xs font-semibold tracking-wide uppercase">
+                <span>Data</span>
+                <span>Descrição</span>
+                <span>Pagador</span>
+                <span>Dono</span>
+                <span className="justify-self-end">Valor</span>
+              </div>
+              {transacoesRecentes.map((l) => (
+                <div
+                  key={l.id}
+                  className="gap-sm py-sm grid grid-cols-5 items-center text-sm"
                 >
                   <span className="text-on-surface-variant">
-                    {LABEL_FAIXA[f.faixa] ?? f.faixa}
+                    {new Date(l.data).toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "short",
+                      timeZone: "UTC",
+                    })}
                   </span>
-                  <span className="data-tabular font-medium text-on-surface">
-                    {centavosParaReais(f.totalCentavos)}
+                  <span className="text-on-surface truncate">
+                    {l.descricaoPropria || l.descricaoOrigem || "—"}
                   </span>
-                </li>
+                  <span className="bg-surface-container px-sm text-on-surface-variant justify-self-start rounded-full py-0.5 text-xs font-semibold">
+                    {nomePessoa(l.pessoaPagouId)}
+                  </span>
+                  <span className="bg-surface-container px-sm text-on-surface-variant justify-self-start rounded-full py-0.5 text-xs font-semibold">
+                    {nomePessoa(l.pessoaDivisaoId)}
+                  </span>
+                  <span className="data-tabular text-on-surface justify-self-end font-semibold">
+                    {centavosParaReais(l.valorCentavos)}
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
-            <p className="text-sm text-on-surface-variant">Nenhum investimento cadastrado.</p>
+            <p className="text-on-surface-variant text-sm">
+              Nenhum lançamento neste mês.
+            </p>
           )}
-          <Link href="/investimentos" className={linkClass}>
-            Ver investimentos →
+          <Link href="/lancamentos" className={linkClass}>
+            Ver extrato completo →
           </Link>
         </div>
       </div>

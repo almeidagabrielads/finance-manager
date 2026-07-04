@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 type Usuario = { id: string; email: string; nome: string };
+type Pessoa = { id: string; nome: string; tipo: string };
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -15,13 +16,18 @@ const LINKS = [
   { href: "/divisao", label: "Divisão" },
   { href: "/relatorios", label: "Relatórios" },
   { href: "/importacao", label: "Importar" },
-  { href: "/configuracoes", label: "Configurações" },
+];
+
+const CORES_AVATAR = [
+  "bg-tertiary-container text-on-tertiary-container",
+  "bg-secondary text-on-secondary",
 ];
 
 export function Nav() {
   const router = useRouter();
   const pathname = usePathname();
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
 
   useEffect(() => {
     let cancelado = false;
@@ -38,6 +44,21 @@ export function Nav() {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!usuario) return;
+    let cancelado = false;
+    fetch("/api/pessoas")
+      .then(async (response) => {
+        if (cancelado || !response.ok) return;
+        const dados: Pessoa[] = await response.json();
+        setPessoas(dados.filter((p) => p.tipo === "INDIVIDUAL").slice(0, 2));
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [usuario]);
+
   async function sair() {
     await fetch("/api/auth/logout", { method: "POST" });
     setUsuario(null);
@@ -53,7 +74,9 @@ export function Nav() {
     <header className="border-outline-variant bg-surface sticky top-0 z-50 w-full border-b shadow-sm">
       <div className="px-lg mx-auto flex h-16 max-w-[1400px] items-center justify-between">
         <div className="gap-xl flex items-center">
-          <span className="text-primary text-lg font-bold">FINANCO</span>
+          <Link href="/" className="flex items-baseline gap-1.5">
+            <span className="text-primary text-lg font-bold">FINANCO</span>
+          </Link>
           <nav className="gap-xs hidden items-center md:flex">
             {LINKS.map((link) => {
               const ativo =
@@ -78,15 +101,63 @@ export function Nav() {
         </div>
         <div className="gap-md flex items-center text-sm">
           {usuario === undefined ? null : usuario ? (
-            <div className="gap-md flex items-center">
-              <span className="text-on-surface-variant">{usuario.nome}</span>
+            <>
+              <Link
+                href="/lancamentos"
+                className="bg-primary px-md text-on-primary hidden items-center gap-1.5 rounded-full py-1.5 text-xs font-semibold hover:opacity-90 sm:flex"
+              >
+                <span className="text-base leading-none">+</span> Transação
+              </Link>
+              <Link
+                href="/configuracoes"
+                aria-label="Configurações"
+                className="text-on-surface-variant hover:bg-surface-container hover:text-primary rounded-full p-1.5 transition-colors"
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                </svg>
+              </Link>
+              <div className="flex items-center -space-x-2">
+                {pessoas.map((p, i) => (
+                  <span
+                    key={p.id}
+                    title={p.nome}
+                    className={`border-surface flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold ${CORES_AVATAR[i % CORES_AVATAR.length]}`}
+                  >
+                    {p.nome.charAt(0).toUpperCase()}
+                  </span>
+                ))}
+              </div>
               <button
                 onClick={sair}
-                className="border-outline-variant px-md text-primary hover:bg-primary/10 rounded-full border py-1.5 text-xs font-semibold transition-colors"
+                title="Sair"
+                aria-label="Sair"
+                className="text-on-surface-variant hover:bg-surface-container hover:text-danger rounded-full p-1.5 transition-colors"
               >
-                Sair
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <path d="M16 17l5-5-5-5" />
+                  <path d="M21 12H9" />
+                </svg>
               </button>
-            </div>
+            </>
           ) : (
             <Link
               href="/login"
