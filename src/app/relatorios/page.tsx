@@ -6,7 +6,7 @@ export default function RelatoriosPage() {
       <div>
         <h1 className="text-2xl font-bold text-on-surface">Relatórios financeiros</h1>
         <p className="text-sm text-on-surface-variant">
-          Analise o desempenho financeiro do Nosso Lar.
+          Analise o desempenho financeiro do FINANCO.
         </p>
       </div>
       <RelatoriosClient />

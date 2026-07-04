@@ -26,7 +26,7 @@ export default function OnboardingPage() {
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-xl p-lg">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold text-on-surface">
-          Bem-vindos ao Nosso Lar! Vamos começar?
+          Bem-vindos ao FINANCO! Vamos começar?
         </h1>
         <p className="text-sm text-on-surface-variant">
           Estamos aqui para ajudar vocês a construir uma harmonia financeira

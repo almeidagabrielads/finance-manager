@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* Protótipos "Nosso Lar" são light-only — dark: só ativa via classe .dark, nunca por prefers-color-scheme */
+/* Protótipos são light-only — dark: só ativa via classe .dark, nunca por prefers-color-scheme */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design system "Nosso Lar" — ver stitch_isa_gabi_finance_hub/shared_ledger/DESIGN.md */
+/* Design system — ver stitch_isa_gabi_finance_hub/shared_ledger/DESIGN.md */
 @theme {
   --font-sans: var(--font-inter);
 

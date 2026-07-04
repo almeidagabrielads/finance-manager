@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Nosso Lar — Isa & Gabi",
+  title: "Isa & Gabi",
   description: "Controle financeiro do casal",
 };
 

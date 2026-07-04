@@ -49,7 +49,7 @@ export function Nav() {
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface shadow-sm">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-lg">
         <div className="flex items-center gap-xl">
-          <span className="text-lg font-bold text-primary">Nosso Lar</span>
+          <span className="text-lg font-bold text-primary">FINANCO</span>
           <nav className="hidden items-center gap-xs md:flex">
             {LINKS.map((link) => {
               const ativo = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);

@@ -5,7 +5,7 @@ export default function LoginPage() {
     <main className="flex flex-1">
       <section className="hidden flex-1 flex-col justify-between bg-primary p-xl text-on-primary lg:flex">
         <div>
-          <h1 className="text-2xl font-bold">Nosso Lar</h1>
+          <h1 className="text-2xl font-bold">FINANCO</h1>
           <p className="text-xs uppercase tracking-wide text-on-primary/70">
             Financial Harmony
           </p>
@@ -20,7 +20,7 @@ export default function LoginPage() {
       <section className="flex flex-1 items-center justify-center bg-surface p-md lg:p-xl">
         <div className="w-full max-w-[28rem] space-y-lg">
           <div className="flex flex-col items-center gap-1 lg:hidden">
-            <h1 className="text-xl font-bold text-primary">Nosso Lar</h1>
+            <h1 className="text-xl font-bold text-primary">FINANCO</h1>
             <p className="text-xs uppercase tracking-wide text-on-surface-variant">
               Financial Harmony
             </p>
