@@ -33,16 +33,41 @@ export function Nav() {
   }
 
   return (
-    <nav className="flex items-center justify-between border-b border-zinc-200 px-8 py-3 dark:border-zinc-800">
-      <div className="flex gap-4 text-sm font-medium">
-        <Link href="/">Início</Link>
-        <Link href="/categorias">Categorias</Link>
-        <Link href="/bancos">Bancos</Link>
-        <Link href="/orcamento">Orçamento</Link>
-        <Link href="/investimentos">Investimentos</Link>
-        <Link href="/divisao">Divisão</Link>
-        <Link href="/importacao">Importar</Link>
-        <Link href="/relatorio-anual">Relatório Anual</Link>
+    <nav className="flex items-center justify-between border-b border-zinc-200 bg-white px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+        <Link href="/" className="text-zinc-900 hover:text-zinc-600 dark:text-zinc-50 dark:hover:text-zinc-300">
+          Início
+        </Link>
+        <Link href="/lancamentos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Lançamentos
+        </Link>
+        <Link href="/receitas" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Receitas
+        </Link>
+        <Link href="/pessoas" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Pessoas
+        </Link>
+        <Link href="/categorias" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Categorias
+        </Link>
+        <Link href="/bancos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Bancos
+        </Link>
+        <Link href="/orcamento" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Orçamento
+        </Link>
+        <Link href="/investimentos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Investimentos
+        </Link>
+        <Link href="/divisao" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Divisão
+        </Link>
+        <Link href="/importacao" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Importar
+        </Link>
+        <Link href="/relatorio-anual" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+          Relatório Anual
+        </Link>
       </div>
       <div className="text-sm">
         {usuario === undefined ? null : usuario ? (
