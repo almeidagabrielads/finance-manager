@@ -152,7 +152,7 @@ export function CategoriasClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar categorias.
       </p>
     );
@@ -161,29 +161,29 @@ export function CategoriasClient() {
   return (
     <div className="flex flex-col gap-6">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarCategoria}
-        className="flex flex-wrap items-end gap-2 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-nome">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-nome">
             Nova categoria
           </label>
           <input
             id="novo-nome"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-percentual">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-percentual">
             % orçamento
           </label>
           <input
@@ -192,20 +192,20 @@ export function CategoriasClient() {
             min={0}
             max={100}
             step="0.01"
-            className="w-24 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoPercentual}
             onChange={(e) => setNovoPercentual(e.target.value)}
           />
         </div>
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-on-surface-variant">
         <input
           type="checkbox"
           checked={mostrarInativas}
@@ -229,7 +229,7 @@ export function CategoriasClient() {
       </ul>
 
       {categorias?.length === 0 && (
-        <p className="text-sm text-zinc-500">Nenhuma categoria encontrada.</p>
+        <p className="text-sm text-on-surface-variant">Nenhuma categoria encontrada.</p>
       )}
     </div>
   );
@@ -270,7 +270,7 @@ function CategoriaItem({
 
   return (
     <li
-      className={`rounded border border-zinc-200 p-4 dark:border-zinc-800 ${
+      className={`rounded-xl border border-outline-variant bg-surface-container-lowest p-lg ${
         categoria.ativo ? "" : "opacity-60"
       }`}
     >
@@ -278,7 +278,7 @@ function CategoriaItem({
         {editando ? (
           <>
             <input
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
@@ -287,18 +287,18 @@ function CategoriaItem({
               min={0}
               max={100}
               step="0.01"
-              className="w-24 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={percentual}
               onChange={(e) => setPercentual(e.target.value)}
             />
             <button
-              className="text-sm font-medium text-emerald-700"
+              className="text-sm font-semibold text-success"
               onClick={salvar}
             >
               Salvar
             </button>
             <button
-              className="text-sm text-zinc-500"
+              className="text-sm text-on-surface-variant"
               onClick={() => setEditando(false)}
             >
               Cancelar
@@ -306,25 +306,25 @@ function CategoriaItem({
           </>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">{categoria.nome}</h2>
-            <span className="text-sm text-zinc-500">
+            <h2 className="text-lg font-semibold text-on-surface">{categoria.nome}</h2>
+            <span className="text-sm text-on-surface-variant">
               {categoria.percentualOrcamento
                 ? `${Number(categoria.percentualOrcamento)}% do orçamento`
                 : "sem % definido"}
             </span>
             {!categoria.ativo && (
-              <span className="rounded bg-zinc-200 px-2 py-0.5 text-xs dark:bg-zinc-800">
+              <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
                 inativa
               </span>
             )}
             <button
-              className="text-sm font-medium text-blue-700"
+              className="text-sm font-medium text-primary"
               onClick={() => setEditando(true)}
             >
               Editar
             </button>
             <button
-              className="text-sm font-medium text-amber-700"
+              className="text-sm font-medium text-tertiary-container"
               onClick={() => onAlternarAtivo(categoria)}
             >
               {categoria.ativo ? "Inativar" : "Reativar"}
@@ -353,13 +353,13 @@ function CategoriaItem({
         }}
       >
         <input
-          className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
           placeholder="Nova subcategoria"
           value={novaSubcategoria}
           onChange={(e) => setNovaSubcategoria(e.target.value)}
           required
         />
-        <button type="submit" className="text-sm font-medium text-zinc-700">
+        <button type="submit" className="text-sm font-medium text-on-surface-variant">
           Adicionar subcategoria
         </button>
       </form>
@@ -388,12 +388,12 @@ function SubcategoriaItem({
       {editando ? (
         <>
           <input
-            className="rounded border border-zinc-300 px-2 py-0.5 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-0.5"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
           <button
-            className="font-medium text-emerald-700"
+            className="font-semibold text-success"
             onClick={async () => {
               await onAtualizar(subcategoria.id, nome);
               setEditando(false);
@@ -401,26 +401,26 @@ function SubcategoriaItem({
           >
             Salvar
           </button>
-          <button className="text-zinc-500" onClick={() => setEditando(false)}>
+          <button className="text-on-surface-variant" onClick={() => setEditando(false)}>
             Cancelar
           </button>
         </>
       ) : (
         <>
-          <span>{subcategoria.nome}</span>
+          <span className="text-on-surface">{subcategoria.nome}</span>
           {!subcategoria.ativo && (
-            <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
+            <span className="rounded-full bg-surface-container px-1.5 py-0.5 text-xs text-on-surface-variant">
               inativa
             </span>
           )}
           <button
-            className="font-medium text-blue-700"
+            className="font-medium text-primary"
             onClick={() => setEditando(true)}
           >
             Editar
           </button>
           <button
-            className="font-medium text-amber-700"
+            className="font-medium text-tertiary-container"
             onClick={() => onAlternarAtivo(subcategoria)}
           >
             {subcategoria.ativo ? "Inativar" : "Reativar"}

@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Nav } from "./Nav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Finance Manager — Isa & Gabi",
+  title: "Nosso Lar — Isa & Gabi",
   description: "Controle financeiro do casal",
 };
 
@@ -24,11 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-zinc-50 dark:bg-zinc-950">
+    <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-background font-sans text-on-surface">
         <Nav />
         {children}
       </body>

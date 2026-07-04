@@ -194,7 +194,7 @@ export function ImportacaoClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para importar lançamentos.
       </p>
     );
@@ -203,15 +203,15 @@ export function ImportacaoClient() {
   const podeAnalisar = bancoId && templateId && arquivo;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       {resultado && (
-        <p className="rounded border border-emerald-300 bg-emerald-50 p-2 text-sm text-emerald-800">
+        <p className="rounded-lg border border-success/30 bg-success/10 p-sm text-sm text-success">
           {resultado.criados} lançamento(s) importado(s).{" "}
           {resultado.duplicadosIgnorados > 0 &&
             `${resultado.duplicadosIgnorados} duplicado(s) ignorado(s).`}
@@ -220,16 +220,16 @@ export function ImportacaoClient() {
 
       <form
         onSubmit={analisarCsv}
-        className="flex flex-col gap-3 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
       >
         <div className="flex flex-wrap gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="banco">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="banco">
               Banco / meio de pagamento
             </label>
             <select
               id="banco"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={bancoId}
               onChange={(e) => setBancoId(e.target.value)}
               required
@@ -246,12 +246,12 @@ export function ImportacaoClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="template">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="template">
               Modelo do CSV
             </label>
             <select
               id="template"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
               required
@@ -266,12 +266,12 @@ export function ImportacaoClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="pessoa-divisao">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa-divisao">
               Divisão (dono do gasto)
             </label>
             <select
               id="pessoa-divisao"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={pessoaDivisaoId}
               onChange={(e) => setPessoaDivisaoId(e.target.value)}
               required
@@ -286,12 +286,12 @@ export function ImportacaoClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="pessoa-pagou">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa-pagou">
               Quem pagou
             </label>
             <select
               id="pessoa-pagou"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={pessoaPagouId}
               onChange={(e) => setPessoaPagouId(e.target.value)}
               required
@@ -307,13 +307,13 @@ export function ImportacaoClient() {
         </div>
 
         {templateId && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-on-surface-variant">
             {templates.find((t) => t.id === templateId)?.descricao}
           </p>
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="arquivo">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="arquivo">
             Arquivo CSV
           </label>
           <input
@@ -327,14 +327,14 @@ export function ImportacaoClient() {
         <button
           type="submit"
           disabled={!podeAnalisar || carregando}
-          className="w-fit rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="w-fit rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary disabled:opacity-50 hover:opacity-90"
         >
           Analisar CSV
         </button>
       </form>
 
       {erros.length > 0 && (
-        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="rounded-xl border border-tertiary-container/30 bg-tertiary-container/10 p-sm text-sm text-tertiary-container">
           <p className="font-medium">
             {erros.length} linha(s) não puderam ser lidas:
           </p>
@@ -352,7 +352,7 @@ export function ImportacaoClient() {
         <div className="flex flex-col gap-3">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+              <tr className="border-b border-outline-variant text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                 <th className="p-2"></th>
                 <th className="p-2">Data</th>
                 <th className="p-2">Descrição</th>
@@ -369,7 +369,7 @@ export function ImportacaoClient() {
                 return (
                   <tr
                     key={linha.hash}
-                    className={`border-b border-zinc-100 dark:border-zinc-900 ${
+                    className={`border-b border-outline-variant/60 ${
                       linha.duplicado ? "opacity-50" : ""
                     }`}
                   >
@@ -389,7 +389,7 @@ export function ImportacaoClient() {
                     <td className="p-2">
                       {linha.descricaoOrigem}
                       {linha.duplicado && (
-                        <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
+                        <span className="ml-2 rounded-full bg-surface-container px-1.5 py-0.5 text-xs text-on-surface-variant">
                           já importado
                         </span>
                       )}
@@ -399,7 +399,7 @@ export function ImportacaoClient() {
                     </td>
                     <td className="p-2">
                       <select
-                        className="rounded border border-zinc-300 px-1 py-0.5 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="rounded-lg border border-outline-variant bg-surface-container-lowest px-1 py-0.5"
                         value={linha.categoriaId}
                         onChange={(e) =>
                           atualizarLinha(linha.hash, {
@@ -420,7 +420,7 @@ export function ImportacaoClient() {
                     </td>
                     <td className="p-2">
                       <select
-                        className="rounded border border-zinc-300 px-1 py-0.5 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="rounded-lg border border-outline-variant bg-surface-container-lowest px-1 py-0.5"
                         value={linha.subcategoriaId}
                         disabled={!categoriaAtual}
                         onChange={(e) =>
@@ -448,7 +448,7 @@ export function ImportacaoClient() {
           <button
             onClick={confirmarImportacao}
             disabled={carregando}
-            className="w-fit rounded bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="w-fit rounded-full bg-success px-md py-1.5 text-xs font-semibold text-on-success disabled:opacity-50 hover:opacity-90"
           >
             Confirmar importação
           </button>

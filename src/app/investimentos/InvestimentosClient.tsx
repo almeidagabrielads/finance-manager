@@ -197,7 +197,7 @@ export function InvestimentosClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar investimentos.
       </p>
     );
@@ -214,15 +214,15 @@ export function InvestimentosClient() {
       {form && (
         <form
           onSubmit={criarInvestimento}
-          className="flex flex-wrap items-end gap-3 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+          className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
         >
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="banco">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="banco">
               Banco
             </label>
             <select
               id="banco"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.bancoId}
               onChange={(e) => setForm({ ...form, bancoId: e.target.value })}
               required
@@ -236,12 +236,12 @@ export function InvestimentosClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="titular">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="titular">
               Titular
             </label>
             <select
               id="titular"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.pessoaId}
               onChange={(e) => setForm({ ...form, pessoaId: e.target.value })}
               required
@@ -255,12 +255,12 @@ export function InvestimentosClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="tipo">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="tipo">
               Tipo
             </label>
             <select
               id="tipo"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.tipo}
               onChange={(e) =>
                 setForm({ ...form, tipo: e.target.value as TipoInvestimento })
@@ -275,12 +275,12 @@ export function InvestimentosClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="produto">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="produto">
               Produto
             </label>
             <input
               id="produto"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.produto}
               onChange={(e) => setForm({ ...form, produto: e.target.value })}
               required
@@ -288,14 +288,14 @@ export function InvestimentosClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="valor">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="valor">
               Valor atual (R$)
             </label>
             <input
               id="valor"
               type="number"
               step="0.01"
-              className="w-32 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-32 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.valor}
               onChange={(e) => setForm({ ...form, valor: e.target.value })}
               required
@@ -303,12 +303,12 @@ export function InvestimentosClient() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="modo-liquidez">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="modo-liquidez">
               Vencimento/liquidez
             </label>
             <select
               id="modo-liquidez"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.modoLiquidez}
               onChange={(e) =>
                 setForm({
@@ -325,14 +325,14 @@ export function InvestimentosClient() {
 
           {form.modoLiquidez === "DIAS" && (
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="liquidez-dias">
+              <label className="text-xs font-semibold text-on-surface-variant" htmlFor="liquidez-dias">
                 Dias (D+n)
               </label>
               <input
                 id="liquidez-dias"
                 type="number"
                 min={0}
-                className="w-24 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
                 value={form.liquidezDias}
                 onChange={(e) =>
                   setForm({ ...form, liquidezDias: e.target.value })
@@ -343,13 +343,13 @@ export function InvestimentosClient() {
 
           {form.modoLiquidez === "DATA" && (
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" htmlFor="vencimento">
+              <label className="text-xs font-semibold text-on-surface-variant" htmlFor="vencimento">
                 Data
               </label>
               <input
                 id="vencimento"
                 type="date"
-                className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
                 value={form.vencimento}
                 onChange={(e) =>
                   setForm({ ...form, vencimento: e.target.value })
@@ -360,12 +360,12 @@ export function InvestimentosClient() {
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" htmlFor="observacao">
+            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="observacao">
               Observação
             </label>
             <input
               id="observacao"
-              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={form.observacao}
               onChange={(e) =>
                 setForm({ ...form, observacao: e.target.value })
@@ -375,15 +375,15 @@ export function InvestimentosClient() {
 
           <button
             type="submit"
-            className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
           >
             Adicionar
           </button>
         </form>
       )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Carteira</h2>
+      <section className="flex flex-col gap-sm">
+        <h2 className="text-lg font-semibold text-on-surface">Carteira</h2>
         <ul className="flex flex-col gap-2">
           {investimentos?.map((inv) => {
             const banco = bancos.find((b) => b.id === inv.bancoId);
@@ -391,22 +391,22 @@ export function InvestimentosClient() {
             return (
               <li
                 key={inv.id}
-                className="flex flex-wrap items-center gap-3 rounded border border-zinc-200 p-3 dark:border-zinc-800"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-sm"
               >
-                <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium dark:bg-zinc-800">
+                <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs font-medium text-on-surface-variant">
                   {banco?.nome ?? "—"}
                 </span>
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-on-surface-variant">
                   {labelTipo(inv.tipo)}
                 </span>
-                <span className="font-medium">{inv.produto}</span>
-                <span className="text-sm text-zinc-500">
+                <span className="font-medium text-on-surface">{inv.produto}</span>
+                <span className="text-sm text-on-surface-variant">
                   {pessoa?.nome ?? "—"}
                 </span>
-                <span className="ml-auto font-medium">
+                <span className="data-tabular ml-auto font-medium text-on-surface">
                   {formatarReais(inv.valorAtualCentavos)}
                 </span>
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-on-surface-variant">
                   {inv.liquidezDias !== null
                     ? `D+${inv.liquidezDias}`
                     : inv.vencimento
@@ -416,12 +416,12 @@ export function InvestimentosClient() {
                       : "Indefinido"}
                 </span>
                 {inv.observacao && (
-                  <span className="w-full text-sm text-zinc-500">
+                  <span className="w-full text-sm text-on-surface-variant">
                     {inv.observacao}
                   </span>
                 )}
                 <button
-                  className="text-sm font-medium text-red-700"
+                  className="text-sm font-medium text-danger"
                   onClick={() => removerInvestimento(inv.id)}
                 >
                   Remover
@@ -431,19 +431,19 @@ export function InvestimentosClient() {
           })}
         </ul>
         {investimentos?.length === 0 && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-on-surface-variant">
             Nenhum investimento cadastrado.
           </p>
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">
+      <section className="flex flex-col gap-sm">
+        <h2 className="text-lg font-semibold text-on-surface">
           Liquidez consolidada (RF15)
         </h2>
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-zinc-200 dark:border-zinc-800">
+            <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               <th className="p-2 text-left">Prazo de resgate</th>
               <th className="p-2 text-right">Total disponível</th>
             </tr>
@@ -452,10 +452,10 @@ export function InvestimentosClient() {
             {liquidez?.map((grupo) => (
               <tr
                 key={grupo.faixa}
-                className="border-b border-zinc-100 dark:border-zinc-900"
+                className="border-b border-outline-variant/60"
               >
                 <td className="p-2">{FAIXAS_LABEL[grupo.faixa] ?? grupo.faixa}</td>
-                <td className="p-2 text-right font-medium">
+                <td className="data-tabular p-2 text-right font-medium">
                   {formatarReais(grupo.totalCentavos)}
                 </td>
               </tr>

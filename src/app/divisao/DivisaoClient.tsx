@@ -102,41 +102,41 @@ export function DivisaoClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para ver a divisão de despesas.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-md">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="dataInicio">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="dataInicio">
             De
           </label>
           <input
             id="dataInicio"
             type="date"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="dataFim">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="dataFim">
             Até
           </label>
           <input
             id="dataFim"
             type="date"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}
           />
@@ -144,12 +144,12 @@ export function DivisaoClient() {
       </div>
 
       {saldo && (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-lg border border-zinc-200 p-4 text-center dark:border-zinc-800">
+        <div className="flex flex-col gap-md">
+          <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg text-center">
             {saldo.pessoaDevedoraId === null ? (
-              <p className="text-lg font-semibold">Contas quitadas 🎉</p>
+              <p className="text-lg font-semibold text-on-surface">Contas quitadas 🎉</p>
             ) : (
-              <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold text-on-surface">
                 {nome(saldo.pessoaDevedoraId)} deve{" "}
                 {centavosParaReais(saldo.valorDevidoCentavos)} para{" "}
                 {nome(
@@ -163,7 +163,7 @@ export function DivisaoClient() {
 
           <table className="min-w-full border-collapse text-sm">
             <tbody>
-              <tr className="border-b border-zinc-100 dark:border-zinc-900">
+              <tr className="border-b border-outline-variant/60">
                 <td className="p-2">
                   Quanto {nome(saldo.pessoaAId)} pagou pela{" "}
                   {nome(saldo.pessoaBId)}
@@ -174,7 +174,7 @@ export function DivisaoClient() {
                   )}
                 </td>
               </tr>
-              <tr className="border-b border-zinc-100 dark:border-zinc-900">
+              <tr className="border-b border-outline-variant/60">
                 <td className="p-2">
                   Quanto {nome(saldo.pessoaBId)} pagou pela{" "}
                   {nome(saldo.pessoaAId)}
@@ -185,7 +185,7 @@ export function DivisaoClient() {
                   )}
                 </td>
               </tr>
-              <tr className="bg-zinc-50 font-medium dark:bg-zinc-900/50">
+              <tr className="bg-surface-container-low font-medium">
                 <td className="p-2">Diferença</td>
                 <td className="p-2 text-right">
                   {centavosParaReais(saldo.diferencaCentavos)}

@@ -194,7 +194,7 @@ export function RelatorioAnualClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para ver o relatório anual.
       </p>
     );
@@ -205,21 +205,21 @@ export function RelatorioAnualClient() {
   );
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-xl">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium" htmlFor="ano">
+        <label className="text-xs font-semibold text-on-surface-variant" htmlFor="ano">
           Ano
         </label>
         <input
           id="ano"
           type="number"
-          className="w-24 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
           value={ano}
           onChange={(e) => setAno(Number(e.target.value))}
         />
@@ -231,20 +231,20 @@ export function RelatorioAnualClient() {
           <section className="flex flex-col gap-3">
             <h2 className="text-lg font-semibold">Saldo do ano</h2>
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-                <p className="text-sm text-zinc-500">Receita</p>
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
+                <p className="text-sm text-on-surface-variant">Receita</p>
                 <p className="text-xl font-semibold">
                   {formatarReais(relatorio.saldo.receitaCentavos)}
                 </p>
               </div>
-              <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-                <p className="text-sm text-zinc-500">Despesa</p>
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
+                <p className="text-sm text-on-surface-variant">Despesa</p>
                 <p className="text-xl font-semibold">
                   {formatarReais(relatorio.saldo.despesaCentavos)}
                 </p>
               </div>
-              <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-                <p className="text-sm text-zinc-500">Saldo</p>
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
+                <p className="text-sm text-on-surface-variant">Saldo</p>
                 <p className="text-xl font-semibold">
                   {formatarReais(relatorio.saldo.saldoCentavos)}
                 </p>
@@ -252,7 +252,7 @@ export function RelatorioAnualClient() {
             </div>
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   <th className="p-2 text-left">Mês</th>
                   <th className="p-2 text-right">Receita</th>
                   <th className="p-2 text-right">Despesa</th>
@@ -263,7 +263,7 @@ export function RelatorioAnualClient() {
                 {relatorio.saldo.porMes.map((m) => (
                   <tr
                     key={m.mes}
-                    className="border-b border-zinc-100 dark:border-zinc-900"
+                    className="border-b border-outline-variant/60"
                   >
                     <td className="p-2">{MESES[m.mes - 1]}</td>
                     <td className="p-2 text-right">
@@ -291,10 +291,10 @@ export function RelatorioAnualClient() {
                 <button
                   key={s.label}
                   onClick={() => setSecaoAtiva(s.label)}
-                  className={`rounded px-3 py-1 text-sm font-medium ${
+                  className={`rounded-full px-md py-1 text-xs font-semibold ${
                     secaoAtivaEfetiva === s.label
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                      : "border border-zinc-300 dark:border-zinc-700"
+                      ? "bg-primary text-on-primary"
+                      : "border border-outline-variant text-on-surface-variant"
                   }`}
                 >
                   {s.label}
@@ -303,7 +303,7 @@ export function RelatorioAnualClient() {
             </div>
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   <th className="p-2 text-left">Categoria / Subcategoria</th>
                   <th className="p-2 text-right">Planejado</th>
                   <th className="p-2 text-right">Real</th>
@@ -315,12 +315,12 @@ export function RelatorioAnualClient() {
                 {secao?.itens.map((item) => (
                   <tr
                     key={`${item.categoriaId}|${item.subcategoriaId ?? ""}`}
-                    className="border-b border-zinc-100 dark:border-zinc-900"
+                    className="border-b border-outline-variant/60"
                   >
                     <td className="p-2">
                       {nomeCategoria.get(item.categoriaId) ?? item.categoriaId}
                       {item.subcategoriaId && (
-                        <span className="text-zinc-500">
+                        <span className="text-on-surface-variant">
                           {" › "}
                           {nomeSubcategoria.get(item.subcategoriaId) ??
                             item.subcategoriaId}
@@ -339,8 +339,8 @@ export function RelatorioAnualClient() {
                     <td
                       className={`p-2 text-right font-medium ${
                         item.acumulado.dentroDoPlanejado
-                          ? "text-emerald-600"
-                          : "text-red-600"
+                          ? "text-success"
+                          : "text-danger"
                       }`}
                     >
                       {item.acumulado.percentual === null
@@ -351,7 +351,7 @@ export function RelatorioAnualClient() {
                 ))}
                 {secao?.itens.length === 0 && (
                   <tr>
-                    <td className="p-2 text-zinc-500" colSpan={5}>
+                    <td className="p-2 text-on-surface-variant" colSpan={5}>
                       Nenhum orçamento ou lançamento neste ano.
                     </td>
                   </tr>
@@ -365,7 +365,7 @@ export function RelatorioAnualClient() {
             <h2 className="text-lg font-semibold">Resumo por categoria</h2>
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   <th className="p-2 text-left">Categoria</th>
                   <th className="p-2 text-right">Total</th>
                   <th className="p-2 text-right">% do total</th>
@@ -376,7 +376,7 @@ export function RelatorioAnualClient() {
                 {relatorio.resumoPorCategoria.map((r) => (
                   <tr
                     key={r.categoriaId}
-                    className="border-b border-zinc-100 dark:border-zinc-900"
+                    className="border-b border-outline-variant/60"
                   >
                     <td className="p-2">
                       {nomeCategoria.get(r.categoriaId) ?? r.categoriaId}
@@ -400,7 +400,7 @@ export function RelatorioAnualClient() {
             <h2 className="text-lg font-semibold">Resumo por subcategoria</h2>
             <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   <th className="p-2 text-left">Categoria / Subcategoria</th>
                   <th className="p-2 text-right">Total</th>
                   <th className="p-2 text-right">% do total</th>
@@ -411,11 +411,11 @@ export function RelatorioAnualClient() {
                 {relatorio.resumoPorSubcategoria.map((r) => (
                   <tr
                     key={`${r.categoriaId}|${r.subcategoriaId}`}
-                    className="border-b border-zinc-100 dark:border-zinc-900"
+                    className="border-b border-outline-variant/60"
                   >
                     <td className="p-2">
                       {nomeCategoria.get(r.categoriaId) ?? r.categoriaId}
-                      <span className="text-zinc-500">
+                      <span className="text-on-surface-variant">
                         {" › "}
                         {nomeSubcategoria.get(r.subcategoriaId) ??
                           r.subcategoriaId}
@@ -442,13 +442,13 @@ export function RelatorioAnualClient() {
               Evolução de patrimônio total
             </h2>
             {relatorio.evolucaoPatrimonio.length === 0 ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-on-surface-variant">
                 Nenhuma posição de patrimônio lançada neste ano.
               </p>
             ) : (
               <table className="min-w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                  <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                     <th className="p-2 text-left">Mês</th>
                     <th className="p-2 text-right">Patrimônio total</th>
                   </tr>
@@ -457,7 +457,7 @@ export function RelatorioAnualClient() {
                   {relatorio.evolucaoPatrimonio.map((p) => (
                     <tr
                       key={p.mes}
-                      className="border-b border-zinc-100 dark:border-zinc-900"
+                      className="border-b border-outline-variant/60"
                     >
                       <td className="p-2">{formatarMes(p.mes)}</td>
                       <td className="p-2 text-right font-medium">
@@ -476,13 +476,13 @@ export function RelatorioAnualClient() {
               Divisão de despesas do ano
             </h2>
             {relatorio.divisaoDespesas === null ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-on-surface-variant">
                 É preciso cadastrar duas pessoas do tipo Individual (ex.: Isa e
                 Gabi) para calcular a divisão de despesas.
               </p>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="rounded-lg border border-zinc-200 p-4 text-center dark:border-zinc-800">
+                <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg text-center">
                   {relatorio.divisaoDespesas.pessoaDevedoraId === null ? (
                     <p className="text-lg font-semibold">Contas quitadas 🎉</p>
                   ) : (
@@ -503,7 +503,7 @@ export function RelatorioAnualClient() {
                 </div>
                 <table className="min-w-full border-collapse text-sm">
                   <tbody>
-                    <tr className="border-b border-zinc-100 dark:border-zinc-900">
+                    <tr className="border-b border-outline-variant/60">
                       <td className="p-2">
                         Quanto {nome(relatorio.divisaoDespesas.pessoaAId)} pagou
                         pela {nome(relatorio.divisaoDespesas.pessoaBId)}
@@ -516,7 +516,7 @@ export function RelatorioAnualClient() {
                         )}
                       </td>
                     </tr>
-                    <tr className="border-b border-zinc-100 dark:border-zinc-900">
+                    <tr className="border-b border-outline-variant/60">
                       <td className="p-2">
                         Quanto {nome(relatorio.divisaoDespesas.pessoaBId)} pagou
                         pela {nome(relatorio.divisaoDespesas.pessoaAId)}
@@ -529,7 +529,7 @@ export function RelatorioAnualClient() {
                         )}
                       </td>
                     </tr>
-                    <tr className="bg-zinc-50 font-medium dark:bg-zinc-900/50">
+                    <tr className="bg-surface-container-low font-medium">
                       <td className="p-2">Diferença</td>
                       <td className="p-2 text-right">
                         {formatarReais(

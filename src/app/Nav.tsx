@@ -2,12 +2,25 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Usuario = { id: string; email: string; nome: string };
 
+const LINKS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/lancamentos", label: "Lançamentos" },
+  { href: "/receitas", label: "Receitas" },
+  { href: "/orcamento", label: "Orçamento" },
+  { href: "/investimentos", label: "Investimentos" },
+  { href: "/divisao", label: "Divisão" },
+  { href: "/relatorios", label: "Relatórios" },
+  { href: "/importacao", label: "Importar" },
+  { href: "/configuracoes", label: "Configurações" },
+];
+
 export function Nav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined);
 
   useEffect(() => {
@@ -33,62 +46,50 @@ export function Nav() {
   }
 
   return (
-    <nav className="flex items-center justify-between border-b border-zinc-200 bg-white px-8 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        <Link href="/" className="text-zinc-900 hover:text-zinc-600 dark:text-zinc-50 dark:hover:text-zinc-300">
-          Início
-        </Link>
-        <Link href="/lancamentos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Lançamentos
-        </Link>
-        <Link href="/receitas" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Receitas
-        </Link>
-        <Link href="/pessoas" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Pessoas
-        </Link>
-        <Link href="/categorias" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Categorias
-        </Link>
-        <Link href="/bancos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Bancos
-        </Link>
-        <Link href="/orcamento" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Orçamento
-        </Link>
-        <Link href="/investimentos" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Investimentos
-        </Link>
-        <Link href="/divisao" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Divisão
-        </Link>
-        <Link href="/importacao" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Importar
-        </Link>
-        <Link href="/relatorio-anual" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-          Relatório Anual
-        </Link>
-      </div>
-      <div className="text-sm">
-        {usuario === undefined ? null : usuario ? (
-          <div className="flex items-center gap-3">
-            <span className="text-zinc-500">{usuario.nome}</span>
-            <button
-              onClick={sair}
-              className="font-medium text-amber-700 dark:text-amber-500"
+    <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface shadow-sm">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-lg">
+        <div className="flex items-center gap-xl">
+          <span className="text-lg font-bold text-primary">Nosso Lar</span>
+          <nav className="hidden items-center gap-xs md:flex">
+            {LINKS.map((link) => {
+              const ativo = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={
+                    ativo
+                      ? "rounded-full bg-primary/10 px-md py-1.5 text-xs font-bold text-primary"
+                      : "rounded-full px-md py-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:text-primary"
+                  }
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+        <div className="flex items-center gap-md text-sm">
+          {usuario === undefined ? null : usuario ? (
+            <div className="flex items-center gap-md">
+              <span className="text-on-surface-variant">{usuario.nome}</span>
+              <button
+                onClick={sair}
+                className="rounded-full border border-outline-variant px-md py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                Sair
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
             >
-              Sair
-            </button>
-          </div>
-        ) : (
-          <Link
-            href="/login"
-            className="font-medium text-blue-700 dark:text-blue-400"
-          >
-            Entrar
-          </Link>
-        )}
+              Entrar
+            </Link>
+          )}
+        </div>
       </div>
-    </nav>
+    </header>
   );
 }

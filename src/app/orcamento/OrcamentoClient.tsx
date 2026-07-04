@@ -188,40 +188,40 @@ export function OrcamentoClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar o orçamento.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-md">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="ano">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="ano">
             Ano
           </label>
           <input
             id="ano"
             type="number"
-            className="w-24 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={ano}
             onChange={(e) => setAno(Number(e.target.value))}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="pessoa">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa">
             Pessoa/grupo
           </label>
           <select
             id="pessoa"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={pessoaFiltro}
             onChange={(e) => setPessoaFiltro(e.target.value)}
           >
@@ -235,19 +235,19 @@ export function OrcamentoClient() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="sticky left-0 bg-white p-2 text-left dark:bg-zinc-950">
+            <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+              <th className="sticky left-0 bg-surface-container-lowest p-2 text-left">
                 Categoria / Subcategoria
               </th>
               {MESES.map((m) => (
-                <th key={m} className="p-2 text-right font-medium">
+                <th key={m} className="p-2 text-right">
                   {m}
                 </th>
               ))}
-              <th className="p-2 text-right font-medium">Anual</th>
+              <th className="p-2 text-right">Anual</th>
             </tr>
           </thead>
           <tbody>
@@ -278,7 +278,7 @@ export function OrcamentoClient() {
       </div>
 
       {categorias?.length === 0 && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-on-surface-variant">
           Nenhuma categoria cadastrada — crie categorias antes de definir o
           orçamento.
         </p>
@@ -309,15 +309,15 @@ function LinhaOrcamento({
 }) {
   return (
     <tr
-      className={`border-b border-zinc-100 dark:border-zinc-900 ${
-        destaque ? "bg-zinc-50 font-medium dark:bg-zinc-900/50" : ""
+      className={`border-b border-outline-variant/60 ${
+        destaque ? "bg-surface-container-low font-medium" : ""
       }`}
     >
       <td
         className={`sticky left-0 p-2 ${
           destaque
-            ? "bg-zinc-50 dark:bg-zinc-900/50"
-            : "bg-white pl-6 dark:bg-zinc-950"
+            ? "bg-surface-container-low"
+            : "bg-surface-container-lowest pl-6"
         }`}
       >
         {label}
@@ -336,7 +336,7 @@ function LinhaOrcamento({
               key={
                 item?.id ?? `${chave(categoriaId, subcategoriaId, mes)}-vazio`
               }
-              className="w-24 rounded border border-zinc-300 px-1.5 py-1 text-right dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-1.5 py-1 text-right"
               onBlur={(e) =>
                 onSalvar(categoriaId, subcategoriaId, mes, e.target.value)
               }
@@ -360,7 +360,7 @@ function LinhaOrcamento({
             mapaOrcamentos.get(chave(categoriaId, subcategoriaId, null))?.id ??
             `${chave(categoriaId, subcategoriaId, null)}-vazio`
           }
-          className="w-24 rounded border border-zinc-300 px-1.5 py-1 text-right font-medium dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-1.5 py-1 text-right font-medium"
           onBlur={(e) =>
             onSalvar(categoriaId, subcategoriaId, null, e.target.value)
           }

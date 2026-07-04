@@ -241,29 +241,29 @@ export function LancamentosClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar lançamentos.
       </p>
     );
   }
 
   const inputClass =
-    "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
+    "rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-1.5 text-sm focus:border-primary focus:outline-none";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarLancamento}
-        className="flex flex-wrap items-end gap-2 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-data">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-data">
             Data
           </label>
           <input
@@ -276,7 +276,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-descricao">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-descricao">
             Descrição
           </label>
           <input
@@ -289,7 +289,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-valor">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-valor">
             Valor (R$)
           </label>
           <input
@@ -304,7 +304,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-desconto">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-desconto">
             Desconto (R$)
           </label>
           <input
@@ -318,7 +318,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-categoria">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-categoria">
             Categoria
           </label>
           <select
@@ -342,7 +342,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-subcategoria">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-subcategoria">
             Subcategoria
           </label>
           <select
@@ -363,7 +363,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-banco">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-banco">
             Banco
           </label>
           <select
@@ -381,7 +381,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-divisao">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-divisao">
             Divisão (dono do gasto)
           </label>
           <select
@@ -401,7 +401,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="l-pagou">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-pagou">
             Quem pagou
           </label>
           <select
@@ -422,15 +422,15 @@ export function LancamentosClient() {
         </div>
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <div className="flex flex-wrap items-end gap-2 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="f-inicio">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="f-inicio">
             De
           </label>
           <input
@@ -442,7 +442,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="f-fim">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="f-fim">
             Até
           </label>
           <input
@@ -454,7 +454,7 @@ export function LancamentosClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="f-categoria">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="f-categoria">
             Categoria
           </label>
           <select
@@ -472,7 +472,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="f-banco">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="f-banco">
             Banco
           </label>
           <select
@@ -490,7 +490,7 @@ export function LancamentosClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="f-pessoa">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="f-pessoa">
             Pessoa
           </label>
           <select
@@ -509,17 +509,17 @@ export function LancamentosClient() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="p-2 text-left font-medium">Data</th>
-              <th className="p-2 text-left font-medium">Descrição</th>
-              <th className="p-2 text-right font-medium">Valor</th>
-              <th className="p-2 text-left font-medium">Categoria</th>
-              <th className="p-2 text-left font-medium">Banco</th>
-              <th className="p-2 text-left font-medium">Divisão</th>
-              <th className="p-2 text-left font-medium">Pagou</th>
+            <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+              <th className="p-2 text-left">Data</th>
+              <th className="p-2 text-left">Descrição</th>
+              <th className="p-2 text-right">Valor</th>
+              <th className="p-2 text-left">Categoria</th>
+              <th className="p-2 text-left">Banco</th>
+              <th className="p-2 text-left">Divisão</th>
+              <th className="p-2 text-left">Pagou</th>
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -541,7 +541,7 @@ export function LancamentosClient() {
       </div>
 
       {lancamentos?.length === 0 && (
-        <p className="text-sm text-zinc-500">Nenhum lançamento encontrado.</p>
+        <p className="text-sm text-on-surface-variant">Nenhum lançamento encontrado.</p>
       )}
     </div>
   );
@@ -608,11 +608,11 @@ function LinhaLancamento({
   }
 
   const inputClass =
-    "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900";
+    "rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1";
 
   if (editando) {
     return (
-      <tr className="border-b border-zinc-100 dark:border-zinc-900">
+      <tr className="border-b border-outline-variant/60">
         <td className="p-1">
           <input
             type="date"
@@ -708,13 +708,13 @@ function LinhaLancamento({
         </td>
         <td className="flex gap-2 p-1">
           <button
-            className="text-sm font-medium text-emerald-700"
+            className="text-sm font-semibold text-success"
             onClick={salvar}
           >
             Salvar
           </button>
           <button
-            className="text-sm text-zinc-500"
+            className="text-sm text-on-surface-variant"
             onClick={() => setEditando(false)}
           >
             Cancelar
@@ -725,10 +725,10 @@ function LinhaLancamento({
   }
 
   return (
-    <tr className="border-b border-zinc-100 dark:border-zinc-900">
+    <tr className="border-b border-outline-variant/60 hover:bg-surface-container-low">
       <td className="p-2">{dataParaInputDate(lancamento.data)}</td>
       <td className="p-2">{lancamento.descricaoPropria || "—"}</td>
-      <td className="p-2 text-right">R$ {centavosParaReais(valorLiquido)}</td>
+      <td className="data-tabular p-2 text-right">R$ {centavosParaReais(valorLiquido)}</td>
       <td className="p-2">
         {nome.categoria(lancamento.categoriaId)}
         {lancamento.subcategoriaId
@@ -740,13 +740,13 @@ function LinhaLancamento({
       <td className="p-2">{nome.pessoa(lancamento.pessoaPagouId)}</td>
       <td className="flex gap-2 p-2">
         <button
-          className="text-sm font-medium text-blue-700"
+          className="text-sm font-medium text-primary"
           onClick={() => setEditando(true)}
         >
           Editar
         </button>
         <button
-          className="text-sm font-medium text-red-700"
+          className="text-sm font-medium text-danger"
           onClick={() => onRemover(lancamento)}
         >
           Remover

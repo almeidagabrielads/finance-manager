@@ -54,6 +54,20 @@ model Household {
   orcamentos         OrcamentoPlanejado[]
   investimentos      Investimento[]
   posicoesPatrimonio PosicaoPatrimonio[]
+  preferencia        Preferencia?
+}
+
+// Preferências regionais/de exibição do household (RF: configurações do sistema).
+model Preferencia {
+  id          String   @id @default(cuid())
+  householdId String   @unique
+  moeda       String   @default("BRL")
+  idioma      String   @default("pt-BR")
+  tema        String   @default("CLARO")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
 }
 
 model User {

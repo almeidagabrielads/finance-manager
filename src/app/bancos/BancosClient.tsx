@@ -112,43 +112,43 @@ export function BancosClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar bancos.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-lg">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarBanco}
-        className="flex flex-wrap items-end gap-2 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-nome">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-nome">
             Novo banco
           </label>
           <input
             id="novo-nome"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-tipo">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-tipo">
             Tipo
           </label>
           <select
             id="novo-tipo"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoTipo}
             onChange={(e) => setNovoTipo(e.target.value as TipoBanco)}
           >
@@ -161,13 +161,13 @@ export function BancosClient() {
         </div>
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-on-surface-variant">
         <input
           type="checkbox"
           checked={mostrarInativos}
@@ -188,7 +188,7 @@ export function BancosClient() {
       </ul>
 
       {bancos?.length === 0 && (
-        <p className="text-sm text-zinc-500">Nenhum banco encontrado.</p>
+        <p className="text-sm text-on-surface-variant">Nenhum banco encontrado.</p>
       )}
     </div>
   );
@@ -217,19 +217,19 @@ function BancoItem({
 
   return (
     <li
-      className={`flex flex-wrap items-center gap-2 rounded border border-zinc-200 p-3 dark:border-zinc-800 ${
+      className={`flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-sm ${
         banco.ativo ? "" : "opacity-60"
       }`}
     >
       {editando ? (
         <>
           <input
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
           <select
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoBanco)}
           >
@@ -240,13 +240,13 @@ function BancoItem({
             ))}
           </select>
           <button
-            className="text-sm font-medium text-emerald-700"
+            className="text-sm font-semibold text-success"
             onClick={salvar}
           >
             Salvar
           </button>
           <button
-            className="text-sm text-zinc-500"
+            className="text-sm text-on-surface-variant"
             onClick={() => setEditando(false)}
           >
             Cancelar
@@ -254,21 +254,21 @@ function BancoItem({
         </>
       ) : (
         <>
-          <h2 className="text-base font-semibold">{banco.nome}</h2>
-          <span className="text-sm text-zinc-500">{labelTipo(banco.tipo)}</span>
+          <h2 className="text-base font-semibold text-on-surface">{banco.nome}</h2>
+          <span className="text-sm text-on-surface-variant">{labelTipo(banco.tipo)}</span>
           {!banco.ativo && (
-            <span className="rounded bg-zinc-200 px-2 py-0.5 text-xs dark:bg-zinc-800">
+            <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
               inativo
             </span>
           )}
           <button
-            className="text-sm font-medium text-blue-700"
+            className="text-sm font-medium text-primary"
             onClick={() => setEditando(true)}
           >
             Editar
           </button>
           <button
-            className="text-sm font-medium text-amber-700"
+            className="text-sm font-medium text-tertiary-container"
             onClick={() => onAlternarAtivo(banco)}
           >
             {banco.ativo ? "Inativar" : "Reativar"}

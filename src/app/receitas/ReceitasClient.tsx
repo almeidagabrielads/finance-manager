@@ -166,7 +166,7 @@ export function ReceitasClient() {
 
   if (naoAutenticado) {
     return (
-      <p className="text-zinc-600 dark:text-zinc-400">
+      <p className="text-on-surface-variant">
         Não autenticado — faça login para gerenciar receitas.
       </p>
     );
@@ -175,22 +175,22 @@ export function ReceitasClient() {
   return (
     <div className="flex flex-col gap-6">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarReceita}
-        className="flex flex-wrap items-end gap-2 rounded border border-zinc-200 p-4 dark:border-zinc-800"
+        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="nova-pessoa">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="nova-pessoa">
             Pessoa
           </label>
           <select
             id="nova-pessoa"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novaPessoaId}
             onChange={(e) => setNovaPessoaId(e.target.value)}
             required
@@ -203,12 +203,12 @@ export function ReceitasClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-subtipo">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-subtipo">
             Subtipo
           </label>
           <select
             id="novo-subtipo"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoSubtipo}
             onChange={(e) => setNovoSubtipo(e.target.value as SubtipoReceita)}
           >
@@ -220,27 +220,27 @@ export function ReceitasClient() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-valor">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-valor">
             Valor (R$)
           </label>
           <input
             id="novo-valor"
             type="number"
             step="0.01"
-            className="w-32 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-32 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoValor}
             onChange={(e) => setNovoValor(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" htmlFor="novo-mes">
+          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-mes">
             Mês
           </label>
           <input
             id="novo-mes"
             type="month"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoMes}
             onChange={(e) => setNovoMes(e.target.value)}
             required
@@ -248,7 +248,7 @@ export function ReceitasClient() {
         </div>
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
         >
           Adicionar
         </button>
@@ -268,7 +268,7 @@ export function ReceitasClient() {
       </ul>
 
       {receitas?.length === 0 && (
-        <p className="text-sm text-zinc-500">Nenhuma receita cadastrada.</p>
+        <p className="text-sm text-on-surface-variant">Nenhuma receita cadastrada.</p>
       )}
     </div>
   );
@@ -312,11 +312,11 @@ function ReceitaItem({
   }
 
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+    <li className="flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-sm">
       {editando ? (
         <>
           <select
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={pessoaId}
             onChange={(e) => setPessoaId(e.target.value)}
           >
@@ -327,7 +327,7 @@ function ReceitaItem({
             ))}
           </select>
           <select
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={subtipo}
             onChange={(e) => setSubtipo(e.target.value as SubtipoReceita)}
           >
@@ -340,24 +340,24 @@ function ReceitaItem({
           <input
             type="number"
             step="0.01"
-            className="w-28 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-28 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
           />
           <input
             type="month"
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={mes}
             onChange={(e) => setMes(e.target.value)}
           />
           <button
-            className="text-sm font-medium text-emerald-700"
+            className="text-sm font-semibold text-success"
             onClick={salvar}
           >
             Salvar
           </button>
           <button
-            className="text-sm text-zinc-500"
+            className="text-sm text-on-surface-variant"
             onClick={() => setEditando(false)}
           >
             Cancelar
@@ -365,24 +365,24 @@ function ReceitaItem({
         </>
       ) : (
         <>
-          <span className="font-medium">{nomePessoa(receita.pessoaId)}</span>
-          <span className="text-sm text-zinc-500">
+          <span className="font-medium text-on-surface">{nomePessoa(receita.pessoaId)}</span>
+          <span className="text-sm text-on-surface-variant">
             {labelSubtipo(receita.subtipo)}
           </span>
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-on-surface-variant">
             {mesParaInputMonth(receita.mes)}
           </span>
-          <span className="font-medium">
+          <span className="data-tabular font-medium text-on-surface">
             R$ {centavosParaReais(receita.valorCentavos)}
           </span>
           <button
-            className="text-sm font-medium text-blue-700"
+            className="text-sm font-medium text-primary"
             onClick={() => setEditando(true)}
           >
             Editar
           </button>
           <button
-            className="text-sm font-medium text-red-700"
+            className="text-sm font-medium text-danger"
             onClick={() => onRemover(receita)}
           >
             Remover

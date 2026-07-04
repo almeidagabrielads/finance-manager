@@ -33,36 +33,39 @@ export function LoginClient() {
     window.location.href = "/";
   }
 
+  const inputClass =
+    "w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-md py-md text-sm focus:border-primary focus:outline-none";
+
   return (
-    <form onSubmit={entrar} className="flex flex-col gap-3">
+    <form onSubmit={entrar} className="flex flex-col gap-md">
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium" htmlFor="email">
+      <div className="flex flex-col gap-xs">
+        <label className="text-xs font-semibold text-on-surface-variant" htmlFor="email">
           E-mail
         </label>
         <input
           id="email"
           type="email"
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium" htmlFor="senha">
+      <div className="flex flex-col gap-xs">
+        <label className="text-xs font-semibold text-on-surface-variant" htmlFor="senha">
           Senha
         </label>
         <input
           id="senha"
           type="password"
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           required
@@ -72,7 +75,7 @@ export function LoginClient() {
       <button
         type="submit"
         disabled={enviando}
-        className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+        className="rounded-xl bg-primary px-md py-md text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {enviando ? "Entrando…" : "Entrar"}
       </button>

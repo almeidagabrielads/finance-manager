@@ -2,8 +2,8 @@ import { DashboardClient } from "./DashboardClient";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold">Visão geral</h1>
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-lg p-lg">
+      <h1 className="text-2xl font-bold text-on-surface">Visão geral</h1>
       <DashboardClient />
     </main>
   );

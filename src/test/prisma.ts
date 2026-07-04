@@ -33,6 +33,7 @@ export async function limparBanco() {
     prismaTest.banco.deleteMany(),
     prismaTest.pessoa.deleteMany(),
     prismaTest.user.deleteMany(),
+    prismaTest.preferencia.deleteMany(),
     prismaTest.household.deleteMany(),
   ]);
 }
