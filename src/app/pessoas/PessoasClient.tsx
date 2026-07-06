@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 
 const TIPOS_PESSOA = [
   { value: "INDIVIDUAL", label: "Individual" },
@@ -34,6 +35,7 @@ export function PessoasClient() {
   const [novoTipo, setNovoTipo] = useState<TipoPessoa>("INDIVIDUAL");
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
 
   function carregar() {
     setReloadToken((t) => t + 1);
@@ -95,7 +97,9 @@ export function PessoasClient() {
   }
 
   async function removerPessoa(pessoa: Pessoa) {
-    if (!confirm(`Remover "${pessoa.nome}"? Essa ação não pode ser desfeita.`)) {
+    if (
+      !(await confirmar(`Remover "${pessoa.nome}"? Essa ação não pode ser desfeita.`))
+    ) {
       return;
     }
     setErro(null);
@@ -119,6 +123,8 @@ export function PessoasClient() {
 
   return (
     <div className="flex flex-col gap-6">
+      {dialogConfirmacao}
+
       {erro && (
         <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
           {erro}

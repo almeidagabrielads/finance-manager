@@ -83,6 +83,10 @@ export type LinhaConfirmacao = {
   valorCentavos: number;
   categoriaId?: string | null;
   subcategoriaId?: string | null;
+  // Sobrescreve, só nessa linha, o dono/pagador padrão do lote (RF: revisão
+  // de importação permite ajustar cada lançamento antes de confirmar).
+  pessoaDivisaoId?: string | null;
+  pessoaPagouId?: string | null;
 };
 
 export type ResultadoConfirmacao =
@@ -137,6 +141,20 @@ export async function confirmarImportacao(
   const categoriasValidas = new Set(categorias.map((c) => c.id));
   const subcategoriasPorId = new Map(subcategorias.map((s) => [s.id, s]));
 
+  const pessoaOverrideIds = [
+    ...new Set(
+      opts.linhas.flatMap((l) => [l.pessoaDivisaoId, l.pessoaPagouId]).filter((v): v is string => !!v),
+    ),
+  ];
+  const pessoasOverridePermitidas = new Set(
+    (
+      await prisma.pessoa.findMany({
+        where: { id: { in: pessoaOverrideIds }, householdId },
+        select: { id: true },
+      })
+    ).map((p) => p.id),
+  );
+
   const dados = [];
   for (const linha of opts.linhas) {
     if (linha.categoriaId && !categoriasValidas.has(linha.categoriaId)) {
@@ -154,6 +172,15 @@ export async function confirmarImportacao(
         };
       }
     }
+    if (
+      (linha.pessoaDivisaoId && !pessoasOverridePermitidas.has(linha.pessoaDivisaoId)) ||
+      (linha.pessoaPagouId && !pessoasOverridePermitidas.has(linha.pessoaPagouId))
+    ) {
+      return {
+        ok: false,
+        erro: `Dono/pagador inválido na linha "${linha.descricaoOrigem}".`,
+      };
+    }
 
     const data = new Date(linha.data);
     const hash = calcularHashImportacao({
@@ -170,8 +197,8 @@ export async function confirmarImportacao(
       categoriaId: linha.categoriaId ?? null,
       subcategoriaId: linha.subcategoriaId ?? null,
       bancoId: opts.bancoId,
-      pessoaDivisaoId: opts.pessoaDivisaoId,
-      pessoaPagouId: opts.pessoaPagouId,
+      pessoaDivisaoId: linha.pessoaDivisaoId ?? opts.pessoaDivisaoId,
+      pessoaPagouId: linha.pessoaPagouId ?? opts.pessoaPagouId,
       householdId,
       hashImportacao: hash,
     });

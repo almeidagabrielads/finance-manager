@@ -10,6 +10,8 @@ const LinhaSchema = z.object({
   valorCentavos: z.number().int(),
   categoriaId: z.string().trim().min(1).nullish(),
   subcategoriaId: z.string().trim().min(1).nullish(),
+  pessoaDivisaoId: z.string().trim().min(1).nullish(),
+  pessoaPagouId: z.string().trim().min(1).nullish(),
 });
 
 const ConfirmarSchema = z.object({
