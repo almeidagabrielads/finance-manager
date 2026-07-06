@@ -3,8 +3,23 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 function createPrismaClient(url: string) {
-  const pool = new Pool({ connectionString: url });
+  console.log("DATABASE_URL =", process.env.DATABASE_URL);
+  console.log("URL recebida =", url);
+  
+  const pool = new Pool({
+    connectionString: url,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  pool
+    .query("select now()")
+    .then(() => console.log("POOL FUNCIONA"))
+    .catch((e) => console.error("POOL FALHOU", e));
+
   const adapter = new PrismaPg(pool);
+
   return new PrismaClient({ adapter });
 }
 
