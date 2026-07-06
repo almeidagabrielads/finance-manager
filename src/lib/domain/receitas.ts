@@ -1,19 +1,45 @@
 import * as z from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 
-export const SubtipoReceitaSchema = z.enum(["SALARIO", "VOUCHER", "OUTROS"]);
+export const SubtipoReceitaSchema = z.enum([
+  "SALARIO",
+  "VOUCHER",
+  "INVESTIMENTO",
+  "OUTROS",
+]);
 
-export const CriarReceitaSchema = z.object({
-  pessoaId: z.string().trim().min(1, "Pessoa é obrigatória."),
-  subtipo: SubtipoReceitaSchema,
-  valorCentavos: z
-    .number()
-    .int("Valor deve ser um inteiro em centavos.")
-    .positive("Valor deve ser positivo."),
-  mes: z.coerce.date(),
-});
+export const CriarReceitaSchema = z
+  .object({
+    pessoaId: z.string().trim().min(1, "Pessoa é obrigatória."),
+    subtipo: SubtipoReceitaSchema,
+    descricao: z.string().trim().min(1).nullable().optional(),
+    valorCentavos: z
+      .number()
+      .int("Valor deve ser um inteiro em centavos.")
+      .positive("Valor deve ser positivo."),
+    mes: z.coerce.date(),
+  })
+  .refine((data) => data.subtipo !== "OUTROS" || !!data.descricao, {
+    message: "Descrição é obrigatória para o subtipo Outros.",
+    path: ["descricao"],
+  });
 
-export const AtualizarReceitaSchema = CriarReceitaSchema.partial();
+export const AtualizarReceitaSchema = z
+  .object({
+    pessoaId: z.string().trim().min(1, "Pessoa é obrigatória.").optional(),
+    subtipo: SubtipoReceitaSchema.optional(),
+    descricao: z.string().trim().min(1).nullable().optional(),
+    valorCentavos: z
+      .number()
+      .int("Valor deve ser um inteiro em centavos.")
+      .positive("Valor deve ser positivo.")
+      .optional(),
+    mes: z.coerce.date().optional(),
+  })
+  .refine((data) => data.subtipo !== "OUTROS" || !!data.descricao, {
+    message: "Descrição é obrigatória para o subtipo Outros.",
+    path: ["descricao"],
+  });
 
 export type CriarReceitaInput = z.infer<typeof CriarReceitaSchema>;
 export type AtualizarReceitaInput = z.infer<typeof AtualizarReceitaSchema>;

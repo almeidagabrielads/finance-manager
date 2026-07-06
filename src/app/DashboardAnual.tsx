@@ -82,6 +82,11 @@ type RelatorioAnual = {
   divisaoDespesas: SaldoDivisaoGrupo | null;
 };
 
+type SaldoAnoAnterior = {
+  origem: "sistema" | "manual";
+  saldoCentavos: number;
+} | null;
+
 function formatarReais(centavos: number): string {
   return (centavos / 100).toLocaleString("pt-BR", {
     style: "currency",
@@ -91,6 +96,15 @@ function formatarReais(centavos: number): string {
 
 function formatarReaisCompacto(centavos: number): string {
   return (centavos / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function reaisParaCentavos(valor: string): number {
+  const n = Number(valor.replace(",", "."));
+  return Math.round(n * 100);
+}
+
+function centavosParaReais(centavos: number): string {
+  return (centavos / 100).toFixed(2);
 }
 
 function chave(categoriaId: string, subcategoriaId: string | null) {
@@ -142,6 +156,11 @@ export function DashboardAnual({ ano }: { ano: number }) {
   const [receitaAnoAnterior, setReceitaAnoAnterior] = useState<number | null>(
     null,
   );
+  const [saldoAnoAnterior, setSaldoAnoAnterior] =
+    useState<SaldoAnoAnterior>(null);
+  const [editandoSaldoAnterior, setEditandoSaldoAnterior] = useState(false);
+  const [inputSaldoAnterior, setInputSaldoAnterior] = useState("");
+  const [salvandoSaldoAnterior, setSalvandoSaldoAnterior] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
 
@@ -174,13 +193,16 @@ export function DashboardAnual({ ano }: { ano: number }) {
     };
   }, []);
 
+  const [reloadToken, setReloadToken] = useState(0);
+
   useEffect(() => {
     let cancelado = false;
     Promise.all([
       fetch(`/api/relatorios/anual?ano=${ano}`),
       fetch(`/api/relatorios/saldo?ano=${ano - 1}`),
+      fetch(`/api/relatorios/saldo-anterior?ano=${ano}`),
     ])
-      .then(async ([relatorioRes, saldoAnteriorRes]) => {
+      .then(async ([relatorioRes, saldoAnteriorRes, saldoAnoAnteriorRes]) => {
         if (cancelado) return;
         if (relatorioRes.status === 401) {
           setNaoAutenticado(true);
@@ -206,6 +228,9 @@ export function DashboardAnual({ ano }: { ano: number }) {
             ? (await saldoAnteriorRes.json()).receitaCentavos
             : null,
         );
+        setSaldoAnoAnterior(
+          saldoAnoAnteriorRes.ok ? await saldoAnoAnteriorRes.json() : null,
+        );
       })
       .catch(() => {
         if (!cancelado) setErro("Não foi possível carregar o relatório.");
@@ -213,7 +238,45 @@ export function DashboardAnual({ ano }: { ano: number }) {
     return () => {
       cancelado = true;
     };
-  }, [ano]);
+  }, [ano, reloadToken]);
+
+  async function salvarSaldoAnoAnterior(e: React.FormEvent) {
+    e.preventDefault();
+    setSalvandoSaldoAnterior(true);
+    setErro(null);
+    try {
+      const response = await fetch("/api/fechamentos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ano: ano - 1,
+          saldoCentavos: reaisParaCentavos(inputSaldoAnterior),
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setErro(body?.error ?? "Não foi possível salvar o saldo anterior.");
+        return;
+      }
+      setInputSaldoAnterior("");
+      setEditandoSaldoAnterior(false);
+      setReloadToken((t) => t + 1);
+    } finally {
+      setSalvandoSaldoAnterior(false);
+    }
+  }
+
+  function editarSaldoAnoAnterior() {
+    setInputSaldoAnterior(
+      saldoAnoAnterior ? centavosParaReais(saldoAnoAnterior.saldoCentavos) : "",
+    );
+    setEditandoSaldoAnterior(true);
+  }
+
+  function cancelarEdicaoSaldoAnterior() {
+    setInputSaldoAnterior("");
+    setEditandoSaldoAnterior(false);
+  }
 
   const nomeCategoria = useMemo(() => {
     const mapa = new Map<string, string>();
@@ -267,6 +330,8 @@ export function DashboardAnual({ ano }: { ano: number }) {
       ? ((saldo.receitaCentavos - receitaAnoAnterior) / receitaAnoAnterior) *
         100
       : null;
+  const saldoAcumulado =
+    (saldoAnoAnterior?.saldoCentavos ?? 0) + saldo.saldoCentavos;
 
   const maioresGastos = [...resumoPorCategoria]
     .sort((a, b) => b.totalCentavos - a.totalCentavos)
@@ -354,7 +419,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
       </div>
 
       {/* Resumo do ano */}
-      <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg grid grid-cols-1 rounded-xl border md:grid-cols-3">
+      <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg grid grid-cols-1 rounded-xl border md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-1">
           <p className="text-on-surface-variant text-sm">Receita total</p>
           <p className="data-tabular text-on-surface text-2xl font-bold">
@@ -394,6 +459,122 @@ export function DashboardAnual({ ano }: { ano: number }) {
             />
           </div>
         </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-on-surface-variant text-sm">
+            Saldo anual até o momento
+          </p>
+          <p
+            className={`data-tabular text-2xl font-bold ${
+              saldo.saldoCentavos >= 0 ? "text-success" : "text-danger"
+            }`}
+          >
+            {formatarReais(saldo.saldoCentavos)}
+          </p>
+          <span className="text-on-surface-variant text-xs">
+            Receitas − despesas em {ano}
+          </span>
+        </div>
+      </div>
+
+      {/* Saldo do ano anterior + saldo acumulado */}
+      <div className={cardClass}>
+        <h2 className="text-on-surface text-base font-semibold">
+          Saldo do ano anterior ({ano - 1})
+        </h2>
+        {saldoAnoAnterior && !editandoSaldoAnterior ? (
+          <div className="gap-md flex flex-wrap items-end justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <p className="data-tabular text-on-surface text-xl font-bold">
+                  {formatarReais(saldoAnoAnterior.saldoCentavos)}
+                </p>
+                <button
+                  type="button"
+                  onClick={editarSaldoAnoAnterior}
+                  title="Editar saldo do ano anterior"
+                  aria-label="Editar saldo do ano anterior"
+                  className="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                </button>
+              </div>
+              <span className="text-on-surface-variant text-xs">
+                {saldoAnoAnterior.origem === "sistema"
+                  ? "Calculado a partir dos lançamentos registrados"
+                  : "Informado manualmente"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <p className="text-on-surface-variant text-sm">
+                Saldo acumulado
+              </p>
+              <p
+                className={`data-tabular text-xl font-bold ${
+                  saldoAcumulado >= 0 ? "text-success" : "text-danger"
+                }`}
+              >
+                {formatarReais(saldoAcumulado)}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <form
+            onSubmit={salvarSaldoAnoAnterior}
+            className="flex flex-wrap items-end gap-sm"
+          >
+            {!saldoAnoAnterior && (
+              <p className="text-on-surface-variant w-full text-sm">
+                Nenhum lançamento encontrado para {ano - 1}. Informe o saldo
+                de fechamento desse ano para acumular com o saldo de {ano}.
+              </p>
+            )}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="saldo-ano-anterior"
+              >
+                Saldo de fechamento de {ano - 1} (R$)
+              </label>
+              <input
+                id="saldo-ano-anterior"
+                type="number"
+                step="0.01"
+                className="border-outline-variant bg-surface-container-lowest w-40 rounded-lg border px-sm py-1.5 text-sm"
+                value={inputSaldoAnterior}
+                onChange={(e) => setInputSaldoAnterior(e.target.value)}
+                required
+                autoFocus={editandoSaldoAnterior}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={salvandoSaldoAnterior}
+              className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+            >
+              Salvar
+            </button>
+            {saldoAnoAnterior && (
+              <button
+                type="button"
+                onClick={cancelarEdicaoSaldoAnterior}
+                className="text-on-surface-variant px-md py-1.5 text-xs font-semibold"
+              >
+                Cancelar
+              </button>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Fluxo de caixa mensal + Maiores gastos */}

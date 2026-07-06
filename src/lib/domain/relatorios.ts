@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { buscarFechamento } from "./fechamentos";
 import { valorLiquidoCentavos } from "./lancamentos";
 
 // ─── Tipos de entrada (dados já filtrados por household/pessoa/ano) ───────────
@@ -405,4 +406,35 @@ export async function buscarSaldo(
   ]);
 
   return calcularSaldo(opts.ano, receitas, lancamentos);
+}
+
+// ─── Saldo do ano anterior (para acumular com o saldo do ano corrente) ─────────
+
+// "sistema": calculado a partir de receitas/lançamentos já registrados no ano.
+// "manual": informado (ou corrigido) pelo usuário via FechamentoAnual — usado
+// quando o ano anterior não tem nenhum registro no sistema, ou quando o
+// usuário optou por sobrescrever o valor calculado automaticamente.
+export type SaldoAnoAnterior = {
+  origem: "sistema" | "manual";
+  saldoCentavos: number;
+} | null;
+
+export async function buscarSaldoAnoAnterior(
+  prisma: PrismaClient,
+  householdId: string,
+  ano: number,
+): Promise<SaldoAnoAnterior> {
+  const anoAnterior = ano - 1;
+
+  const fechamento = await buscarFechamento(prisma, householdId, anoAnterior);
+  if (fechamento) {
+    return { origem: "manual", saldoCentavos: fechamento.saldoCentavos };
+  }
+
+  const saldo = await buscarSaldo(prisma, householdId, { ano: anoAnterior });
+  if (saldo.receitaCentavos !== 0 || saldo.despesaCentavos !== 0) {
+    return { origem: "sistema", saldoCentavos: saldo.saldoCentavos };
+  }
+
+  return null;
 }
