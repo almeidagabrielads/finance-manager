@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const PAPEIS = [
   { value: "ADMIN", label: "Administrador" },
@@ -111,6 +113,38 @@ export function AcessoClient() {
   }, [reloadToken]);
 
   const souGestor = euRole === "PROPRIETARIO" || euRole === "ADMIN";
+
+  const colunasAtividades = useMemo<ColunaTabela<Atividade>[]>(
+    () => [
+      { chave: "acao", tipo: "texto", acessor: (a) => a.acao },
+      { chave: "usuario", tipo: "opcoes", acessor: (a) => a.user?.nome ?? "—" },
+      { chave: "data", tipo: "data", acessor: (a) => a.createdAt.slice(0, 10) },
+      {
+        chave: "dispositivo",
+        tipo: "opcoes",
+        acessor: (a) => a.dispositivo ?? "—",
+      },
+    ],
+    [],
+  );
+
+  const {
+    linhas: atividadesProcessadas,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(atividades, colunasAtividades);
+
+  const opcoesColunasAtividades = useMemo(() => {
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      usuario: unicos(atividades.map((a) => a.user?.nome ?? "—")),
+      dispositivo: unicos(atividades.map((a) => a.dispositivo ?? "—")),
+    };
+  }, [atividades]);
 
   async function alterarPapel(id: string, role: string) {
     setErro(null);
@@ -238,14 +272,52 @@ export function AcessoClient() {
             <table className="w-full text-sm">
               <thead className="bg-surface-container-low text-left text-xs font-semibold text-on-surface-variant">
                 <tr>
-                  <th className="p-sm">Ação</th>
-                  <th className="p-sm">Usuário</th>
-                  <th className="p-sm">Data</th>
-                  <th className="p-sm">Dispositivo</th>
+                  <ColumnHeader
+                    label="Ação"
+                    chave="acao"
+                    tipo="texto"
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.acao}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Usuário"
+                    chave="usuario"
+                    tipo="opcoes"
+                    opcoes={opcoesColunasAtividades.usuario}
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.usuario}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Data"
+                    chave="data"
+                    tipo="data"
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.data}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Dispositivo"
+                    chave="dispositivo"
+                    tipo="opcoes"
+                    opcoes={opcoesColunasAtividades.dispositivo}
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.dispositivo}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
                 </tr>
               </thead>
               <tbody>
-                {atividades.map((a) => (
+                {atividadesProcessadas.map((a) => (
                   <tr key={a.id} className="border-t border-outline-variant">
                     <td className="p-sm">{a.acao}</td>
                     <td className="p-sm text-on-surface-variant">
@@ -262,6 +334,11 @@ export function AcessoClient() {
               </tbody>
             </table>
           </div>
+          {atividadesProcessadas.length === 0 && (
+            <p className="p-sm text-sm text-on-surface-variant">
+              Nenhuma atividade corresponde aos filtros das colunas.
+            </p>
+          )}
         </div>
       )}
 

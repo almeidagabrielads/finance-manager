@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa", cor: "var(--color-primary)" },
@@ -192,6 +194,69 @@ export function RelatorioInvestimentos({
       ? rendimento[rendimento.length - 1]
       : null;
 
+  const bancosPorId = useMemo(
+    () => new Map(bancos.map((b) => [b.id, b])),
+    [bancos],
+  );
+  const pessoasPorId = useMemo(
+    () => new Map(pessoas.map((p) => [p.id, p])),
+    [pessoas],
+  );
+
+  const colunasInvestimentos = useMemo<ColunaTabela<Investimento>[]>(
+    () => [
+      { chave: "classe", tipo: "opcoes", acessor: (inv) => labelTipo(inv.tipo) },
+      {
+        chave: "instituicao",
+        tipo: "opcoes",
+        acessor: (inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—",
+      },
+      {
+        chave: "titular",
+        tipo: "opcoes",
+        acessor: (inv) => pessoasPorId.get(inv.pessoaId)?.nome ?? "—",
+      },
+      {
+        chave: "valor",
+        tipo: "numero",
+        acessor: (inv) => inv.valorAtualCentavos / 100,
+      },
+    ],
+    [bancosPorId, pessoasPorId],
+  );
+
+  const investimentosDetalhe = useMemo(
+    () => grupos.flatMap((g) => g.itens),
+    [grupos],
+  );
+
+  const {
+    linhas: investimentosParaExibir,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(investimentosDetalhe, colunasInvestimentos);
+
+  const opcoesColunasInvestimentos = useMemo(() => {
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      classe: unicos(investimentosDetalhe.map((inv) => labelTipo(inv.tipo))),
+      instituicao: unicos(
+        investimentosDetalhe.map(
+          (inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—",
+        ),
+      ),
+      titular: unicos(
+        investimentosDetalhe.map(
+          (inv) => pessoasPorId.get(inv.pessoaId)?.nome ?? "—",
+        ),
+      ),
+    };
+  }, [investimentosDetalhe, bancosPorId, pessoasPorId]);
+
   return (
     <div className="gap-lg flex flex-col">
       <div className="gap-sm flex items-center">
@@ -318,51 +383,88 @@ export function RelatorioInvestimentos({
         <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr className="border-outline-variant text-on-surface-variant border-b text-xs font-semibold tracking-wide uppercase">
-              <th className="p-2 text-left">Classe</th>
-              <th className="p-2 text-left">Instituição</th>
-              <th className="p-2 text-left">Titular</th>
-              <th className="p-2 text-right">Valor</th>
+              <ColumnHeader
+                label="Classe"
+                chave="classe"
+                tipo="opcoes"
+                opcoes={opcoesColunasInvestimentos.classe}
+                ordenacao={ordenacao}
+                onOrdenar={alternarOrdenacao}
+                filtro={filtros.classe}
+                onFiltrar={definirFiltro}
+                onLimparFiltro={limparFiltro}
+              />
+              <ColumnHeader
+                label="Instituição"
+                chave="instituicao"
+                tipo="opcoes"
+                opcoes={opcoesColunasInvestimentos.instituicao}
+                ordenacao={ordenacao}
+                onOrdenar={alternarOrdenacao}
+                filtro={filtros.instituicao}
+                onFiltrar={definirFiltro}
+                onLimparFiltro={limparFiltro}
+              />
+              <ColumnHeader
+                label="Titular"
+                chave="titular"
+                tipo="opcoes"
+                opcoes={opcoesColunasInvestimentos.titular}
+                ordenacao={ordenacao}
+                onOrdenar={alternarOrdenacao}
+                filtro={filtros.titular}
+                onFiltrar={definirFiltro}
+                onLimparFiltro={limparFiltro}
+              />
+              <ColumnHeader
+                label="Valor"
+                chave="valor"
+                tipo="numero"
+                align="right"
+                ordenacao={ordenacao}
+                onOrdenar={alternarOrdenacao}
+                filtro={filtros.valor}
+                onFiltrar={definirFiltro}
+                onLimparFiltro={limparFiltro}
+              />
               <th className="p-2 text-right">%</th>
             </tr>
           </thead>
           <tbody>
-            {grupos.flatMap((g) =>
-              g.itens.map((inv) => {
-                const banco = bancos.find((b) => b.id === inv.bancoId);
-                const pessoa = pessoas.find((p) => p.id === inv.pessoaId);
-                return (
-                  <tr
-                    key={inv.id}
-                    className="border-outline-variant/60 border-b"
-                  >
-                    <td className="p-2">
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: corTipo(inv.tipo) }}
-                        />
-                        {labelTipo(inv.tipo)}
-                      </span>
-                    </td>
-                    <td className="p-2">{banco?.nome ?? "—"}</td>
-                    <td className="p-2">{pessoa?.nome ?? "—"}</td>
-                    <td className="data-tabular p-2 text-right font-medium">
-                      {formatarReais(inv.valorAtualCentavos)}
-                    </td>
-                    <td className="data-tabular text-on-surface-variant p-2 text-right">
-                      {totalCentavos > 0
-                        ? `${((inv.valorAtualCentavos / totalCentavos) * 100).toFixed(1)}%`
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              }),
-            )}
+            {investimentosParaExibir.map((inv) => {
+              const banco = bancosPorId.get(inv.bancoId);
+              const pessoa = pessoasPorId.get(inv.pessoaId);
+              return (
+                <tr key={inv.id} className="border-outline-variant/60 border-b">
+                  <td className="p-2">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: corTipo(inv.tipo) }}
+                      />
+                      {labelTipo(inv.tipo)}
+                    </span>
+                  </td>
+                  <td className="p-2">{banco?.nome ?? "—"}</td>
+                  <td className="p-2">{pessoa?.nome ?? "—"}</td>
+                  <td className="data-tabular p-2 text-right font-medium">
+                    {formatarReais(inv.valorAtualCentavos)}
+                  </td>
+                  <td className="data-tabular text-on-surface-variant p-2 text-right">
+                    {totalCentavos > 0
+                      ? `${((inv.valorAtualCentavos / totalCentavos) * 100).toFixed(1)}%`
+                      : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        {investimentos.length === 0 && (
+        {investimentosParaExibir.length === 0 && (
           <p className="text-on-surface-variant text-sm">
-            Nenhum investimento cadastrado.
+            {investimentos.length === 0
+              ? "Nenhum investimento cadastrado."
+              : "Nenhum investimento corresponde aos filtros das colunas."}
           </p>
         )}
       </section>

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { corPessoa } from "../components/PessoaBadge";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const SUBTIPOS_RECEITA = [
   { value: "SALARIO", label: "Salário", Icone: IconeSalario },
@@ -312,7 +314,6 @@ export function ReceitasClient() {
 
   const [pessoaFiltro, setPessoaFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
-  const [ordemAscendente, setOrdemAscendente] = useState(false);
   const [mesesVisiveis, setMesesVisiveis] = useState(MESES_INICIAIS);
 
   const hoje = new Date();
@@ -436,12 +437,9 @@ export function ReceitasClient() {
 
   const receitasOrdenadas = useMemo(() => {
     const copia = [...receitasFiltradas];
-    copia.sort((a, b) => {
-      const cmp = a.mes.localeCompare(b.mes);
-      return ordemAscendente ? cmp : -cmp;
-    });
+    copia.sort((a, b) => -a.mes.localeCompare(b.mes));
     return copia;
-  }, [receitasFiltradas, ordemAscendente]);
+  }, [receitasFiltradas]);
 
   const mesesDistintos = useMemo(() => {
     const vistos = new Set<string>();
@@ -462,6 +460,52 @@ export function ReceitasClient() {
   );
   const haMaisMeses =
     modo === "anual" && mesesDistintos.length > mesesVisiveis;
+
+  const colunasReceitas = useMemo<ColunaTabela<Receita>[]>(
+    () => [
+      {
+        chave: "responsavel",
+        tipo: "opcoes",
+        acessor: (r) => nomePessoa(r.pessoaId),
+      },
+      {
+        chave: "categoria",
+        tipo: "opcoes",
+        acessor: (r) => infoSubtipo(r.subtipo).label,
+      },
+      { chave: "descricao", tipo: "texto", acessor: (r) => r.descricao ?? "" },
+      {
+        chave: "mes",
+        tipo: "opcoes",
+        acessor: (r) => formatarMesAno(mesParaInputMonth(r.mes)),
+      },
+      { chave: "valor", tipo: "numero", acessor: (r) => r.valorCentavos / 100 },
+    ],
+    [nomePessoa],
+  );
+
+  const {
+    linhas: receitasParaExibir,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(receitasExibidas, colunasReceitas);
+
+  const opcoesColunasReceitas = useMemo(() => {
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      responsavel: unicos(receitasExibidas.map((r) => nomePessoa(r.pessoaId))),
+      categoria: unicos(
+        receitasExibidas.map((r) => infoSubtipo(r.subtipo).label),
+      ),
+      mes: unicos(
+        receitasExibidas.map((r) => formatarMesAno(mesParaInputMonth(r.mes))),
+      ),
+    };
+  }, [receitasExibidas, nomePessoa]);
 
   async function criarReceita(e: React.FormEvent) {
     e.preventDefault();
@@ -816,16 +860,65 @@ export function ReceitasClient() {
           <table className="min-w-full border-collapse text-sm">
             <thead>
               <tr className="border-y border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                <th className="p-md text-left">Responsável</th>
-                <th className="p-md text-left">Categoria</th>
-                <th className="p-md text-left">Descrição</th>
-                <th className="p-md text-left whitespace-nowrap">Mês</th>
-                <th className="p-md text-right">Valor</th>
+                <ColumnHeader
+                  label="Responsável"
+                  chave="responsavel"
+                  tipo="opcoes"
+                  opcoes={opcoesColunasReceitas.responsavel}
+                  ordenacao={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  filtro={filtros.responsavel}
+                  onFiltrar={definirFiltro}
+                  onLimparFiltro={limparFiltro}
+                />
+                <ColumnHeader
+                  label="Categoria"
+                  chave="categoria"
+                  tipo="opcoes"
+                  opcoes={opcoesColunasReceitas.categoria}
+                  ordenacao={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  filtro={filtros.categoria}
+                  onFiltrar={definirFiltro}
+                  onLimparFiltro={limparFiltro}
+                />
+                <ColumnHeader
+                  label="Descrição"
+                  chave="descricao"
+                  tipo="texto"
+                  ordenacao={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  filtro={filtros.descricao}
+                  onFiltrar={definirFiltro}
+                  onLimparFiltro={limparFiltro}
+                />
+                <ColumnHeader
+                  label="Mês"
+                  chave="mes"
+                  tipo="opcoes"
+                  opcoes={opcoesColunasReceitas.mes}
+                  ordenacao={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  filtro={filtros.mes}
+                  onFiltrar={definirFiltro}
+                  onLimparFiltro={limparFiltro}
+                />
+                <ColumnHeader
+                  label="Valor"
+                  chave="valor"
+                  tipo="numero"
+                  align="right"
+                  ordenacao={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  filtro={filtros.valor}
+                  onFiltrar={definirFiltro}
+                  onLimparFiltro={limparFiltro}
+                />
                 <th className="p-md text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {receitasExibidas.map((receita) => (
+              {receitasParaExibir.map((receita) => (
                 <LinhaReceita
                   key={receita.id}
                   receita={receita}
@@ -839,9 +932,11 @@ export function ReceitasClient() {
           </table>
         </div>
 
-        {receitasExibidas.length === 0 && (
+        {receitasParaExibir.length === 0 && (
           <p className="p-lg text-sm text-on-surface-variant">
-            Nenhuma receita encontrada.
+            {receitasExibidas.length === 0
+              ? "Nenhuma receita encontrada."
+              : "Nenhuma receita corresponde aos filtros das colunas."}
           </p>
         )}
 

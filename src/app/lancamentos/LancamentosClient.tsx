@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PessoaBadge } from "../components/PessoaBadge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
+import type { FiltroColuna } from "@/lib/domain/tabela";
 
 type Subcategoria = { id: string; nome: string; categoriaId: string };
 type Categoria = { id: string; nome: string; subcategorias: Subcategoria[] };
@@ -243,6 +246,67 @@ export function LancamentosClient() {
     () => new Map(pessoas.map((p) => [p.id, p])),
     [pessoas],
   );
+
+  const colunasLancamentos = useMemo<ColunaTabela<Lancamento>[]>(
+    () => [
+      { chave: "data", tipo: "data", acessor: (l) => dataParaInputDate(l.data) },
+      {
+        chave: "descricao",
+        tipo: "texto",
+        acessor: (l) => l.descricaoPropria ?? "",
+      },
+      {
+        chave: "valor",
+        tipo: "numero",
+        acessor: (l) => (l.valorCentavos - l.descontoCentavos) / 100,
+      },
+      { chave: "categoria", tipo: "opcoes", acessor: (l) => nome.categoria(l.categoriaId) },
+      { chave: "banco", tipo: "opcoes", acessor: (l) => nome.banco(l.bancoId) },
+      {
+        chave: "divisao",
+        tipo: "opcoes",
+        acessor: (l) => nome.pessoa(l.pessoaDivisaoId),
+      },
+      { chave: "pagou", tipo: "opcoes", acessor: (l) => nome.pessoa(l.pessoaPagouId) },
+    ],
+    [nome],
+  );
+
+  const {
+    linhas: lancamentosProcessados,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(lancamentos ?? [], colunasLancamentos);
+
+  const opcoesColunas = useMemo(() => {
+    const base = lancamentos ?? [];
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      categoria: unicos(base.map((l) => nome.categoria(l.categoriaId))),
+      banco: unicos(base.map((l) => nome.banco(l.bancoId))),
+      divisao: unicos(base.map((l) => nome.pessoa(l.pessoaDivisaoId))),
+      pagou: unicos(base.map((l) => nome.pessoa(l.pessoaPagouId))),
+    };
+  }, [lancamentos, nome]);
+
+  function aoOrdenarColuna(chave: string) {
+    alternarOrdenacao(chave);
+    setPaginaLancamentos(0);
+  }
+
+  function aoFiltrarColuna(chave: string, filtro: FiltroColuna) {
+    definirFiltro(chave, filtro);
+    setPaginaLancamentos(0);
+  }
+
+  function aoLimparFiltroColuna(chave: string) {
+    limparFiltro(chave);
+    setPaginaLancamentos(0);
+  }
 
   const subcategoriasDaCategoriaSelecionada = useMemo(() => {
     return (
@@ -1122,19 +1186,87 @@ export function LancamentosClient() {
         <table className="min-w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-              <th className="p-2 text-left">Data</th>
-              <th className="p-2 text-left">Descrição</th>
-              <th className="p-2 text-right">Valor</th>
-              <th className="p-2 text-left">Categoria</th>
-              <th className="p-2 text-left">Banco</th>
-              <th className="p-2 text-left">Divisão</th>
-              <th className="p-2 text-left">Pagou</th>
+              <ColumnHeader
+                label="Data"
+                chave="data"
+                tipo="data"
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.data}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Descrição"
+                chave="descricao"
+                tipo="texto"
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.descricao}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Valor"
+                chave="valor"
+                tipo="numero"
+                align="right"
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.valor}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Categoria"
+                chave="categoria"
+                tipo="opcoes"
+                opcoes={opcoesColunas.categoria}
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.categoria}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Banco"
+                chave="banco"
+                tipo="opcoes"
+                opcoes={opcoesColunas.banco}
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.banco}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Divisão"
+                chave="divisao"
+                tipo="opcoes"
+                opcoes={opcoesColunas.divisao}
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.divisao}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
+              <ColumnHeader
+                label="Pagou"
+                chave="pagou"
+                tipo="opcoes"
+                opcoes={opcoesColunas.pagou}
+                ordenacao={ordenacao}
+                onOrdenar={aoOrdenarColuna}
+                filtro={filtros.pagou}
+                onFiltrar={aoFiltrarColuna}
+                onLimparFiltro={aoLimparFiltroColuna}
+              />
               <th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
-            {lancamentos
-              ?.slice(
+            {lancamentosProcessados
+              .slice(
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS +
                 TAMANHO_PAGINA_LANCAMENTOS,
@@ -1155,19 +1287,24 @@ export function LancamentosClient() {
         </table>
       </div>
 
-      {lancamentos?.length === 0 && (
-        <p className="text-sm text-on-surface-variant">Nenhum lançamento encontrado.</p>
+      {lancamentos && lancamentosProcessados.length === 0 && (
+        <p className="text-sm text-on-surface-variant">
+          {lancamentos.length === 0
+            ? "Nenhum lançamento encontrado."
+            : "Nenhum lançamento corresponde aos filtros das colunas."}
+        </p>
       )}
 
-      {lancamentos && lancamentos.length > TAMANHO_PAGINA_LANCAMENTOS && (
+      {lancamentosProcessados.length > TAMANHO_PAGINA_LANCAMENTOS && (
         <div className="flex items-center justify-between text-xs text-on-surface-variant">
           <span>
             Mostrando{" "}
             {Math.min(
               TAMANHO_PAGINA_LANCAMENTOS,
-              lancamentos.length - paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
+              lancamentosProcessados.length -
+                paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
             )}{" "}
-            de {lancamentos.length} lançamentos
+            de {lancamentosProcessados.length} lançamentos
           </span>
           <div className="flex gap-2">
             <button
@@ -1182,7 +1319,7 @@ export function LancamentosClient() {
               type="button"
               disabled={
                 (paginaLancamentos + 1) * TAMANHO_PAGINA_LANCAMENTOS >=
-                lancamentos.length
+                lancamentosProcessados.length
               }
               onClick={() => setPaginaLancamentos((p) => p + 1)}
               className="rounded-full border border-outline-variant px-sm py-1 disabled:opacity-40"

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 type Pessoa = { id: string; nome: string; tipo: string };
 type SaldoPessoa = { pessoaId: string; saldoCentavos: number };
@@ -237,6 +239,53 @@ export function DivisaoClient() {
     setReloadToken((t) => t + 1);
   }
 
+  const lancamentosFiltrados =
+    resumo?.lancamentos.filter(
+      (l) => !filtroPessoa || l.pessoaDivisaoId === filtroPessoa,
+    ) ?? [];
+
+  const colunasLancamentos = useMemo<ColunaTabela<LancamentoDetalhe>[]>(
+    () => [
+      { chave: "descricao", tipo: "texto", acessor: (l) => l.descricao || "" },
+      {
+        chave: "responsavel",
+        tipo: "opcoes",
+        acessor: (l) => nome(l.pessoaDivisaoId),
+      },
+      {
+        chave: "categoria",
+        tipo: "opcoes",
+        acessor: (l) => l.categoriaNome ?? "Sem categoria",
+      },
+      { chave: "valor", tipo: "numero", acessor: (l) => l.valorCentavos / 100 },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nomePorId],
+  );
+
+  const {
+    linhas: lancamentosProcessados,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(lancamentosFiltrados, colunasLancamentos);
+
+  const opcoesColunasLancamentos = useMemo(() => {
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      responsavel: unicos(
+        lancamentosFiltrados.map((l) => nome(l.pessoaDivisaoId)),
+      ),
+      categoria: unicos(
+        lancamentosFiltrados.map((l) => l.categoriaNome ?? "Sem categoria"),
+      ),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lancamentosFiltrados]);
+
   if (naoAutenticado) {
     return (
       <p className="text-on-surface-variant">
@@ -248,13 +297,9 @@ export function DivisaoClient() {
   const totalPagoGeral =
     resumo?.totalPagoPorPessoa.reduce((s, t) => s + t.totalCentavos, 0) ?? 0;
 
-  const lancamentosFiltrados =
-    resumo?.lancamentos.filter(
-      (l) => !filtroPessoa || l.pessoaDivisaoId === filtroPessoa,
-    ) ?? [];
   const lancamentosVisiveis = mostrarTodosLancamentos
-    ? lancamentosFiltrados
-    : lancamentosFiltrados.slice(0, 6);
+    ? lancamentosProcessados
+    : lancamentosProcessados.slice(0, 6);
 
   const historicoVisivel = mostrarHistoricoCompleto
     ? historico
@@ -417,10 +462,49 @@ export function DivisaoClient() {
                 <table className="w-full text-sm">
                   <thead className="bg-surface-container-low text-left text-xs font-semibold text-on-surface-variant">
                     <tr>
-                      <th className="p-sm">Despesa</th>
-                      <th className="p-sm">Responsável</th>
-                      <th className="p-sm">Categoria</th>
-                      <th className="p-sm text-right">Valor</th>
+                      <ColumnHeader
+                        label="Despesa"
+                        chave="descricao"
+                        tipo="texto"
+                        ordenacao={ordenacao}
+                        onOrdenar={alternarOrdenacao}
+                        filtro={filtros.descricao}
+                        onFiltrar={definirFiltro}
+                        onLimparFiltro={limparFiltro}
+                      />
+                      <ColumnHeader
+                        label="Responsável"
+                        chave="responsavel"
+                        tipo="opcoes"
+                        opcoes={opcoesColunasLancamentos.responsavel}
+                        ordenacao={ordenacao}
+                        onOrdenar={alternarOrdenacao}
+                        filtro={filtros.responsavel}
+                        onFiltrar={definirFiltro}
+                        onLimparFiltro={limparFiltro}
+                      />
+                      <ColumnHeader
+                        label="Categoria"
+                        chave="categoria"
+                        tipo="opcoes"
+                        opcoes={opcoesColunasLancamentos.categoria}
+                        ordenacao={ordenacao}
+                        onOrdenar={alternarOrdenacao}
+                        filtro={filtros.categoria}
+                        onFiltrar={definirFiltro}
+                        onLimparFiltro={limparFiltro}
+                      />
+                      <ColumnHeader
+                        label="Valor"
+                        chave="valor"
+                        tipo="numero"
+                        align="right"
+                        ordenacao={ordenacao}
+                        onOrdenar={alternarOrdenacao}
+                        filtro={filtros.valor}
+                        onFiltrar={definirFiltro}
+                        onLimparFiltro={limparFiltro}
+                      />
                     </tr>
                   </thead>
                   <tbody>
@@ -450,19 +534,21 @@ export function DivisaoClient() {
                   </tbody>
                 </table>
               </div>
-              {lancamentosFiltrados.length > 6 && (
+              {lancamentosProcessados.length > 6 && (
                 <button
                   onClick={() => setMostrarTodosLancamentos((v) => !v)}
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   {mostrarTodosLancamentos
                     ? "Mostrar menos"
-                    : `Ver todas as ${lancamentosFiltrados.length} despesas deste período`}
+                    : `Ver todas as ${lancamentosProcessados.length} despesas deste período`}
                 </button>
               )}
-              {lancamentosFiltrados.length === 0 && (
+              {lancamentosProcessados.length === 0 && (
                 <p className="text-sm text-on-surface-variant">
-                  Nenhuma despesa considerada no acerto para este período.
+                  {lancamentosFiltrados.length === 0
+                    ? "Nenhuma despesa considerada no acerto para este período."
+                    : "Nenhuma despesa corresponde aos filtros das colunas."}
                 </p>
               )}
             </div>

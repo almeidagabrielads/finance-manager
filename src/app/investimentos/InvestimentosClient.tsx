@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { RelatorioInvestimentos } from "./RelatorioInvestimentos";
 import { PosicaoMensalInline } from "./PosicaoMensalInline";
 import { useConfirmDialog } from "../components/ConfirmDialog";
+import { ColumnHeader } from "../components/ColumnHeader";
+import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa" },
@@ -68,6 +70,15 @@ function formatarReais(centavos: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function labelVencimento(inv: Investimento): string {
+  if (inv.liquidezDias !== null) return `D+${inv.liquidezDias}`;
+  if (inv.vencimento)
+    return new Date(inv.vencimento).toLocaleDateString("pt-BR", {
+      timeZone: "UTC",
+    });
+  return "Indefinido";
 }
 
 type FormState = {
@@ -296,6 +307,65 @@ export function InvestimentosClient() {
     }
     recarregar();
   }
+
+  const bancosPorId = useMemo(
+    () => new Map(bancos.map((b) => [b.id, b])),
+    [bancos],
+  );
+  const pessoasPorId = useMemo(
+    () => new Map(pessoas.map((p) => [p.id, p])),
+    [pessoas],
+  );
+
+  const colunasInvestimentos = useMemo<ColunaTabela<Investimento>[]>(
+    () => [
+      {
+        chave: "banco",
+        tipo: "opcoes",
+        acessor: (inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—",
+      },
+      { chave: "tipo", tipo: "opcoes", acessor: (inv) => labelTipo(inv.tipo) },
+      { chave: "produto", tipo: "texto", acessor: (inv) => inv.produto },
+      {
+        chave: "titular",
+        tipo: "opcoes",
+        acessor: (inv) => pessoasPorId.get(inv.pessoaId)?.nome ?? "—",
+      },
+      {
+        chave: "vencimento",
+        tipo: "texto",
+        acessor: (inv) => labelVencimento(inv),
+      },
+      {
+        chave: "valor",
+        tipo: "numero",
+        acessor: (inv) => inv.valorAtualCentavos / 100,
+      },
+    ],
+    [bancosPorId, pessoasPorId],
+  );
+
+  const {
+    linhas: investimentosParaExibir,
+    ordenacao,
+    alternarOrdenacao,
+    filtros,
+    definirFiltro,
+    limparFiltro,
+  } = useTabela(investimentos ?? [], colunasInvestimentos);
+
+  const opcoesColunasInvestimentos = useMemo(() => {
+    const base = investimentos ?? [];
+    const unicos = (valores: string[]) =>
+      [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return {
+      banco: unicos(base.map((inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—")),
+      tipo: unicos(base.map((inv) => labelTipo(inv.tipo))),
+      titular: unicos(
+        base.map((inv) => pessoasPorId.get(inv.pessoaId)?.nome ?? "—"),
+      ),
+    };
+  }, [investimentos, bancosPorId, pessoasPorId]);
 
   if (naoAutenticado) {
     return (
@@ -606,19 +676,75 @@ export function InvestimentosClient() {
               <thead>
                 <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
                   <th className="p-md text-left"></th>
-                  <th className="p-md text-left">Banco</th>
-                  <th className="p-md text-left">Tipo</th>
-                  <th className="p-md text-left">Produto</th>
-                  <th className="p-md text-left">Titular</th>
-                  <th className="p-md text-left whitespace-nowrap">
-                    Vencimento/liquidez
-                  </th>
-                  <th className="p-md text-right">Valor</th>
+                  <ColumnHeader
+                    label="Banco"
+                    chave="banco"
+                    tipo="opcoes"
+                    opcoes={opcoesColunasInvestimentos.banco}
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.banco}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Tipo"
+                    chave="tipo"
+                    tipo="opcoes"
+                    opcoes={opcoesColunasInvestimentos.tipo}
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.tipo}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Produto"
+                    chave="produto"
+                    tipo="texto"
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.produto}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Titular"
+                    chave="titular"
+                    tipo="opcoes"
+                    opcoes={opcoesColunasInvestimentos.titular}
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.titular}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Vencimento/liquidez"
+                    chave="vencimento"
+                    tipo="texto"
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.vencimento}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
+                  <ColumnHeader
+                    label="Valor"
+                    chave="valor"
+                    tipo="numero"
+                    align="right"
+                    ordenacao={ordenacao}
+                    onOrdenar={alternarOrdenacao}
+                    filtro={filtros.valor}
+                    onFiltrar={definirFiltro}
+                    onLimparFiltro={limparFiltro}
+                  />
                   <th className="p-md text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {investimentos?.map((inv) => {
+                {investimentosParaExibir.map((inv) => {
                   const banco = bancos.find((b) => b.id === inv.bancoId);
                   const pessoa = pessoas.find((p) => p.id === inv.pessoaId);
                   const expandido = investimentoExpandidoId === inv.id;
@@ -654,14 +780,7 @@ export function InvestimentosClient() {
                           {pessoa?.nome ?? "—"}
                         </td>
                         <td className="p-md text-on-surface-variant whitespace-nowrap">
-                          {inv.liquidezDias !== null
-                            ? `D+${inv.liquidezDias}`
-                            : inv.vencimento
-                              ? new Date(inv.vencimento).toLocaleDateString(
-                                "pt-BR",
-                                { timeZone: "UTC" },
-                              )
-                              : "Indefinido"}
+                          {labelVencimento(inv)}
                         </td>
                         <td className="data-tabular p-md text-right font-medium">
                           {formatarReais(inv.valorAtualCentavos)}
@@ -703,9 +822,11 @@ export function InvestimentosClient() {
             </table>
           </div>
 
-          {investimentos?.length === 0 && (
+          {investimentosParaExibir.length === 0 && (
             <p className="p-lg text-on-surface-variant text-sm">
-              Nenhum investimento cadastrado.
+              {investimentos?.length === 0
+                ? "Nenhum investimento cadastrado."
+                : "Nenhum investimento corresponde aos filtros das colunas."}
             </p>
           )}
         </div>
