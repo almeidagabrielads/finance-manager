@@ -70,39 +70,43 @@ model AtividadeLog {
 }
 
 model Pessoa {
-  id                        String               @id @default(cuid())
-  nome                      String
-  tipo                      TipoPessoa
-  householdId               String
-  createdAt                 DateTime             @default(now())
-  updatedAt                 DateTime             @updatedAt
-  acertosDevidos            AcertoContas[]       @relation("AcertoDe")
-  acertosRecebidos          AcertoContas[]       @relation("AcertoPara")
-  investimentos             Investimento[]
-  lancamentosDivisao        Lancamento[]         @relation("LancamentoDivisao")
-  lancamentosPagou          Lancamento[]         @relation("LancamentoPagou")
-  orcamentos                OrcamentoPlanejado[]
-  household                 Household            @relation(fields: [householdId], references: [id])
-  posicoesPatrimonio        PosicaoPatrimonio[]
-  receitas                  Receita[]
-  integrantesDoGrupo        IntegranteGrupo[]    @relation("IntegranteGrupo_grupoIdToPessoa")
-  participacoesComoIntegrante IntegranteGrupo[]  @relation("IntegranteGrupo_pessoaIdToPessoa")
+  id                 String               @id @default(cuid())
+  nome               String
+  tipo               TipoPessoa
+  householdId        String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  acertosDevidos     AcertoContas[]       @relation("AcertoDe")
+  acertosRecebidos   AcertoContas[]       @relation("AcertoPara")
+  investimentos      Investimento[]
+  lancamentosDivisao Lancamento[]         @relation("LancamentoDivisao")
+  lancamentosPagou   Lancamento[]         @relation("LancamentoPagou")
+  orcamentos         OrcamentoPlanejado[]
+  household          Household            @relation(fields: [householdId], references: [id])
+  posicoesPatrimonio PosicaoPatrimonio[]
+  receitas           Receita[]
+  // Quando esta pessoa é um grupo (CASAL/FAMILIA): quem a compõe.
+  integrantes        IntegranteGrupo[]    @relation("GrupoIntegrantes")
+  // Quando esta pessoa é INDIVIDUAL: de quais grupos ela participa.
+  participacoes      IntegranteGrupo[]    @relation("PessoaIntegraGrupos")
 
   @@unique([householdId, nome])
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+// Composição de um grupo (Pessoa tipo CASAL/FAMILIA): quais pessoas
+// INDIVIDUAL o formam e o peso relativo de cada uma na divisão dos gastos
+// atribuídos a esse grupo (ver src/lib/domain/split.ts).
 model IntegranteGrupo {
-  id                                      String    @id @default(cuid())
-  grupoId                                 String
-  pessoaId                                String
-  peso                                    Int       @default(100)
-  householdId                             String
-  createdAt                               DateTime  @default(now())
-  updatedAt                               DateTime  @updatedAt
-  grupo                                   Pessoa    @relation("IntegranteGrupo_grupoIdToPessoa", fields: [grupoId], references: [id], onDelete: Cascade)
-  household                               Household @relation(fields: [householdId], references: [id])
-  pessoa                                  Pessoa    @relation("IntegranteGrupo_pessoaIdToPessoa", fields: [pessoaId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  grupoId     String
+  pessoaId    String
+  peso        Int       @default(100)
+  householdId String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  grupo       Pessoa    @relation("GrupoIntegrantes", fields: [grupoId], references: [id], onDelete: Cascade)
+  pessoa      Pessoa    @relation("PessoaIntegraGrupos", fields: [pessoaId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id])
 
   @@unique([grupoId, pessoaId])
   @@index([householdId])
