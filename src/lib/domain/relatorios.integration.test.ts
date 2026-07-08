@@ -82,6 +82,49 @@ describe("buscarPlanejadoVsReal", () => {
       dentroDoPlanejado: true,
     });
   });
+
+  it("usa o limite sugerido da subcategoria (Categorias & Orçamento) como base quando não há orçamento mensal definido", async () => {
+    const { household, categoria } = await montarBase();
+    const subLimite = await criarSubcategoria(prismaTest, household.id, {
+      nome: "Supermercado",
+      categoriaId: categoria.id,
+      orcamentoCentavos: 50_000,
+    });
+
+    const resultado = await buscarPlanejadoVsReal(prismaTest, household.id, {
+      ano: 2026,
+    });
+
+    const linha = resultado.find((r) => r.subcategoriaId === subLimite!.id)!;
+    expect(linha.meses[0].planejadoCentavos).toBe(50_000);
+    expect(linha.meses[11].planejadoCentavos).toBe(50_000);
+  });
+
+  it("um valor definido em um mês específico sobrepõe o limite sugerido a partir daquele mês, mantendo o limite antes dele", async () => {
+    const { household, categoria } = await montarBase();
+    const subLimite = await criarSubcategoria(prismaTest, household.id, {
+      nome: "Supermercado",
+      categoriaId: categoria.id,
+      orcamentoCentavos: 50_000,
+    });
+    await criarOrcamento(prismaTest, household.id, {
+      categoriaId: categoria.id,
+      subcategoriaId: subLimite!.id,
+      mes: 6,
+      ano: 2026,
+      valorCentavos: 70_000,
+    });
+
+    const resultado = await buscarPlanejadoVsReal(prismaTest, household.id, {
+      ano: 2026,
+    });
+
+    const linha = resultado.find((r) => r.subcategoriaId === subLimite!.id)!;
+    expect(linha.meses[0].planejadoCentavos).toBe(50_000); // jan: limite sugerido
+    expect(linha.meses[4].planejadoCentavos).toBe(50_000); // mai: limite sugerido
+    expect(linha.meses[5].planejadoCentavos).toBe(70_000); // jun: valor definido
+    expect(linha.meses[11].planejadoCentavos).toBe(70_000); // dez: continua vigente
+  });
 });
 
 describe("buscarResumoPorCategoria e buscarResumoPorSubcategoria", () => {

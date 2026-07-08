@@ -216,8 +216,8 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
   const variacaoPercentual =
     patrimonioAnteriorCentavos && patrimonioAnteriorCentavos !== 0
       ? ((patrimonioAtualCentavos - patrimonioAnteriorCentavos) /
-          Math.abs(patrimonioAnteriorCentavos)) *
-        100
+        Math.abs(patrimonioAnteriorCentavos)) *
+      100
       : null;
 
   const categoriasOrcamento = (orcamento ?? [])
@@ -260,11 +260,10 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
             <h2 className={cardTitleClass}>Patrimônio consolidado</h2>
             {variacaoPercentual !== null && (
               <span
-                className={`px-sm rounded-full py-0.5 text-xs font-semibold ${
-                  variacaoPercentual >= 0
+                className={`px-sm rounded-full py-0.5 text-xs font-semibold ${variacaoPercentual >= 0
                     ? "bg-success/15 text-success"
                     : "bg-danger-container text-on-danger-container"
-                }`}
+                  }`}
               >
                 {variacaoPercentual >= 0 ? "↗" : "↘"}{" "}
                 {Math.abs(variacaoPercentual).toFixed(1)}% este mês
@@ -290,11 +289,10 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
             <div>
               <p className="text-on-surface-variant text-xs">Saldo do mês</p>
               <p
-                className={`data-tabular font-semibold ${
-                  saldoDoMes && saldoDoMes.saldoCentavos < 0
+                className={`data-tabular font-semibold ${saldoDoMes && saldoDoMes.saldoCentavos < 0
                     ? "text-danger"
                     : "text-on-surface"
-                }`}
+                  }`}
               >
                 {saldoDoMes ? centavosParaReais(saldoDoMes.saldoCentavos) : "—"}
               </p>
@@ -324,11 +322,10 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                 {divisao.participantes.slice(0, 2).map((id, i) => (
                   <span
                     key={id}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${
-                      i === 0
+                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${i === 0
                         ? "bg-tertiary-container text-on-tertiary-container"
                         : "bg-secondary text-on-secondary"
-                    }`}
+                      }`}
                   >
                     {nomePessoa(id).charAt(0).toUpperCase()}
                   </span>
@@ -385,9 +382,9 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                 const percentual =
                   c.planejadoCentavos > 0
                     ? Math.min(
-                        (c.realCentavos / c.planejadoCentavos) * 100,
-                        100,
-                      )
+                      (c.realCentavos / c.planejadoCentavos) * 100,
+                      100,
+                    )
                     : 100;
                 return (
                   <div key={c.categoriaId} className="flex flex-col gap-1">
@@ -396,9 +393,8 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                         {nomeCategoria(c.categoriaId)}
                       </span>
                       <span
-                        className={`data-tabular text-xs font-medium ${
-                          estourou ? "text-danger" : "text-on-surface-variant"
-                        }`}
+                        className={`data-tabular text-xs font-medium ${estourou ? "text-danger" : "text-on-surface-variant"
+                          }`}
                       >
                         {centavosParaReais(c.realCentavos)} /{" "}
                         {centavosParaReais(c.planejadoCentavos)}
@@ -424,11 +420,10 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
               Total planejado: {centavosParaReais(totalPlanejadoCentavos)}
             </span>
             <span
-              className={`data-tabular font-semibold ${
-                totalPlanejadoCentavos - totalRealCentavos < 0
+              className={`data-tabular font-semibold ${totalPlanejadoCentavos - totalRealCentavos < 0
                   ? "text-danger"
                   : "text-on-surface"
-              }`}
+                }`}
             >
               Saldo:{" "}
               {centavosParaReais(totalPlanejadoCentavos - totalRealCentavos)}
@@ -446,7 +441,7 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                 <span>Data</span>
                 <span>Descrição</span>
                 <span>Pagador</span>
-                <span>Dono</span>
+                <span>Divisão</span>
                 <span className="justify-self-end">Valor</span>
               </div>
               {transacoesRecentes.map((l) => (

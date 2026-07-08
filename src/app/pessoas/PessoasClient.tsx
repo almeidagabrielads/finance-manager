@@ -21,7 +21,15 @@ type Pessoa = {
   id: string;
   nome: string;
   tipo: TipoPessoa;
+  pesoDivisao: number;
 };
+
+function percentualDivisao(pessoa: Pessoa, pessoas: Pessoa[]): number {
+  const individuais = pessoas.filter((p) => p.tipo === "INDIVIDUAL");
+  const somaPesos = individuais.reduce((soma, p) => soma + p.pesoDivisao, 0);
+  if (somaPesos <= 0) return 0;
+  return (pessoa.pesoDivisao / somaPesos) * 100;
+}
 
 async function parseErro(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
@@ -104,6 +112,7 @@ export function PessoasClient() {
   const [erro, setErro] = useState<string | null>(null);
   const [novoNome, setNovoNome] = useState("");
   const [novoTipo, setNovoTipo] = useState<TipoPessoa>("INDIVIDUAL");
+  const [novoPeso, setNovoPeso] = useState("100");
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
@@ -140,19 +149,26 @@ export function PessoasClient() {
     const response = await fetch("/api/pessoas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome: novoNome, tipo: novoTipo }),
+      body: JSON.stringify({
+        nome: novoNome,
+        tipo: novoTipo,
+        ...(novoTipo === "INDIVIDUAL"
+          ? { pesoDivisao: Number(novoPeso) || 100 }
+          : {}),
+      }),
     });
     if (!response.ok) {
       setErro(await parseErro(response));
       return;
     }
     setNovoNome("");
+    setNovoPeso("100");
     carregar();
   }
 
   async function atualizarPessoa(
     id: string,
-    input: { nome?: string; tipo?: TipoPessoa },
+    input: { nome?: string; tipo?: TipoPessoa; pesoDivisao?: number },
   ) {
     setErro(null);
     const response = await fetch(`/api/pessoas/${id}`, {
@@ -169,7 +185,9 @@ export function PessoasClient() {
 
   async function removerPessoa(pessoa: Pessoa) {
     if (
-      !(await confirmar(`Remover "${pessoa.nome}"? Essa ação não pode ser desfeita.`))
+      !(await confirmar(
+        `Remover "${pessoa.nome}"? Essa ação não pode ser desfeita.`,
+      ))
     ) {
       return;
     }
@@ -193,38 +211,44 @@ export function PessoasClient() {
   }
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {dialogConfirmacao}
 
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarPessoa}
-        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+        className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-wrap items-end rounded-xl border"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-nome">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="novo-nome"
+          >
             Nova pessoa
           </label>
           <input
             id="novo-nome"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-tipo">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="novo-tipo"
+          >
             Tipo
           </label>
           <select
             id="novo-tipo"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={novoTipo}
             onChange={(e) => setNovoTipo(e.target.value as TipoPessoa)}
           >
@@ -235,19 +259,40 @@ export function PessoasClient() {
             ))}
           </select>
         </div>
+        {novoTipo === "INDIVIDUAL" && (
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="novo-peso"
+              title="Usado para ratear gastos compartilhados (Casal/Família) proporcionalmente entre as pessoas Individual. Pesos iguais dividem igualmente."
+            >
+              Peso de divisão
+            </label>
+            <input
+              id="novo-peso"
+              type="number"
+              min={1}
+              step={1}
+              className="border-outline-variant bg-surface-container-lowest w-24 rounded-lg border px-2 py-1"
+              value={novoPeso}
+              onChange={(e) => setNovoPeso(e.target.value)}
+            />
+          </div>
+        )}
         <button
           type="submit"
-          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
+          className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <div className="grid grid-cols-1 gap-sm sm:grid-cols-2">
+      <div className="gap-sm grid grid-cols-1 sm:grid-cols-2">
         {pessoas?.map((pessoa) => (
           <PessoaItem
             key={pessoa.id}
             pessoa={pessoa}
+            pessoas={pessoas}
             onAtualizar={atualizarPessoa}
             onRemover={removerPessoa}
           />
@@ -255,7 +300,9 @@ export function PessoasClient() {
       </div>
 
       {pessoas?.length === 0 && (
-        <p className="text-sm text-on-surface-variant">Nenhuma pessoa cadastrada.</p>
+        <p className="text-on-surface-variant text-sm">
+          Nenhuma pessoa cadastrada.
+        </p>
       )}
     </div>
   );
@@ -263,33 +310,41 @@ export function PessoasClient() {
 
 function PessoaItem({
   pessoa,
+  pessoas,
   onAtualizar,
   onRemover,
 }: {
   pessoa: Pessoa;
+  pessoas: Pessoa[];
   onAtualizar: (
     id: string,
-    input: { nome?: string; tipo?: TipoPessoa },
+    input: { nome?: string; tipo?: TipoPessoa; pesoDivisao?: number },
   ) => Promise<void>;
   onRemover: (pessoa: Pessoa) => Promise<void>;
 }) {
   const [editando, setEditando] = useState(false);
   const [nome, setNome] = useState(pessoa.nome);
   const [tipo, setTipo] = useState<TipoPessoa>(pessoa.tipo);
+  const [peso, setPeso] = useState(String(pessoa.pesoDivisao));
 
   async function salvar() {
-    await onAtualizar(pessoa.id, { nome, tipo });
+    await onAtualizar(pessoa.id, {
+      nome,
+      tipo,
+      ...(tipo === "INDIVIDUAL" ? { pesoDivisao: Number(peso) || 100 } : {}),
+    });
     setEditando(false);
   }
 
   function cancelar() {
     setNome(pessoa.nome);
     setTipo(pessoa.tipo);
+    setPeso(String(pessoa.pesoDivisao));
     setEditando(false);
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
+    <div className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border">
       {editando ? (
         <>
           <div className="flex items-center gap-2">
@@ -299,30 +354,43 @@ function PessoaItem({
               {nome.charAt(0).toUpperCase() || "?"}
             </span>
             <input
-              className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+              className="border-outline-variant bg-surface-container-lowest min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               autoFocus
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <select
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoPessoa)}
-            >
-              {TIPOS_PESSOA.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1 text-xs"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as TipoPessoa)}
+              >
+                {TIPOS_PESSOA.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              {tipo === "INDIVIDUAL" && (
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  title="Peso de divisão"
+                  className="border-outline-variant bg-surface-container-lowest w-16 rounded-lg border px-2 py-1 text-xs"
+                  value={peso}
+                  onChange={(e) => setPeso(e.target.value)}
+                />
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <button
                 title="Salvar"
                 aria-label="Salvar"
                 onClick={salvar}
-                className="rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
               >
                 <IconeCheck />
               </button>
@@ -330,7 +398,7 @@ function PessoaItem({
                 title="Cancelar"
                 aria-label="Cancelar"
                 onClick={cancelar}
-                className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
               >
                 <IconeX />
               </button>
@@ -346,11 +414,13 @@ function PessoaItem({
               {pessoa.nome.charAt(0).toUpperCase()}
             </span>
             <div>
-              <h3 className="text-base font-semibold text-on-surface">
+              <h3 className="text-on-surface text-base font-semibold">
                 {pessoa.nome}
               </h3>
-              <span className="text-xs font-semibold text-on-surface-variant">
+              <span className="text-on-surface-variant text-xs font-semibold">
                 {labelTipo(pessoa.tipo)}
+                {pessoa.tipo === "INDIVIDUAL" &&
+                  ` · ${percentualDivisao(pessoa, pessoas).toFixed(0)}% da divisão (peso ${pessoa.pesoDivisao})`}
               </span>
             </div>
           </div>
@@ -359,7 +429,7 @@ function PessoaItem({
               title="Editar"
               aria-label="Editar"
               onClick={() => setEditando(true)}
-              className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+              className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
             >
               <IconeLapis />
             </button>
@@ -367,7 +437,7 @@ function PessoaItem({
               title="Remover"
               aria-label="Remover"
               onClick={() => onRemover(pessoa)}
-              className="rounded-full p-1.5 text-danger transition-colors hover:bg-danger-container"
+              className="text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
             >
               <IconeLixeira />
             </button>

@@ -8,23 +8,24 @@ datasource db {
 }
 
 model Household {
-  id                 String               @id @default(cuid())
-  nome               String               @unique
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  acertos            AcertoContas[]
-  atividades         AtividadeLog[]
-  bancos             Banco[]
-  categorias         Categoria[]
-  fechamentosAnuais  FechamentoAnual[]
-  investimentos      Investimento[]
-  lancamentos        Lancamento[]
-  orcamentos         OrcamentoPlanejado[]
-  pessoas            Pessoa[]
-  posicoesPatrimonio PosicaoPatrimonio[]
-  preferencia        Preferencia?
-  receitas           Receita[]
-  users              User[]
+  id                   String                @id @default(cuid())
+  nome                 String                @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  acertos              AcertoContas[]
+  atividades           AtividadeLog[]
+  bancos               Banco[]
+  categorias           Categoria[]
+  fechamentosAnuais    FechamentoAnual[]
+  investimentos        Investimento[]
+  lancamentos          Lancamento[]
+  orcamentos           OrcamentoPlanejado[]
+  pessoas              Pessoa[]
+  posicoesInvestimento PosicaoInvestimento[]
+  posicoesPatrimonio   PosicaoPatrimonio[]
+  preferencia          Preferencia?
+  receitas             Receita[]
+  users                User[]
 }
 
 model Preferencia {
@@ -71,6 +72,9 @@ model Pessoa {
   id                 String               @id @default(cuid())
   nome               String
   tipo               TipoPessoa
+  // Peso relativo usado para ratear gastos CASAL/FAMILIA entre as pessoas
+  // INDIVIDUAL do household (proporcional, não uma % absoluta).
+  pesoDivisao        Int                  @default(100)
   householdId        String
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -221,24 +225,44 @@ model OrcamentoPlanejado {
 }
 
 model Investimento {
-  id                 String           @id @default(cuid())
+  id                 String                @id @default(cuid())
   bancoId            String
   tipo               TipoInvestimento
   produto            String
   valorAtualCentavos Int
-  vencimento         DateTime?        @db.Date
+  vencimento         DateTime?             @db.Date
   liquidezDias       Int?
   observacao         String?
   pessoaId           String
   householdId        String
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  banco              Banco            @relation(fields: [bancoId], references: [id])
-  household          Household        @relation(fields: [householdId], references: [id])
-  pessoa             Pessoa           @relation(fields: [pessoaId], references: [id])
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  banco              Banco                 @relation(fields: [bancoId], references: [id])
+  household          Household             @relation(fields: [householdId], references: [id])
+  pessoa             Pessoa                @relation(fields: [pessoaId], references: [id])
+  posicoesMensais    PosicaoInvestimento[]
 
   @@index([householdId])
   @@index([householdId, pessoaId])
+}
+
+// Posição mensal informada manualmente por investimento (produto), usada
+// para acompanhar a evolução real de cada produto mês a mês — mais granular
+// que PosicaoPatrimonio, que agrega apenas por banco+titular.
+model PosicaoInvestimento {
+  id             String       @id @default(cuid())
+  investimentoId String
+  // Sempre o 1º dia do mês em UTC.
+  mes            DateTime     @db.Date
+  valorCentavos  Int
+  householdId    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  household      Household    @relation(fields: [householdId], references: [id])
+  investimento   Investimento @relation(fields: [investimentoId], references: [id])
+
+  @@unique([investimentoId, mes])
+  @@index([householdId, mes])
 }
 
 model PosicaoPatrimonio {

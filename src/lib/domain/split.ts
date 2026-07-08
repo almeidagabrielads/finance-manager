@@ -8,13 +8,22 @@ import { valorLiquidoCentavos } from "./lancamentos";
 // tipo INDIVIDUAL diferente de quem pagou, quem pagou pagou 100% em nome dela.
 // Quando a divisão é CASAL ou FAMÍLIA (gasto compartilhado pela casa), quem
 // pagou só pagou "pelos outros" a fração que caberia a cada um dos demais
-// participantes — dividida igualmente entre todas as pessoas do tipo
-// INDIVIDUAL cadastradas, não apenas duas. Isso vale tanto para uma pessoa que
-// mora sozinha (nada a acertar) quanto para um casal, uma família com vários
-// membros ou um grupo de amigos dividindo a casa. Divisão do tipo OUTRO
-// (terceiro, ex. um convidado) não entra no acerto de contas.
+// participantes — dividida proporcionalmente ao peso de divisão (pesoDivisao)
+// de cada pessoa do tipo INDIVIDUAL cadastrada, não apenas duas. Pesos iguais
+// (padrão) resultam em partes iguais; pesos diferentes (ex.: 60/40) permitem
+// um split customizado. Isso vale tanto para uma pessoa que mora sozinha
+// (nada a acertar) quanto para um casal, uma família com vários membros ou um
+// grupo de amigos dividindo a casa. Divisão do tipo OUTRO (terceiro, ex. um
+// convidado) não entra no acerto de contas.
 
 export type TipoPessoaDivisao = "INDIVIDUAL" | "CASAL" | "FAMILIA" | "OUTRO";
+
+export type ParticipanteDivisao = {
+  pessoaId: string;
+  // Peso relativo para divisão proporcional dos gastos compartilhados.
+  // Pesos iguais entre os participantes equivalem a divisão igualitária.
+  peso: number;
+};
 
 export type LancamentoParaDivisao = {
   valorCentavos: number;
@@ -73,13 +82,29 @@ export type ResumoDivisaoGrupo = SaldoDivisaoGrupo & {
 };
 
 /**
- * Divide um valor em N partes inteiras (centavos) que somam exatamente o
- * total, distribuindo o resto de centavos entre as primeiras partes.
+ * Divide um valor em partes inteiras (centavos) proporcionais aos pesos
+ * informados, somando exatamente o total. Usa o método dos maiores restos:
+ * cada parte recebe o piso da fração proporcional, e os centavos restantes
+ * vão para as partes com maior resto fracionário (empate: primeiro índice).
+ * Pesos iguais reproduzem uma divisão igualitária.
  */
-function dividirIgualmente(valorCentavos: number, partes: number): number[] {
-  const base = Math.floor(valorCentavos / partes);
-  const resto = valorCentavos - base * partes;
-  return Array.from({ length: partes }, (_, i) => base + (i < resto ? 1 : 0));
+function dividirPorPeso(valorCentavos: number, pesos: number[]): number[] {
+  const somaPesos = pesos.reduce((soma, peso) => soma + peso, 0);
+  if (somaPesos <= 0) return pesos.map(() => 0);
+
+  const brutos = pesos.map((peso) => (valorCentavos * peso) / somaPesos);
+  const partes = brutos.map(Math.floor);
+  const resto = valorCentavos - partes.reduce((soma, parte) => soma + parte, 0);
+
+  const porMaiorResto = brutos
+    .map((bruto, idx) => ({ idx, fracao: bruto - Math.floor(bruto) }))
+    .sort((a, b) => b.fracao - a.fracao || a.idx - b.idx);
+
+  for (let i = 0; i < resto; i++) {
+    partes[porMaiorResto[i].idx] += 1;
+  }
+
+  return partes;
 }
 
 /**
@@ -132,8 +157,10 @@ function simplificarTransferencias(saldos: SaldoPessoa[]): Transferencia[] {
 
 export function calcularSaldoDivisaoGrupo(
   lancamentos: LancamentoParaDivisao[],
-  participanteIds: string[],
+  participantesDivisao: ParticipanteDivisao[],
 ): SaldoDivisaoGrupo {
+  const participanteIds = participantesDivisao.map((p) => p.pessoaId);
+  const pesos = participantesDivisao.map((p) => p.peso);
   const participantes = new Set(participanteIds);
   const saldo = new Map<string, number>(participanteIds.map((id) => [id, 0]));
 
@@ -145,19 +172,20 @@ export function calcularSaldoDivisaoGrupo(
     const valorLiquido = valorLiquidoCentavos(lancamento);
 
     if (lancamento.pessoaDivisaoTipo === "INDIVIDUAL") {
-      const dono = lancamento.pessoaDivisaoId;
-      if (dono === pagador) continue; // pagou o próprio gasto, sem acerto
-      if (!participantes.has(dono)) continue;
+      const divisao = lancamento.pessoaDivisaoId;
+      if (divisao === pagador) continue; // pagou o próprio gasto, sem acerto
+      if (!participantes.has(divisao)) continue;
       saldo.set(pagador, (saldo.get(pagador) ?? 0) + valorLiquido);
-      saldo.set(dono, (saldo.get(dono) ?? 0) - valorLiquido);
+      saldo.set(divisao, (saldo.get(divisao) ?? 0) - valorLiquido);
       continue;
     }
 
-    // CASAL ou FAMÍLIA: gasto compartilhado pela casa, dividido igualmente
-    // entre todos os participantes. Quem pagou só pagou "pelos outros" a
-    // fração que coube a cada um deles (a própria fração não gera débito).
+    // CASAL ou FAMÍLIA: gasto compartilhado pela casa, dividido
+    // proporcionalmente ao peso de cada participante. Quem pagou só pagou
+    // "pelos outros" a fração que coube a cada um deles (a própria fração
+    // não gera débito).
     if (participanteIds.length === 0) continue;
-    const partes = dividirIgualmente(valorLiquido, participanteIds.length);
+    const partes = dividirPorPeso(valorLiquido, pesos);
     participanteIds.forEach((pessoaId, idx) => {
       if (pessoaId === pagador) return;
       const parte = partes[idx];
@@ -189,7 +217,7 @@ export async function buscarSaldoDivisaoGrupo(
   const individuais = await prisma.pessoa.findMany({
     where: { householdId, tipo: "INDIVIDUAL" },
     orderBy: { nome: "asc" },
-    select: { id: true },
+    select: { id: true, pesoDivisao: true },
   });
   if (individuais.length < 2) return null;
 
@@ -198,11 +226,11 @@ export async function buscarSaldoDivisaoGrupo(
       householdId,
       ...(opts.dataInicio || opts.dataFim
         ? {
-            data: {
-              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
-              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
-            },
-          }
+          data: {
+            ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+            ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+          },
+        }
         : {}),
     },
     orderBy: { data: "desc" },
@@ -221,6 +249,10 @@ export async function buscarSaldoDivisaoGrupo(
   });
 
   const participanteIds = individuais.map((p) => p.id);
+  const participantesDivisao: ParticipanteDivisao[] = individuais.map((p) => ({
+    pessoaId: p.id,
+    peso: p.pesoDivisao,
+  }));
   const lancamentosParaDivisao = lancamentos.map((l) => ({
     valorCentavos: l.valorCentavos,
     descontoCentavos: l.descontoCentavos,
@@ -229,7 +261,10 @@ export async function buscarSaldoDivisaoGrupo(
     pessoaPagouId: l.pessoaPagouId,
   }));
 
-  const saldo = calcularSaldoDivisaoGrupo(lancamentosParaDivisao, participanteIds);
+  const saldo = calcularSaldoDivisaoGrupo(
+    lancamentosParaDivisao,
+    participantesDivisao,
+  );
 
   const totalPagoPorPessoa: TotalPagoPessoa[] = participanteIds.map(
     (pessoaId) => ({
@@ -271,10 +306,7 @@ function calcularInsightDivisao(
   for (const l of lancamentos) {
     if (!l.categoria) continue;
     const atual = totalPorCategoria.get(l.categoria.nome) ?? 0;
-    totalPorCategoria.set(
-      l.categoria.nome,
-      atual + valorLiquidoCentavos(l),
-    );
+    totalPorCategoria.set(l.categoria.nome, atual + valorLiquidoCentavos(l));
   }
   if (totalPorCategoria.size === 0) return null;
 

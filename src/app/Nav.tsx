@@ -16,7 +16,7 @@ const LINKS = [
   { href: "/investimentos", label: "Investimentos" },
   { href: "/divisao", label: "Divisão" },
   { href: "/relatorios", label: "Relatórios" },
-  { href: "/importacao", label: "Importar" },
+  { href: "/orcamento", label: "Orçamento" },
 ];
 
 const MAX_AVATARES = 4;

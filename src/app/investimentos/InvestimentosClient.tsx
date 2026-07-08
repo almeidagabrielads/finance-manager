@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { RelatorioInvestimentos } from "./RelatorioInvestimentos";
+import { PosicaoMensalInline } from "./PosicaoMensalInline";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 
 const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa" },
@@ -43,6 +46,11 @@ type FaixaLiquidez = {
   totalCentavos: number;
   investimentos: { id: string; produto: string; valorAtualCentavos: number }[];
 };
+type PosicaoMensal = {
+  investimentoId: string;
+  mes: string;
+  valorCentavos: number;
+};
 
 async function parseErro(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
@@ -74,6 +82,60 @@ type FormState = {
   observacao: string;
 };
 
+function IconePlusCirculo() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v8" />
+      <path d="M8 12h8" />
+    </svg>
+  );
+}
+
+function IconeLixeira() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+function IconeChevron({ aberto }: { aberto: boolean }) {
+  return (
+    <svg
+      className={`text-on-surface-variant h-4 w-4 shrink-0 transition-transform ${aberto ? "rotate-90" : ""}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
 function formVazio(bancos: Banco[], pessoas: Pessoa[]): FormState {
   return {
     bancoId: bancos[0]?.id ?? "",
@@ -99,10 +161,27 @@ export function InvestimentosClient() {
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [aba, setAba] = useState<"CARTEIRA" | "RELATORIOS">("RELATORIOS");
+  const [toast, setToast] = useState<string | null>(null);
+  const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
+
+  const anoAtual = new Date().getUTCFullYear();
+  const [investimentoExpandidoId, setInvestimentoExpandidoId] = useState<
+    string | null
+  >(null);
+  const [anoPosicoes, setAnoPosicoes] = useState(anoAtual);
+  const [posicoesMensais, setPosicoesMensais] = useState<PosicaoMensal[]>([]);
+  const [reloadPosicoesToken, setReloadPosicoesToken] = useState(0);
 
   function recarregar() {
     setReloadToken((t) => t + 1);
   }
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     let cancelado = false;
@@ -155,6 +234,21 @@ export function InvestimentosClient() {
     };
   }, [reloadToken]);
 
+  useEffect(() => {
+    let cancelado = false;
+    fetch(`/api/investimentos/posicoes?ano=${anoPosicoes}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((dados) => {
+        if (!cancelado) setPosicoesMensais(dados);
+      })
+      .catch(() => {
+        if (!cancelado) setPosicoesMensais([]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [anoPosicoes, reloadPosicoesToken]);
+
   async function criarInvestimento(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
@@ -180,12 +274,20 @@ export function InvestimentosClient() {
       return;
     }
     setForm(formVazio(bancos, pessoas));
+    setToast("Investimento adicionado com sucesso!");
     recarregar();
   }
 
-  async function removerInvestimento(id: string) {
+  async function removerInvestimento(inv: Investimento) {
+    if (
+      !(await confirmar(
+        `Remover "${inv.produto}"? Essa ação não pode ser desfeita.`,
+      ))
+    ) {
+      return;
+    }
     setErro(null);
-    const response = await fetch(`/api/investimentos/${id}`, {
+    const response = await fetch(`/api/investimentos/${inv.id}`, {
       method: "DELETE",
     });
     if (!response.ok) {
@@ -203,266 +305,446 @@ export function InvestimentosClient() {
     );
   }
 
+  const cardClass =
+    "rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm";
+  const inputClass =
+    "rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-1.5 text-sm focus:border-primary focus:outline-none";
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="gap-lg flex flex-col">
+      {dialogConfirmacao}
+
+      {toast && (
+        <div className="bottom-lg right-lg bg-primary px-md text-on-primary fixed z-50 flex items-center gap-2 rounded-xl py-2.5 text-sm font-medium shadow-lg">
+          <span aria-hidden>✓</span> {toast}
+        </div>
+      )}
+
       {erro && (
-        <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      {form && (
-        <form
-          onSubmit={criarInvestimento}
-          className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="banco">
-              Banco
-            </label>
-            <select
-              id="banco"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.bancoId}
-              onChange={(e) => setForm({ ...form, bancoId: e.target.value })}
-              required
-            >
-              {bancos.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+      <nav className="gap-sm border-outline-variant flex items-center border-b">
+        {(
+          [
+            { value: "RELATORIOS", label: "Relatórios" },
+            { value: "CARTEIRA", label: "Carteira" },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setAba(tab.value)}
+            className={
+              aba === tab.value
+                ? "border-primary text-on-surface border-b-2 px-1 pb-2 text-sm font-semibold"
+                : "text-on-surface-variant hover:text-on-surface px-1 pb-2 text-sm font-medium"
+            }
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="titular">
-              Titular
-            </label>
-            <select
-              id="titular"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.pessoaId}
-              onChange={(e) => setForm({ ...form, pessoaId: e.target.value })}
-              required
-            >
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+      {aba === "RELATORIOS" && (
+        <RelatorioInvestimentos
+          investimentos={investimentos ?? []}
+          bancos={bancos}
+          pessoas={pessoas}
+        />
+      )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="tipo">
-              Tipo
-            </label>
-            <select
-              id="tipo"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.tipo}
-              onChange={(e) =>
-                setForm({ ...form, tipo: e.target.value as TipoInvestimento })
-              }
-            >
-              {TIPOS_INVESTIMENTO.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+      {aba === "CARTEIRA" && form && (
+        <div className={`${cardClass} p-lg`}>
+          <div className="mb-md border-outline-variant pb-md text-on-surface flex items-center gap-2 border-b">
+            <IconePlusCirculo />
+            <h2 className="text-base font-bold">Registrar Novo Investimento</h2>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="produto">
-              Produto
-            </label>
-            <input
-              id="produto"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.produto}
-              onChange={(e) => setForm({ ...form, produto: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="valor">
-              Valor atual (R$)
-            </label>
-            <input
-              id="valor"
-              type="number"
-              step="0.01"
-              className="w-32 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.valor}
-              onChange={(e) => setForm({ ...form, valor: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="modo-liquidez">
-              Vencimento/liquidez
-            </label>
-            <select
-              id="modo-liquidez"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.modoLiquidez}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  modoLiquidez: e.target.value as FormState["modoLiquidez"],
-                })
-              }
-            >
-              <option value="DIAS">Prazo (D+n)</option>
-              <option value="DATA">Data de vencimento</option>
-              <option value="NENHUM">Indefinido</option>
-            </select>
-          </div>
-
-          {form.modoLiquidez === "DIAS" && (
+          <form
+            onSubmit={criarInvestimento}
+            className="gap-sm flex flex-wrap items-end"
+          >
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant" htmlFor="liquidez-dias">
-                Dias (D+n)
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="banco"
+              >
+                Banco
               </label>
-              <input
-                id="liquidez-dias"
-                type="number"
-                min={0}
-                className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-                value={form.liquidezDias}
-                onChange={(e) =>
-                  setForm({ ...form, liquidezDias: e.target.value })
-                }
-              />
+              <select
+                id="banco"
+                className={inputClass}
+                value={form.bancoId}
+                onChange={(e) => setForm({ ...form, bancoId: e.target.value })}
+                required
+              >
+                {bancos.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nome}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {form.modoLiquidez === "DATA" && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant" htmlFor="vencimento">
-                Data
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="titular"
+              >
+                Titular
+              </label>
+              <select
+                id="titular"
+                className={inputClass}
+                value={form.pessoaId}
+                onChange={(e) => setForm({ ...form, pessoaId: e.target.value })}
+                required
+              >
+                {pessoas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="tipo"
+              >
+                Tipo
+              </label>
+              <select
+                id="tipo"
+                className={inputClass}
+                value={form.tipo}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    tipo: e.target.value as TipoInvestimento,
+                  })
+                }
+              >
+                {TIPOS_INVESTIMENTO.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="produto"
+              >
+                Produto
               </label>
               <input
-                id="vencimento"
-                type="date"
-                className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-                value={form.vencimento}
-                onChange={(e) =>
-                  setForm({ ...form, vencimento: e.target.value })
-                }
+                id="produto"
+                className={inputClass}
+                value={form.produto}
+                onChange={(e) => setForm({ ...form, produto: e.target.value })}
                 required
               />
             </div>
-          )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="observacao">
-              Observação
-            </label>
-            <input
-              id="observacao"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
-              value={form.observacao}
-              onChange={(e) =>
-                setForm({ ...form, observacao: e.target.value })
-              }
-            />
-          </div>
+            <div className="flex flex-col gap-3">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="valor"
+              >
+                Valor atual (R$)
+              </label>
+              <input
+                id="valor"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                className={`w-32 text-right ${inputClass}`}
+                value={form.valor}
+                onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
-          >
-            Adicionar
-          </button>
-        </form>
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="modo-liquidez"
+              >
+                Vencimento/liquidez
+              </label>
+              <select
+                id="modo-liquidez"
+                className={inputClass}
+                value={form.modoLiquidez}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    modoLiquidez: e.target.value as FormState["modoLiquidez"],
+                  })
+                }
+              >
+                <option value="DIAS">Prazo (D+n)</option>
+                <option value="DATA">Data de vencimento</option>
+                <option value="NENHUM">Indefinido</option>
+              </select>
+            </div>
+
+            {form.modoLiquidez === "DIAS" && (
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="liquidez-dias"
+                >
+                  Dias (D+n)
+                </label>
+                <input
+                  id="liquidez-dias"
+                  type="number"
+                  min={0}
+                  className={`w-24 ${inputClass}`}
+                  value={form.liquidezDias}
+                  onChange={(e) =>
+                    setForm({ ...form, liquidezDias: e.target.value })
+                  }
+                />
+              </div>
+            )}
+
+            {form.modoLiquidez === "DATA" && (
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="vencimento"
+                >
+                  Data
+                </label>
+                <input
+                  id="vencimento"
+                  type="date"
+                  className={inputClass}
+                  value={form.vencimento}
+                  onChange={(e) =>
+                    setForm({ ...form, vencimento: e.target.value })
+                  }
+                  required
+                />
+              </div>
+            )}
+
+            <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="observacao"
+              >
+                Observação (Opcional)
+              </label>
+              <input
+                id="observacao"
+                className={inputClass}
+                value={form.observacao}
+                onChange={(e) =>
+                  setForm({ ...form, observacao: e.target.value })
+                }
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="bg-primary px-md text-on-primary rounded-full py-2 text-xs font-semibold hover:opacity-90"
+            >
+              Adicionar
+            </button>
+          </form>
+        </div>
       )}
 
-      <section className="flex flex-col gap-sm">
-        <h2 className="text-lg font-semibold text-on-surface">Carteira</h2>
-        <ul className="flex flex-col gap-2">
-          {investimentos?.map((inv) => {
-            const banco = bancos.find((b) => b.id === inv.bancoId);
-            const pessoa = pessoas.find((p) => p.id === inv.pessoaId);
-            return (
-              <li
-                key={inv.id}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-sm"
+      {aba === "CARTEIRA" && (
+        <div className={cardClass}>
+          <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-on-surface text-base font-bold">Carteira</h2>
+              <span className="bg-surface-container px-sm text-on-surface-variant rounded-full py-0.5 text-xs font-semibold">
+                {investimentos?.length ?? 0}{" "}
+                {investimentos?.length === 1
+                  ? "item cadastrado"
+                  : "itens cadastrados"}
+              </span>
+            </div>
+            <div className="gap-sm flex items-center">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="ano-posicoes"
               >
-                <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs font-medium text-on-surface-variant">
-                  {banco?.nome ?? "—"}
-                </span>
-                <span className="text-sm text-on-surface-variant">
-                  {labelTipo(inv.tipo)}
-                </span>
-                <span className="font-medium text-on-surface">{inv.produto}</span>
-                <span className="text-sm text-on-surface-variant">
-                  {pessoa?.nome ?? "—"}
-                </span>
-                <span className="data-tabular ml-auto font-medium text-on-surface">
-                  {formatarReais(inv.valorAtualCentavos)}
-                </span>
-                <span className="text-sm text-on-surface-variant">
-                  {inv.liquidezDias !== null
-                    ? `D+${inv.liquidezDias}`
-                    : inv.vencimento
-                      ? new Date(inv.vencimento).toLocaleDateString("pt-BR", {
-                          timeZone: "UTC",
-                        })
-                      : "Indefinido"}
-                </span>
-                {inv.observacao && (
-                  <span className="w-full text-sm text-on-surface-variant">
-                    {inv.observacao}
-                  </span>
-                )}
-                <button
-                  className="text-sm font-medium text-danger"
-                  onClick={() => removerInvestimento(inv.id)}
-                >
-                  Remover
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {investimentos?.length === 0 && (
-          <p className="text-sm text-on-surface-variant">
-            Nenhum investimento cadastrado.
+                Posições do ano
+              </label>
+              <select
+                id="ano-posicoes"
+                className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1 text-sm"
+                value={anoPosicoes}
+                onChange={(e) => setAnoPosicoes(Number(e.target.value))}
+              >
+                {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p className="text-on-surface-variant px-lg pb-md text-xs">
+            Clique em um investimento para informar a posição mês a mês.
           </p>
-        )}
-      </section>
 
-      <section className="flex flex-col gap-sm">
-        <h2 className="text-lg font-semibold text-on-surface">
-          Liquidez consolidada (RF15)
-        </h2>
-        <table className="min-w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-              <th className="p-2 text-left">Prazo de resgate</th>
-              <th className="p-2 text-right">Total disponível</th>
-            </tr>
-          </thead>
-          <tbody>
-            {liquidez?.map((grupo) => (
-              <tr
-                key={grupo.faixa}
-                className="border-b border-outline-variant/60"
-              >
-                <td className="p-2">{FAIXAS_LABEL[grupo.faixa] ?? grupo.faixa}</td>
-                <td className="data-tabular p-2 text-right font-medium">
-                  {formatarReais(grupo.totalCentavos)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
+                  <th className="p-md text-left"></th>
+                  <th className="p-md text-left">Banco</th>
+                  <th className="p-md text-left">Tipo</th>
+                  <th className="p-md text-left">Produto</th>
+                  <th className="p-md text-left">Titular</th>
+                  <th className="p-md text-left whitespace-nowrap">
+                    Vencimento/liquidez
+                  </th>
+                  <th className="p-md text-right">Valor</th>
+                  <th className="p-md text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {investimentos?.map((inv) => {
+                  const banco = bancos.find((b) => b.id === inv.bancoId);
+                  const pessoa = pessoas.find((p) => p.id === inv.pessoaId);
+                  const expandido = investimentoExpandidoId === inv.id;
+                  return (
+                    <Fragment key={inv.id}>
+                      <tr
+                        onClick={() =>
+                          setInvestimentoExpandidoId(expandido ? null : inv.id)
+                        }
+                        aria-expanded={expandido}
+                        className="border-outline-variant/60 hover:bg-surface-container-low cursor-pointer border-b"
+                      >
+                        <td className="p-md">
+                          <IconeChevron aberto={expandido} />
+                        </td>
+                        <td className="p-md text-on-surface-variant">
+                          {banco?.nome ?? "—"}
+                        </td>
+                        <td className="p-md text-on-surface-variant">
+                          {labelTipo(inv.tipo)}
+                        </td>
+                        <td className="p-md">
+                          <div className="text-on-surface font-medium">
+                            {inv.produto}
+                          </div>
+                          {inv.observacao && (
+                            <div className="text-on-surface-variant text-xs">
+                              {inv.observacao}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-md text-on-surface-variant">
+                          {pessoa?.nome ?? "—"}
+                        </td>
+                        <td className="p-md text-on-surface-variant whitespace-nowrap">
+                          {inv.liquidezDias !== null
+                            ? `D+${inv.liquidezDias}`
+                            : inv.vencimento
+                              ? new Date(inv.vencimento).toLocaleDateString(
+                                "pt-BR",
+                                { timeZone: "UTC" },
+                              )
+                              : "Indefinido"}
+                        </td>
+                        <td className="data-tabular p-md text-right font-medium">
+                          {formatarReais(inv.valorAtualCentavos)}
+                        </td>
+                        <td className="p-md">
+                          <div className="flex justify-end">
+                            <button
+                              className="text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removerInvestimento(inv);
+                              }}
+                              title="Remover"
+                              aria-label="Remover"
+                            >
+                              <IconeLixeira />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandido && (
+                        <tr className="border-outline-variant/60 bg-surface-container-low border-b">
+                          <td colSpan={8} className="p-0">
+                            <PosicaoMensalInline
+                              investimentoId={inv.id}
+                              ano={anoPosicoes}
+                              posicoes={posicoesMensais}
+                              onAlterado={() =>
+                                setReloadPosicoesToken((t) => t + 1)
+                              }
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {investimentos?.length === 0 && (
+            <p className="p-lg text-on-surface-variant text-sm">
+              Nenhum investimento cadastrado.
+            </p>
+          )}
+        </div>
+      )}
+
+      {aba === "CARTEIRA" && (
+        <div className={cardClass}>
+          <div className="p-lg pb-md">
+            <h2 className="text-on-surface text-base font-bold">
+              Liquidez consolidada (RF15)
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
+                  <th className="p-md text-left">Prazo de resgate</th>
+                  <th className="p-md text-right">Total disponível</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liquidez?.map((grupo) => (
+                  <tr
+                    key={grupo.faixa}
+                    className="border-outline-variant/60 hover:bg-surface-container-low border-b"
+                  >
+                    <td className="p-md text-on-surface-variant">
+                      {FAIXAS_LABEL[grupo.faixa] ?? grupo.faixa}
+                    </td>
+                    <td className="data-tabular p-md text-right font-medium">
+                      {formatarReais(grupo.totalCentavos)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

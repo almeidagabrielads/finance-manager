@@ -11,6 +11,11 @@ export const TipoPessoaSchema = z.enum([
 export const CriarPessoaSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório."),
   tipo: TipoPessoaSchema,
+  pesoDivisao: z
+    .number()
+    .int("Peso deve ser um inteiro.")
+    .positive("Peso deve ser positivo.")
+    .optional(),
 });
 
 export const AtualizarPessoaSchema = CriarPessoaSchema.partial();

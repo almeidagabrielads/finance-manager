@@ -185,7 +185,11 @@ describe("buscarSaldoDivisaoGrupo", () => {
 
     const saldo = await buscarSaldoDivisaoGrupo(prismaTest, household.id, {});
 
-    expect(saldo!.totalPagoPorPessoa.sort((a, b) => a.pessoaId.localeCompare(b.pessoaId))).toEqual(
+    expect(
+      saldo!.totalPagoPorPessoa.sort((a, b) =>
+        a.pessoaId.localeCompare(b.pessoaId),
+      ),
+    ).toEqual(
       [
         { pessoaId: gabi.id, totalCentavos: 50_00 },
         { pessoaId: isa.id, totalCentavos: 300_00 },
@@ -196,5 +200,48 @@ describe("buscarSaldoDivisaoGrupo", () => {
       categoriaNome: "Moradia",
       pessoaId: isa.id,
     });
+  });
+
+  it("usa o pesoDivisao de cada pessoa para ratear o gasto compartilhado (split customizado)", async () => {
+    const household = await prismaTest.household.create({
+      data: { nome: "Casa com split 70/30" },
+    });
+    const isa = await criarPessoa(prismaTest, household.id, {
+      nome: "Isa",
+      tipo: "INDIVIDUAL",
+      pesoDivisao: 70,
+    });
+    const gabi = await criarPessoa(prismaTest, household.id, {
+      nome: "Gabi",
+      tipo: "INDIVIDUAL",
+      pesoDivisao: 30,
+    });
+    const casal = await criarPessoa(prismaTest, household.id, {
+      nome: "Casa",
+      tipo: "CASAL",
+    });
+    const categoria = await criarCategoria(prismaTest, household.id, {
+      nome: "Moradia",
+    });
+    const banco = await criarBanco(prismaTest, household.id, {
+      nome: "Nubank",
+      tipo: "CONTA_CORRENTE",
+    });
+
+    await criarLancamento(prismaTest, household.id, {
+      data: new Date(Date.UTC(2026, 0, 10)),
+      categoriaId: categoria.id,
+      bancoId: banco.id,
+      pessoaDivisaoId: casal.id,
+      pessoaPagouId: isa.id,
+      valorCentavos: 100_000,
+    });
+
+    const saldo = await buscarSaldoDivisaoGrupo(prismaTest, household.id, {});
+
+    // Isa pesa 70%, Gabi pesa 30% -> Gabi deve 30.000 (30% de 100.000) para Isa.
+    expect(saldo!.transferenciasSugeridas).toEqual([
+      { deId: gabi.id, paraId: isa.id, valorCentavos: 30_000 },
+    ]);
   });
 });

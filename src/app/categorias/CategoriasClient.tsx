@@ -44,6 +44,12 @@ function somaOrcamentoCategoria(categoria: Categoria): number {
     .reduce((total, s) => total + (s.orcamentoCentavos ?? 0), 0);
 }
 
+type PlanejadoVsRealCategoria = {
+  categoriaId: string;
+  subcategoriaId: string | null;
+  meses: { mes: number; planejadoCentavos: number }[];
+};
+
 function IconePasta() {
   return (
     <svg
@@ -195,6 +201,65 @@ export function CategoriasClient() {
     };
   }, [mostrarInativas, reloadToken]);
 
+  // Mantém o limite exibido aqui sempre igual ao valor vigente no mês
+  // corrente do orçamento mensal (Tela de Orçamento), que pode ter sido
+  // sobrescrito lá desde a última vez que este limite foi definido.
+  useEffect(() => {
+    if (!categorias) return;
+    let cancelado = false;
+    const hoje = new Date();
+    const ano = hoje.getUTCFullYear();
+    const mes = hoje.getUTCMonth() + 1;
+
+    // pessoaId=null: só o orçamento compartilhado da casa, sem somar
+    // orçamentos individuais de cada pessoa ao limite exibido aqui.
+    fetch(`/api/relatorios/planejado-vs-real?ano=${ano}&pessoaId=null`)
+      .then(async (response) => {
+        if (cancelado || !response.ok) return;
+        const dados: PlanejadoVsRealCategoria[] = await response.json();
+        const valorVigentePorSubcategoria = new Map<string, number>();
+        for (const linha of dados) {
+          if (!linha.subcategoriaId) continue;
+          const doMes = linha.meses.find((m) => m.mes === mes);
+          if (doMes) {
+            valorVigentePorSubcategoria.set(
+              linha.subcategoriaId,
+              doMes.planejadoCentavos,
+            );
+          }
+        }
+
+        const desatualizadas = (categorias ?? [])
+          .flatMap((c) => c.subcategorias)
+          .filter((s) => {
+            if (s.orcamentoCentavos === null) return false; // sem limite definido ainda
+            const vigente = valorVigentePorSubcategoria.get(s.id);
+            return vigente !== undefined && vigente !== s.orcamentoCentavos;
+          });
+        if (desatualizadas.length === 0 || cancelado) return;
+
+        await Promise.all(
+          desatualizadas.map((s) =>
+            fetch(`/api/subcategorias/${s.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orcamentoCentavos: valorVigentePorSubcategoria.get(s.id),
+              }),
+            }),
+          ),
+        );
+        if (!cancelado) carregar();
+      })
+      .catch(() => {
+        // Sincronização best-effort: falha aqui não deve bloquear a tela.
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [categorias]);
+
   async function criarCategoria(e: FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -296,24 +361,27 @@ export function CategoriasClient() {
   }
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarCategoria}
-        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+        className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-wrap items-end rounded-xl border"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-nome">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="novo-nome"
+          >
             Nova categoria
           </label>
           <input
             id="novo-nome"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             required
@@ -321,13 +389,13 @@ export function CategoriasClient() {
         </div>
         <button
           type="submit"
-          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
+          className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm text-on-surface-variant">
+      <label className="text-on-surface-variant flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={mostrarInativas}
@@ -336,7 +404,7 @@ export function CategoriasClient() {
         Mostrar categorias inativas
       </label>
 
-      <div className="flex flex-col gap-md">
+      <div className="gap-md flex flex-col">
         {categorias?.map((categoria) => (
           <CategoriaItem
             key={categoria.id}
@@ -351,7 +419,9 @@ export function CategoriasClient() {
       </div>
 
       {categorias?.length === 0 && (
-        <p className="text-sm text-on-surface-variant">Nenhuma categoria encontrada.</p>
+        <p className="text-on-surface-variant text-sm">
+          Nenhuma categoria encontrada.
+        </p>
       )}
     </div>
   );
@@ -396,11 +466,11 @@ function CategoriaItem({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-outline-variant ${
+      className={`border-outline-variant overflow-hidden rounded-xl border ${
         categoria.ativo ? "" : "opacity-60"
       }`}
     >
-      <div className="flex items-center justify-between gap-2 bg-primary-container/20 p-lg">
+      <div className="bg-primary-container/20 p-lg flex items-center justify-between gap-2">
         {editando ? (
           <>
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -408,7 +478,7 @@ function CategoriaItem({
                 <IconePasta />
               </span>
               <input
-                className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+                className="border-outline-variant bg-surface-container-lowest min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 autoFocus
@@ -419,7 +489,7 @@ function CategoriaItem({
                 title="Salvar"
                 aria-label="Salvar"
                 onClick={salvar}
-                className="rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
               >
                 <IconeCheck />
               </button>
@@ -427,7 +497,7 @@ function CategoriaItem({
                 title="Cancelar"
                 aria-label="Cancelar"
                 onClick={cancelar}
-                className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
               >
                 <IconeX />
               </button>
@@ -439,25 +509,26 @@ function CategoriaItem({
               <span className="text-on-surface-variant">
                 <IconePasta />
               </span>
-              <h3 className="text-base font-semibold text-on-surface">
+              <h3 className="text-on-surface text-base font-semibold">
                 {categoria.nome}
               </h3>
               {!categoria.ativo && (
-                <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
+                <span className="bg-surface-container text-on-surface-variant rounded-full px-2 py-0.5 text-xs">
                   inativa
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-on-surface">
-                Limite: R$ {centavosParaReais(somaOrcamentoCategoria(categoria))}
+              <span className="text-on-surface text-sm font-semibold">
+                Limite: R${" "}
+                {centavosParaReais(somaOrcamentoCategoria(categoria))}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   title="Editar"
                   aria-label="Editar"
                   onClick={() => setEditando(true)}
-                  className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+                  className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
                 >
                   <IconeLapis />
                 </button>
@@ -467,8 +538,8 @@ function CategoriaItem({
                   onClick={() => onAlternarAtivo(categoria)}
                   className={
                     categoria.ativo
-                      ? "rounded-full p-1.5 text-danger transition-colors hover:bg-danger-container"
-                      : "rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                      ? "text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
+                      : "text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
                   }
                 >
                   {categoria.ativo ? <IconeInativar /> : <IconeReativar />}
@@ -491,7 +562,7 @@ function CategoriaItem({
       </div>
 
       <form
-        className="flex flex-wrap items-center gap-2 border-t border-outline-variant p-lg"
+        className="border-outline-variant p-lg flex flex-wrap items-center gap-2 border-t"
         onSubmit={async (e) => {
           e.preventDefault();
           await onCriarSubcategoria(
@@ -504,14 +575,14 @@ function CategoriaItem({
         }}
       >
         <input
-          className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+          className="border-outline-variant bg-surface-container-lowest min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm"
           placeholder="Nova subcategoria"
           value={novaSubNome}
           onChange={(e) => setNovaSubNome(e.target.value)}
           required
         />
         <input
-          className="w-28 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+          className="border-outline-variant bg-surface-container-lowest w-28 rounded-lg border px-2 py-1 text-sm"
           placeholder="R$ 0,00"
           inputMode="decimal"
           value={novaSubValor}
@@ -521,7 +592,7 @@ function CategoriaItem({
           type="submit"
           title="Adicionar subcategoria"
           aria-label="Adicionar subcategoria"
-          className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+          className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
         >
           <IconeMais />
         </button>
@@ -570,20 +641,20 @@ function SubcategoriaItem({
 
   return (
     <div
-      className={`flex items-center justify-between gap-2 border-t border-outline-variant px-lg py-sm ${
+      className={`border-outline-variant px-lg py-sm flex items-center justify-between gap-2 border-t ${
         subcategoria.ativo ? "" : "opacity-60"
       }`}
     >
       {editando ? (
         <>
           <input
-            className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+            className="border-outline-variant bg-surface-container-lowest min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             autoFocus
           />
           <input
-            className="w-28 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+            className="border-outline-variant bg-surface-container-lowest w-28 rounded-lg border px-2 py-1 text-sm"
             placeholder="R$ 0,00"
             inputMode="decimal"
             value={valor}
@@ -594,7 +665,7 @@ function SubcategoriaItem({
               title="Salvar"
               aria-label="Salvar"
               onClick={salvar}
-              className="rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+              className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
             >
               <IconeCheck />
             </button>
@@ -602,7 +673,7 @@ function SubcategoriaItem({
               title="Cancelar"
               aria-label="Cancelar"
               onClick={cancelar}
-              className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+              className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
             >
               <IconeX />
             </button>
@@ -611,15 +682,15 @@ function SubcategoriaItem({
       ) : (
         <>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-on-surface">{subcategoria.nome}</span>
+            <span className="text-on-surface text-sm">{subcategoria.nome}</span>
             {!subcategoria.ativo && (
-              <span className="rounded-full bg-surface-container px-1.5 py-0.5 text-xs text-on-surface-variant">
+              <span className="bg-surface-container text-on-surface-variant rounded-full px-1.5 py-0.5 text-xs">
                 inativa
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-on-surface-variant">
+            <span className="text-on-surface-variant text-sm">
               {subcategoria.orcamentoCentavos != null
                 ? `R$ ${centavosParaReais(subcategoria.orcamentoCentavos)}`
                 : "sem orçamento"}
@@ -629,7 +700,7 @@ function SubcategoriaItem({
                 title="Editar"
                 aria-label="Editar"
                 onClick={() => setEditando(true)}
-                className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+                className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
               >
                 <IconeLapis />
               </button>
@@ -639,8 +710,8 @@ function SubcategoriaItem({
                 onClick={() => onAlternarAtivo(subcategoria)}
                 className={
                   subcategoria.ativo
-                    ? "rounded-full p-1.5 text-danger transition-colors hover:bg-danger-container"
-                    : "rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                    ? "text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
+                    : "text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
                 }
               >
                 {subcategoria.ativo ? <IconeInativar /> : <IconeReativar />}

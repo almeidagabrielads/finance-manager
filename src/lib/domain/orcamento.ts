@@ -6,7 +6,9 @@ export const CriarOrcamentoSchema = z.object({
   pessoaId: z.string().trim().min(1).nullish(),
   categoriaId: z.string().trim().min(1, "Categoria é obrigatória."),
   subcategoriaId: z.string().trim().min(1).nullish(),
-  // null/ausente = orçamento anual (sem mês específico)
+  // Valor vigente a partir desse mês, até o próximo mês com valor próprio.
+  // null/ausente = legado (orçamento anual antigo), tratado como vigente
+  // desde o mês 1.
   mes: z.number().int().min(1).max(12).nullish(),
   ano: z.number().int().min(2000).max(2100),
   valorCentavos: z

@@ -543,10 +543,9 @@ export function ReceitasClient() {
   const botaoSetaClass =
     "flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary";
   const botaoToggleClass = (ativo: boolean) =>
-    `rounded-full px-md py-1.5 text-sm font-semibold transition-colors ${
-      ativo
-        ? "bg-primary text-on-primary"
-        : "text-on-surface-variant hover:text-on-surface"
+    `rounded-full px-md py-1.5 text-sm font-semibold transition-colors ${ativo
+      ? "bg-primary text-on-primary"
+      : "text-on-surface-variant hover:text-on-surface"
     }`;
 
   return (
@@ -778,11 +777,10 @@ export function ReceitasClient() {
               <button
                 type="button"
                 onClick={() => setPessoaFiltro(null)}
-                className={`rounded-full px-sm py-1 transition-colors ${
-                  pessoaFiltro === null
+                className={`rounded-full px-sm py-1 transition-colors ${pessoaFiltro === null
                     ? "bg-surface-container-high text-on-surface"
                     : "text-on-surface-variant hover:text-on-surface"
-                }`}
+                  }`}
               >
                 Todos
               </button>
@@ -791,11 +789,10 @@ export function ReceitasClient() {
                   key={p.id}
                   type="button"
                   onClick={() => setPessoaFiltro(p.id)}
-                  className={`rounded-full px-sm py-1 transition-colors ${
-                    pessoaFiltro === p.id
+                  className={`rounded-full px-sm py-1 transition-colors ${pessoaFiltro === p.id
                       ? "bg-surface-container-high text-on-surface"
                       : "text-on-surface-variant hover:text-on-surface"
-                  }`}
+                    }`}
                 >
                   {p.nome}
                 </button>
@@ -812,14 +809,6 @@ export function ReceitasClient() {
                 className={`w-56 pl-8 ${inputClass}`}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setOrdemAscendente((v) => !v)}
-              title="Alternar ordem por mês"
-              className="flex items-center gap-1.5 rounded-lg border border-outline-variant px-sm py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
-            >
-              <IconeFiltro /> Filtros
-            </button>
           </div>
         </div>
 

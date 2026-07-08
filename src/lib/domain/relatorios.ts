@@ -15,7 +15,9 @@ export type LancamentoParaRelatorio = {
 export type OrcamentoParaRelatorio = {
   categoriaId: string;
   subcategoriaId: string | null;
-  // 1–12; null = orçamento anual, ratear entre os 12 meses
+  // 1–12: valor vigente a partir desse mês (até o próximo mês com valor
+  // definido). null = legado (orçamento anual antigo), tratado como vigente
+  // desde o mês 1.
   mes: number | null;
   ano: number;
   valorCentavos: number;
@@ -107,32 +109,42 @@ export function calcularPlanejadoVsReal(
       (o) =>
         o.categoriaId === categoriaId && o.subcategoriaId === subcategoriaId,
     );
-    const anualCentavos = orcamentosDaChave
-      .filter((o) => o.mes === null)
-      .reduce((soma, o) => soma + o.valorCentavos, 0);
-    // Orçamento anual (sem mês definido) é rateado igualmente pelos 12 meses.
-    const planejadoRateado = Math.round(anualCentavos / 12);
+    // Valor definido a partir de cada mês (mes=null é vigente desde o mês 1).
+    // Quando há mais de uma entrada com o mesmo início, soma (ex.: várias
+    // pessoas com orçamento próprio nesse mês).
+    const valorPorInicio = new Map<number, number>();
+    for (const o of orcamentosDaChave) {
+      const inicio = o.mes ?? 1;
+      valorPorInicio.set(
+        inicio,
+        (valorPorInicio.get(inicio) ?? 0) + o.valorCentavos,
+      );
+    }
 
     const lancamentosDaChave = lancamentosDoAno.filter(
       (l) =>
         l.categoriaId === categoriaId && l.subcategoriaId === subcategoriaId,
     );
 
+    // O valor vigente carrega do mês em que foi definido até o próximo mês
+    // com valor próprio (não é mais rateado pelos 12 meses).
+    let valorVigenteCentavos = 0;
     const meses: LinhaMensalPlanejadoReal[] = Array.from(
       { length: 12 },
       (_, i) => {
         const mes = i + 1;
-        const planejadoMes = orcamentosDaChave
-          .filter((o) => o.mes === mes)
-          .reduce((soma, o) => soma + o.valorCentavos, 0);
-        const planejadoCentavos =
-          planejadoMes > 0 ? planejadoMes : planejadoRateado;
+        if (valorPorInicio.has(mes)) {
+          valorVigenteCentavos = valorPorInicio.get(mes)!;
+        }
 
         const realCentavos = lancamentosDaChave
           .filter((l) => l.data.getUTCMonth() + 1 === mes)
           .reduce((soma, l) => soma + valorLiquidoCentavos(l), 0);
 
-        return { mes, ...calcularIndicador(planejadoCentavos, realCentavos) };
+        return {
+          mes,
+          ...calcularIndicador(valorVigenteCentavos, realCentavos),
+        };
       },
     );
 
@@ -156,7 +168,7 @@ export async function buscarPlanejadoVsReal(
   householdId: string,
   opts: { ano: number; pessoaId?: string | null },
 ): Promise<PlanejadoVsRealCategoria[]> {
-  const [orcamentos, lancamentos] = await Promise.all([
+  const [orcamentos, lancamentos, subcategorias] = await Promise.all([
     prisma.orcamentoPlanejado.findMany({
       where: {
         householdId,
@@ -188,9 +200,35 @@ export async function buscarPlanejadoVsReal(
         descontoCentavos: true,
       },
     }),
+    prisma.subcategoria.findMany({
+      where: { householdId, orcamentoCentavos: { not: null } },
+      select: { id: true, categoriaId: true, orcamentoCentavos: true },
+    }),
   ]);
 
-  return calcularPlanejadoVsReal(opts.ano, orcamentos, lancamentos);
+  // Limite sugerido cadastrado em Categorias & Orçamento (Subcategoria.orcamentoCentavos)
+  // serve de base (vigente desde o mês 1) quando a subcategoria ainda não tem
+  // nenhum valor específico definido nessa posição no orçamento mensal.
+  const chavesComValorNoInicio = new Set(
+    orcamentos
+      .filter((o) => o.mes === 1 || o.mes === null)
+      .map((o) => chaveCategoria(o.categoriaId, o.subcategoriaId)),
+  );
+  const orcamentosComPadrao: OrcamentoParaRelatorio[] = [...orcamentos];
+  for (const sub of subcategorias) {
+    if (chavesComValorNoInicio.has(chaveCategoria(sub.categoriaId, sub.id))) {
+      continue;
+    }
+    orcamentosComPadrao.push({
+      categoriaId: sub.categoriaId,
+      subcategoriaId: sub.id,
+      mes: null,
+      ano: opts.ano,
+      valorCentavos: sub.orcamentoCentavos!,
+    });
+  }
+
+  return calcularPlanejadoVsReal(opts.ano, orcamentosComPadrao, lancamentos);
 }
 
 // ─── RF10: Relatórios agregados por categoria/subcategoria ─────────────────────

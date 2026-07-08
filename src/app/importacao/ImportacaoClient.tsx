@@ -267,7 +267,7 @@ export function ImportacaoClient() {
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa-divisao">
-              Divisão (dono do gasto)
+              Divisão
             </label>
             <select
               id="pessoa-divisao"
@@ -369,9 +369,8 @@ export function ImportacaoClient() {
                 return (
                   <tr
                     key={linha.hash}
-                    className={`border-b border-outline-variant/60 ${
-                      linha.duplicado ? "opacity-50" : ""
-                    }`}
+                    className={`border-b border-outline-variant/60 ${linha.duplicado ? "opacity-50" : ""
+                      }`}
                   >
                     <td className="p-2">
                       <input

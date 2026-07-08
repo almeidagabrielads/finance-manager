@@ -596,7 +596,7 @@ export function LancamentosClient() {
           <div className="grid grid-cols-1 gap-sm sm:grid-cols-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-on-surface-variant" htmlFor="l-divisao">
-                Dono do Gasto
+                Divisão
               </label>
               <select
                 id="l-divisao"
@@ -696,11 +696,11 @@ export function LancamentosClient() {
             </div>
             <div className="grid grid-cols-2 gap-sm">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-on-surface-variant" htmlFor="i-dono">
-                  Dono padrão
+                <label className="text-xs font-semibold text-on-surface-variant" htmlFor="i-divisão">
+                  Divisão padrão
                 </label>
                 <select
-                  id="i-dono"
+                  id="i-divisão"
                   className={inputClass}
                   value={importPessoaDivisaoId}
                   onChange={(e) => setImportPessoaDivisaoId(e.target.value)}
@@ -740,11 +740,10 @@ export function LancamentosClient() {
             onDragLeave={() => setArrastandoArquivo(false)}
             onDrop={onSoltarArquivo}
             onClick={() => inputArquivoRef.current?.click()}
-            className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-lg text-center transition-colors ${
-              arrastandoArquivo
-                ? "border-primary bg-primary/5"
-                : "border-outline-variant"
-            }`}
+            className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-lg text-center transition-colors ${arrastandoArquivo
+              ? "border-primary bg-primary/5"
+              : "border-outline-variant"
+              }`}
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-container/20 text-lg" aria-hidden>
               ⬆
@@ -865,7 +864,7 @@ export function LancamentosClient() {
                   <th className="p-2">Data</th>
                   <th className="p-2">Descrição</th>
                   <th className="p-2">Sugestão / Categoria</th>
-                  <th className="p-2">Dono</th>
+                  <th className="p-2">Divisão</th>
                   <th className="p-2">Tipo</th>
                   <th className="p-2 text-right">Valor</th>
                   <th className="p-2"></th>
@@ -876,11 +875,11 @@ export function LancamentosClient() {
                   const categoriaAtual = categorias.find(
                     (c) => c.id === linha.categoriaId,
                   );
-                  const donoPessoa = pessoasPorId.get(linha.pessoaDivisaoId);
+                  const divisaoPessoa = pessoasPorId.get(linha.pessoaDivisaoId);
                   const ehAjuste = linha.valorCentavos < 0;
                   const tipo = ehAjuste
                     ? { label: "Ajuste", classe: "bg-surface-container text-on-surface-variant" }
-                    : donoPessoa?.tipo === "INDIVIDUAL"
+                    : divisaoPessoa?.tipo === "INDIVIDUAL"
                       ? { label: "Individual", classe: "bg-secondary/10 text-secondary" }
                       : { label: "Dividido", classe: "bg-primary/10 text-primary" };
                   return (
@@ -1138,7 +1137,7 @@ export function LancamentosClient() {
               ?.slice(
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS +
-                  TAMANHO_PAGINA_LANCAMENTOS,
+                TAMANHO_PAGINA_LANCAMENTOS,
               )
               .map((lancamento) => (
                 <LinhaLancamento
@@ -1429,7 +1428,7 @@ function LinhaLancamento({
     );
   }
 
-  const donoPessoa = pessoas.find((p) => p.id === lancamento.pessoaDivisaoId);
+  const divisaoPessoa = pessoas.find((p) => p.id === lancamento.pessoaDivisaoId);
 
   return (
     <tr className="border-b border-outline-variant/60 hover:bg-surface-container-low">
@@ -1444,11 +1443,11 @@ function LinhaLancamento({
       </td>
       <td className="p-2">{nome.banco(lancamento.bancoId)}</td>
       <td className="p-2">
-        {donoPessoa ? (
+        {divisaoPessoa ? (
           <PessoaBadge
-            nome={donoPessoa.nome}
-            pessoaId={donoPessoa.id}
-            compartilhado={donoPessoa.tipo !== "INDIVIDUAL"}
+            nome={divisaoPessoa.nome}
+            pessoaId={divisaoPessoa.id}
+            compartilhado={divisaoPessoa.tipo !== "INDIVIDUAL"}
           />
         ) : (
           nome.pessoa(lancamento.pessoaDivisaoId)

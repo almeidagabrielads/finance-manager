@@ -10,9 +10,11 @@ import {
 } from "./relatorios";
 
 // Cenário fixo, calculado manualmente:
-// - Moradia/Aluguel: orçamento de jan explícito (1500) + orçamento anual de
-//   12000 (rateado em 1000/mês para os demais meses).
-// - Mercado (sem subcategoria): só orçamento anual de 6000 (rateado em 500/mês).
+// - Moradia/Aluguel: 1500 a partir de jan; alterado para 1000 a partir de fev
+//   (o valor definido em um mês vale para ele e todos os meses seguintes,
+//   até ser alterado novamente).
+// - Mercado (sem subcategoria): orçamento legado sem mês definido (500),
+//   tratado como vigente desde o mês 1.
 // - Lançamentos em jan/fev/mar/2026; valores em centavos.
 const CATEGORIA_MORADIA = "cat-moradia";
 const SUBCATEGORIA_ALUGUEL = "sub-aluguel";
@@ -29,16 +31,16 @@ const orcamentos: OrcamentoParaRelatorio[] = [
   {
     categoriaId: CATEGORIA_MORADIA,
     subcategoriaId: SUBCATEGORIA_ALUGUEL,
-    mes: null,
+    mes: 2,
     ano: 2026,
-    valorCentavos: 1_200_000,
+    valorCentavos: 100_000,
   },
   {
     categoriaId: CATEGORIA_MERCADO,
     subcategoriaId: null,
     mes: null,
     ano: 2026,
-    valorCentavos: 600_000,
+    valorCentavos: 50_000,
   },
 ];
 
@@ -101,7 +103,7 @@ describe("calcularPlanejadoVsReal", () => {
     return linha;
   }
 
-  it("usa o orçamento específico do mês quando existe (jan/Aluguel)", () => {
+  it("usa o valor definido a partir do mês (jan/Aluguel)", () => {
     const [jan] = linhaDe(CATEGORIA_MORADIA, SUBCATEGORIA_ALUGUEL).meses;
     expect(jan).toMatchObject({
       mes: 1,
@@ -113,11 +115,11 @@ describe("calcularPlanejadoVsReal", () => {
     expect(jan.percentual).toBeCloseTo((140_000 / 150_000) * 100);
   });
 
-  it("rateia o orçamento anual pelos 12 meses quando não há orçamento mensal (fev/Aluguel)", () => {
+  it("aplica o novo valor definido em fev (fev/Aluguel)", () => {
     const fev = linhaDe(CATEGORIA_MORADIA, SUBCATEGORIA_ALUGUEL).meses[1];
     expect(fev).toMatchObject({
       mes: 2,
-      planejadoCentavos: 100_000, // 1_200_000 / 12
+      planejadoCentavos: 100_000,
       realCentavos: 110_000, // 120_000 - desconto de 10_000
       diferencaCentavos: -10_000,
       dentroDoPlanejado: false,
@@ -125,15 +127,16 @@ describe("calcularPlanejadoVsReal", () => {
     expect(fev.percentual).toBeCloseTo(110);
   });
 
-  it("considera estornos (valores negativos) no real do mês (mar/Aluguel)", () => {
+  it("mantém o valor de fev vigente em mar, que não tem valor próprio, e considera estornos no real (mar/Aluguel)", () => {
     const mar = linhaDe(CATEGORIA_MORADIA, SUBCATEGORIA_ALUGUEL).meses[2];
+    expect(mar.planejadoCentavos).toBe(100_000);
     expect(mar.realCentavos).toBe(-20_000);
     expect(mar.dentroDoPlanejado).toBe(true);
   });
 
   it("acumula planejado e real do ano inteiro (Aluguel)", () => {
     const { acumulado } = linhaDe(CATEGORIA_MORADIA, SUBCATEGORIA_ALUGUEL);
-    // 150_000 (jan) + 100_000 * 11 (demais meses rateados)
+    // 150_000 (jan) + 100_000 * 11 (fev a dez, valor definido em fev vigora até o fim do ano)
     expect(acumulado.planejadoCentavos).toBe(1_250_000);
     // 140_000 + 110_000 - 20_000
     expect(acumulado.realCentavos).toBe(230_000);
@@ -154,6 +157,36 @@ describe("calcularPlanejadoVsReal", () => {
     });
     expect(mercado.acumulado.planejadoCentavos).toBe(600_000);
     expect(mercado.acumulado.realCentavos).toBe(105_000);
+  });
+
+  it("um novo valor definido no meio do ano vale a partir daquele mês até o próximo valor definido", () => {
+    const resultadoComTrocaEmSet = calcularPlanejadoVsReal(
+      2026,
+      [
+        {
+          categoriaId: "cat-x",
+          subcategoriaId: null,
+          mes: 3,
+          ano: 2026,
+          valorCentavos: 20_000,
+        },
+        {
+          categoriaId: "cat-x",
+          subcategoriaId: null,
+          mes: 9,
+          ano: 2026,
+          valorCentavos: 30_000,
+        },
+      ],
+      [],
+    );
+    const [linha] = resultadoComTrocaEmSet;
+    expect(linha.meses[0].planejadoCentavos).toBe(0); // jan/fev: ainda sem valor definido
+    expect(linha.meses[1].planejadoCentavos).toBe(0);
+    expect(linha.meses[2].planejadoCentavos).toBe(20_000); // mar a ago: 20_000
+    expect(linha.meses[7].planejadoCentavos).toBe(20_000);
+    expect(linha.meses[8].planejadoCentavos).toBe(30_000); // set a dez: 30_000
+    expect(linha.meses[11].planejadoCentavos).toBe(30_000);
   });
 
   it("trata planejado zero e real zero como dentro do planejado (0%)", () => {
