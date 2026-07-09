@@ -516,9 +516,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
               </span>
             </div>
             <div className="flex flex-col gap-1 text-right">
-              <p className="text-on-surface-variant text-sm">
-                Saldo acumulado
-              </p>
+              <p className="text-on-surface-variant text-sm">Saldo acumulado</p>
               <p
                 className={`data-tabular text-xl font-bold ${
                   saldoAcumulado >= 0 ? "text-success" : "text-danger"
@@ -531,12 +529,12 @@ export function DashboardAnual({ ano }: { ano: number }) {
         ) : (
           <form
             onSubmit={salvarSaldoAnoAnterior}
-            className="flex flex-wrap items-end gap-sm"
+            className="gap-sm flex flex-wrap items-end"
           >
             {!saldoAnoAnterior && (
               <p className="text-on-surface-variant w-full text-sm">
-                Nenhum lançamento encontrado para {ano - 1}. Informe o saldo
-                de fechamento desse ano para acumular com o saldo de {ano}.
+                Nenhum lançamento encontrado para {ano - 1}. Informe o saldo de
+                fechamento desse ano para acumular com o saldo de {ano}.
               </p>
             )}
             <div className="flex flex-col gap-1">
@@ -550,7 +548,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                 id="saldo-ano-anterior"
                 type="number"
                 step="0.01"
-                className="border-outline-variant bg-surface-container-lowest w-40 rounded-lg border px-sm py-1.5 text-sm"
+                className="border-outline-variant bg-surface-container-lowest px-sm w-40 rounded-lg border py-1.5 text-sm"
                 value={inputSaldoAnterior}
                 onChange={(e) => setInputSaldoAnterior(e.target.value)}
                 required
@@ -585,10 +583,8 @@ export function DashboardAnual({ ano }: { ano: number }) {
           </h2>
           <div className="flex h-48 items-end gap-2">
             {saldo.porMes.map((m) => {
-              const pctReceita =
-                (m.receitaCentavos / maxFluxoMensal) * 100;
-              const pctDespesa =
-                (m.despesaCentavos / maxFluxoMensal) * 100;
+              const pctReceita = (m.receitaCentavos / maxFluxoMensal) * 100;
+              const pctDespesa = (m.despesaCentavos / maxFluxoMensal) * 100;
               return (
                 <div
                   key={m.mes}
@@ -597,7 +593,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                   <div className="flex h-32 w-full items-end justify-center gap-0.5">
                     <div className="relative flex h-full w-1/2 items-end">
                       <span
-                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold"
+                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap"
                         style={{ bottom: `calc(${pctReceita}% + 2px)` }}
                       >
                         {formatarReaisCompacto(m.receitaCentavos)}
@@ -610,7 +606,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                     </div>
                     <div className="relative flex h-full w-1/2 items-end">
                       <span
-                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold"
+                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap"
                         style={{ bottom: `calc(${pctDespesa}% + 2px)` }}
                       >
                         {formatarReaisCompacto(m.despesaCentavos)}
@@ -756,44 +752,65 @@ export function DashboardAnual({ ano }: { ano: number }) {
               </tr>
             </thead>
             <tbody>
-              {categoriasComItens.map(({ categoria, itens }) => (
-                <Fragment key={categoria.id}>
-                  <tr className="bg-surface-container-low">
-                    <td
-                      className="text-on-surface p-2 font-semibold"
-                      colSpan={13}
-                    >
-                      {categoria.nome}
-                    </td>
-                  </tr>
-                  {itens.map((item) => (
-                    <tr
-                      key={chave(item.categoriaId, item.subcategoriaId)}
-                      className="border-outline-variant/60 border-b"
-                    >
-                      <td className="pl-lg text-on-surface-variant p-2">
-                        {item.subcategoriaId
-                          ? (nomeSubcategoria.get(item.subcategoriaId) ??
-                            item.subcategoriaId)
-                          : "Geral"}
+              {categoriasComItens.map(({ categoria, itens }) => {
+                const subtotalPorMes = Array.from({ length: 12 }, (_, i) =>
+                  itens.reduce(
+                    (soma, item) => soma + item.meses[i].realCentavos,
+                    0,
+                  ),
+                );
+                return (
+                  <Fragment key={categoria.id}>
+                    <tr className="bg-surface-container-low">
+                      <td
+                        className="text-on-surface p-2 font-semibold"
+                        colSpan={13}
+                      >
+                        {categoria.nome}
                       </td>
-                      {item.meses.map((mes, idx) => (
+                    </tr>
+                    {itens.map((item) => (
+                      <tr
+                        key={chave(item.categoriaId, item.subcategoriaId)}
+                        className="border-outline-variant/60 border-b"
+                      >
+                        <td className="pl-lg text-on-surface-variant p-2">
+                          {item.subcategoriaId
+                            ? (nomeSubcategoria.get(item.subcategoriaId) ??
+                              item.subcategoriaId)
+                            : "Geral"}
+                        </td>
+                        {item.meses.map((mes, idx) => (
+                          <td
+                            key={idx}
+                            className={`data-tabular p-2 text-right ${
+                              mes.planejadoCentavos > 0 &&
+                              mes.realCentavos > mes.planejadoCentavos
+                                ? "text-danger font-semibold"
+                                : "text-on-surface"
+                            }`}
+                          >
+                            {formatarReaisCompacto(mes.realCentavos)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    <tr className="border-outline-variant bg-surface-container-low/60 border-b-2 font-semibold">
+                      <td className="text-on-surface p-2">
+                        Subtotal {categoria.nome}
+                      </td>
+                      {subtotalPorMes.map((total, idx) => (
                         <td
                           key={idx}
-                          className={`data-tabular p-2 text-right ${
-                            mes.planejadoCentavos > 0 &&
-                            mes.realCentavos > mes.planejadoCentavos
-                              ? "text-danger font-semibold"
-                              : "text-on-surface"
-                          }`}
+                          className="data-tabular text-on-surface p-2 text-right"
                         >
-                          {formatarReaisCompacto(mes.realCentavos)}
+                          {formatarReaisCompacto(total)}
                         </td>
                       ))}
                     </tr>
-                  ))}
-                </Fragment>
-              ))}
+                  </Fragment>
+                );
+              })}
               <tr className="border-outline-variant border-t-2 font-semibold">
                 <td className="text-on-surface p-2">Total consolidado</td>
                 {totalConsolidadoPorMes.map((total, idx) => (
