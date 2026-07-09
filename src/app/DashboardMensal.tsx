@@ -287,8 +287,8 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
               <p className="text-on-surface-variant text-xs">Saldo do mês</p>
               <p
                 className={`data-tabular text-2xl font-semibold ${saldoDoMes && saldoDoMes.saldoCentavos < 0
-                    ? "text-danger"
-                    : "text-on-surface"
+                  ? "text-danger"
+                  : "text-on-surface"
                   }`}
               >
                 {saldoDoMes ? centavosParaReais(saldoDoMes.saldoCentavos) : "—"}
@@ -320,8 +320,8 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                   <span
                     key={id}
                     className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${i === 0
-                        ? "bg-tertiary-container text-on-tertiary-container"
-                        : "bg-secondary text-on-secondary"
+                      ? "bg-tertiary-container text-on-tertiary-container"
+                      : "bg-secondary text-on-secondary"
                       }`}
                   >
                     {nomePessoa(id).charAt(0).toUpperCase()}
@@ -418,8 +418,8 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
             </span>
             <span
               className={`data-tabular font-semibold ${totalPlanejadoCentavos - totalRealCentavos < 0
-                  ? "text-danger"
-                  : "text-on-surface"
+                ? "text-danger"
+                : "text-on-surface"
                 }`}
             >
               Saldo:{" "}
