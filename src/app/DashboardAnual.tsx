@@ -98,6 +98,10 @@ function formatarReaisCompacto(centavos: number): string {
   return (centavos / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 }
 
+function formatarReaisCompactoComSimbolo(centavos: number): string {
+  return `R$ ${formatarReaisCompacto(centavos)}`;
+}
+
 function reaisParaCentavos(valor: string): number {
   const n = Number(valor.replace(",", "."));
   return Math.round(n * 100);
@@ -770,7 +774,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                           key={idx}
                           className="data-tabular text-on-surface p-2 text-right font-semibold"
                         >
-                          {formatarReaisCompacto(total)}
+                          {formatarReaisCompactoComSimbolo(total)}
                         </td>
                       ))}
                     </tr>
@@ -795,7 +799,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                                 : "text-on-surface"
                             }`}
                           >
-                            {formatarReaisCompacto(mes.realCentavos)}
+                            {formatarReaisCompactoComSimbolo(mes.realCentavos)}
                           </td>
                         ))}
                       </tr>
@@ -810,7 +814,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
                     key={idx}
                     className="data-tabular text-on-surface p-2 text-right"
                   >
-                    {formatarReaisCompacto(total)}
+                    {formatarReaisCompactoComSimbolo(total)}
                   </td>
                 ))}
               </tr>
