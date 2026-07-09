@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ColumnHeader } from "../components/ColumnHeader";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
+import { FAIXAS_LABEL } from "./InvestimentosClient";
 
 const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa", cor: "var(--color-primary)" },
@@ -83,6 +84,25 @@ type Investimento = {
   produto: string;
   valorAtualCentavos: number;
 };
+type FaixaLiquidez = { faixa: string; totalCentavos: number };
+
+// Prazos de liquidez têm uma ordem natural (mais perto → mais longe), por
+// isso usam uma rampa ordinal (um só matiz, claro→escuro) em vez da paleta
+// categórica. "Sem prazo definido" não é "o prazo mais longo", então fica
+// com o mesmo cinza neutro usado para o bucket "Outros".
+const ORDEM_LIQUIDEZ = [
+  "IMEDIATO",
+  "ATE_30_DIAS",
+  "ATE_90_DIAS",
+  "ATE_180_DIAS",
+  "ATE_365_DIAS",
+  "MAIS_DE_1_ANO",
+] as const;
+
+function corRampaLiquidez(indice: number): string {
+  const percentual = 20 + indice * 16;
+  return `color-mix(in srgb, var(--color-primary) ${percentual}%, white)`;
+}
 type LinhaRendimento = {
   mes: string;
   rendimentoAcumuladoRealPercentual: number;
@@ -286,11 +306,13 @@ export function RelatorioInvestimentos({
   investimentos,
   bancos,
   pessoas,
+  liquidez,
   onFiltrarCarteira,
 }: {
   investimentos: Investimento[];
   bancos: Banco[];
   pessoas: Pessoa[];
+  liquidez: FaixaLiquidez[];
   onFiltrarCarteira?: (
     chave: "tipo" | "banco" | "titular",
     valores: string[],
@@ -390,6 +412,36 @@ export function RelatorioInvestimentos({
     );
   }, [investimentos, pessoasPorId]);
 
+  const gruposLiquidez = useMemo<GrupoAlocacao[]>(() => {
+    const porFaixa = new Map(liquidez.map((l) => [l.faixa, l.totalCentavos]));
+
+    const definidos = ORDEM_LIQUIDEZ.map((faixa, i) => {
+      const label = FAIXAS_LABEL[faixa] ?? faixa;
+      return {
+        chave: faixa,
+        label,
+        cor: corRampaLiquidez(i),
+        totalCentavos: porFaixa.get(faixa) ?? 0,
+        itens: [label],
+      };
+    }).filter((g) => g.totalCentavos > 0);
+
+    const totalIndefinido = porFaixa.get("INDEFINIDO") ?? 0;
+    if (totalIndefinido <= 0) return definidos;
+
+    const labelIndefinido = FAIXAS_LABEL.INDEFINIDO;
+    return [
+      ...definidos,
+      {
+        chave: "INDEFINIDO",
+        label: labelIndefinido,
+        cor: COR_OUTROS,
+        totalCentavos: totalIndefinido,
+        itens: [labelIndefinido],
+      },
+    ];
+  }, [liquidez]);
+
   const colunasInvestimentos = useMemo<ColunaTabela<Investimento>[]>(
     () => [
       { chave: "classe", tipo: "opcoes", acessor: (inv) => labelTipo(inv.tipo) },
@@ -476,7 +528,7 @@ export function RelatorioInvestimentos({
         </span>
       </div>
 
-      <div className="gap-lg grid grid-cols-1 md:grid-cols-3">
+      <div className="gap-lg grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <AlocacaoCard
           titulo="Alocação por Classe"
           grupos={gruposClasse}
@@ -504,6 +556,7 @@ export function RelatorioInvestimentos({
               : undefined
           }
         />
+        <AlocacaoCard titulo="Liquidez de Resgate" grupos={gruposLiquidez} />
       </div>
 
       <section className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border shadow-sm">

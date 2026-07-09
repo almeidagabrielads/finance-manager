@@ -23,7 +23,7 @@ export function labelTipo(tipo: string): string {
   return TIPOS_INVESTIMENTO.find((t) => t.value === tipo)?.label ?? tipo;
 }
 
-const FAIXAS_LABEL: Record<string, string> = {
+export const FAIXAS_LABEL: Record<string, string> = {
   IMEDIATO: "Imediato (D+0)",
   ATE_30_DIAS: "Até 30 dias",
   ATE_90_DIAS: "Até 90 dias",
@@ -469,6 +469,7 @@ export function InvestimentosClient() {
           investimentos={investimentos ?? []}
           bancos={bancos}
           pessoas={pessoas}
+          liquidez={liquidez ?? []}
           onFiltrarCarteira={irParaCarteiraFiltrada}
         />
       )}
