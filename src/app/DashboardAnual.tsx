@@ -178,6 +178,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
   const [salvandoSaldoAnterior, setSalvandoSaldoAnterior] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
+  const [pessoaFiltro, setPessoaFiltro] = useState("");
 
   useEffect(() => {
     let cancelado = false;
@@ -212,9 +213,10 @@ export function DashboardAnual({ ano }: { ano: number }) {
 
   useEffect(() => {
     let cancelado = false;
+    const pessoaQuery = pessoaFiltro ? `&pessoaId=${pessoaFiltro}` : "";
     Promise.all([
-      fetch(`/api/relatorios/anual?ano=${ano}`),
-      fetch(`/api/relatorios/saldo?ano=${ano - 1}`),
+      fetch(`/api/relatorios/anual?ano=${ano}${pessoaQuery}`),
+      fetch(`/api/relatorios/saldo?ano=${ano - 1}${pessoaQuery}`),
       fetch(`/api/relatorios/saldo-anterior?ano=${ano}`),
     ])
       .then(async ([relatorioRes, saldoAnteriorRes, saldoAnoAnteriorRes]) => {
@@ -253,7 +255,7 @@ export function DashboardAnual({ ano }: { ano: number }) {
     return () => {
       cancelado = true;
     };
-  }, [ano, reloadToken]);
+  }, [ano, reloadToken, pessoaFiltro]);
 
   async function salvarSaldoAnoAnterior(e: React.FormEvent) {
     e.preventDefault();
@@ -432,7 +434,28 @@ export function DashboardAnual({ ano }: { ano: number }) {
         </p>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="pessoaFiltro"
+            className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase"
+          >
+            Visualizando
+          </label>
+          <select
+            id="pessoaFiltro"
+            value={pessoaFiltro}
+            onChange={(e) => setPessoaFiltro(e.target.value)}
+            className="border-outline-variant bg-surface-container-lowest text-on-surface px-md rounded-full border py-1.5 text-sm font-semibold"
+          >
+            <option value="">Geral</option>
+            {pessoas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </div>
         <Link
           href="/configuracoes/exportar-dados"
           className="bg-primary px-md py-sm text-on-primary rounded-xl text-sm font-semibold hover:opacity-90"
