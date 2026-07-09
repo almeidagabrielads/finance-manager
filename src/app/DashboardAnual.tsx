@@ -583,33 +583,51 @@ export function DashboardAnual({ ano }: { ano: number }) {
           <h2 className="text-on-surface text-base font-semibold">
             Fluxo de caixa mensal
           </h2>
-          <div className="flex h-40 items-end gap-2">
-            {saldo.porMes.map((m) => (
-              <div
-                key={m.mes}
-                className="flex flex-1 flex-col items-center gap-1"
-              >
-                <div className="flex h-32 w-full items-end justify-center gap-0.5">
-                  <div
-                    className="bg-primary w-1/2 rounded-t"
-                    style={{
-                      height: `${(m.receitaCentavos / maxFluxoMensal) * 100}%`,
-                    }}
-                    title={`Receita: ${formatarReais(m.receitaCentavos)}`}
-                  />
-                  <div
-                    className="bg-outline-variant w-1/2 rounded-t"
-                    style={{
-                      height: `${(m.despesaCentavos / maxFluxoMensal) * 100}%`,
-                    }}
-                    title={`Despesa: ${formatarReais(m.despesaCentavos)}`}
-                  />
+          <div className="flex h-48 items-end gap-2">
+            {saldo.porMes.map((m) => {
+              const pctReceita =
+                (m.receitaCentavos / maxFluxoMensal) * 100;
+              const pctDespesa =
+                (m.despesaCentavos / maxFluxoMensal) * 100;
+              return (
+                <div
+                  key={m.mes}
+                  className="flex flex-1 flex-col items-center gap-1"
+                >
+                  <div className="flex h-32 w-full items-end justify-center gap-0.5">
+                    <div className="relative flex h-full w-1/2 items-end">
+                      <span
+                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold"
+                        style={{ bottom: `calc(${pctReceita}% + 2px)` }}
+                      >
+                        {formatarReaisCompacto(m.receitaCentavos)}
+                      </span>
+                      <div
+                        className="bg-primary w-full rounded-t"
+                        style={{ height: `${pctReceita}%` }}
+                        title={`Receita: ${formatarReais(m.receitaCentavos)}`}
+                      />
+                    </div>
+                    <div className="relative flex h-full w-1/2 items-end">
+                      <span
+                        className="data-tabular text-on-surface-variant absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold"
+                        style={{ bottom: `calc(${pctDespesa}% + 2px)` }}
+                      >
+                        {formatarReaisCompacto(m.despesaCentavos)}
+                      </span>
+                      <div
+                        className="bg-outline-variant w-full rounded-t"
+                        style={{ height: `${pctDespesa}%` }}
+                        title={`Despesa: ${formatarReais(m.despesaCentavos)}`}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-on-surface-variant text-[10px] font-medium">
+                    {MESES[m.mes - 1].toUpperCase()}
+                  </span>
                 </div>
-                <span className="text-on-surface-variant text-[10px] font-medium">
-                  {MESES[m.mes - 1].toUpperCase()}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="gap-md text-on-surface-variant flex items-center text-xs">
             <span className="flex items-center gap-1">
