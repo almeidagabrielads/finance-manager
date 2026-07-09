@@ -314,7 +314,7 @@ export function RelatorioInvestimentos({
   pessoas: Pessoa[];
   liquidez: FaixaLiquidez[];
   onFiltrarCarteira?: (
-    chave: "tipo" | "banco" | "titular",
+    chave: "tipo" | "banco" | "titular" | "faixaLiquidez",
     valores: string[],
   ) => void;
 }) {
@@ -556,7 +556,15 @@ export function RelatorioInvestimentos({
               : undefined
           }
         />
-        <AlocacaoCard titulo="Liquidez de Resgate" grupos={gruposLiquidez} />
+        <AlocacaoCard
+          titulo="Liquidez de Resgate"
+          grupos={gruposLiquidez}
+          onSelecionar={
+            onFiltrarCarteira
+              ? (g) => onFiltrarCarteira("faixaLiquidez", g.itens)
+              : undefined
+          }
+        />
       </div>
 
       <section className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border shadow-sm">

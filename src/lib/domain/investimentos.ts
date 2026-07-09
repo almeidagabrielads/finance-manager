@@ -279,7 +279,7 @@ export const FAIXAS_LIQUIDEZ = [
 
 export type FaixaLiquidez = (typeof FAIXAS_LIQUIDEZ)[number];
 
-function diasParaFaixa(dias: number | null): FaixaLiquidez {
+export function diasParaFaixa(dias: number | null): FaixaLiquidez {
   if (dias === null) return "INDEFINIDO";
   if (dias <= 0) return "IMEDIATO";
   if (dias <= 30) return "ATE_30_DIAS";
@@ -289,7 +289,7 @@ function diasParaFaixa(dias: number | null): FaixaLiquidez {
   return "MAIS_DE_1_ANO";
 }
 
-function diasAteResgate(
+export function diasAteResgate(
   investimento: { liquidezDias: number | null; vencimento: Date | null },
   dataReferencia: Date,
 ): number | null {

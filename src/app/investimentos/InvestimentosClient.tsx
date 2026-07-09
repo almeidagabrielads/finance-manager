@@ -9,6 +9,7 @@ import { useConfirmDialog } from "../components/ConfirmDialog";
 import { ColumnHeader } from "../components/ColumnHeader";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import { filtroEstaAtivo } from "@/lib/domain/tabela";
+import { diasAteResgate, diasParaFaixa } from "@/lib/domain/investimentos";
 
 export const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa" },
@@ -357,6 +358,24 @@ export function InvestimentosClient() {
         tipo: "numero",
         acessor: (inv) => inv.valorAtualCentavos / 100,
       },
+      // Sem coluna visível na tabela — existe só para permitir filtrar a
+      // Carteira a partir de um clique no gráfico de liquidez.
+      {
+        chave: "faixaLiquidez",
+        tipo: "opcoes",
+        acessor: (inv) =>
+          FAIXAS_LABEL[
+            diasParaFaixa(
+              diasAteResgate(
+                {
+                  liquidezDias: inv.liquidezDias,
+                  vencimento: inv.vencimento ? new Date(inv.vencimento) : null,
+                },
+                new Date(),
+              ),
+            )
+          ] ?? "—",
+      },
     ],
     [bancosPorId, pessoasPorId],
   );
@@ -374,7 +393,7 @@ export function InvestimentosClient() {
   const algumFiltroAtivo = Object.values(filtros).some(filtroEstaAtivo);
 
   function irParaCarteiraFiltrada(
-    chave: "tipo" | "banco" | "titular",
+    chave: "tipo" | "banco" | "titular" | "faixaLiquidez",
     valores: string[],
   ) {
     setAba("CARTEIRA");
