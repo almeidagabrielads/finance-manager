@@ -157,6 +157,7 @@ export const FinalizarInvestimentoSchema = z
     valorResgatadoCentavos: z.number().int().nonnegative(),
     valorReinvestidoCentavos: z.number().int().nonnegative().default(0),
     criarReceita: z.boolean().default(true),
+    dataResgate: z.coerce.date().optional(),
     mesReceita: z.coerce.date().optional(),
     novoInvestimento: z
       .object({
@@ -214,6 +215,7 @@ export async function finalizarInvestimento(
 
   const valorLiquidoCentavos =
     input.valorResgatadoCentavos - input.valorReinvestidoCentavos;
+  const dataResgate = input.dataResgate ?? new Date();
 
   return prisma.$transaction(async (tx) => {
     const novoInvestimento =
@@ -242,7 +244,7 @@ export async function finalizarInvestimento(
               subtipo: "INVESTIMENTO",
               descricao: `Resgate: ${existente.produto}`,
               valorCentavos: valorLiquidoCentavos,
-              mes: primeiroDiaMes(input.mesReceita ?? new Date()),
+              mes: primeiroDiaMes(input.mesReceita ?? dataResgate),
               householdId,
               investimentoId: existente.id,
             },
@@ -253,7 +255,7 @@ export async function finalizarInvestimento(
       where: { id },
       data: {
         status: "FINALIZADO",
-        finalizadoEm: new Date(),
+        finalizadoEm: dataResgate,
         valorResgatadoCentavos: input.valorResgatadoCentavos,
         valorReinvestidoCentavos: input.valorReinvestidoCentavos,
       },
