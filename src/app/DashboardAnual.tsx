@@ -762,12 +762,17 @@ export function DashboardAnual({ ano }: { ano: number }) {
                 return (
                   <Fragment key={categoria.id}>
                     <tr className="bg-surface-container-low">
-                      <td
-                        className="text-on-surface p-2 font-semibold"
-                        colSpan={13}
-                      >
+                      <td className="text-on-surface p-2 font-semibold">
                         {categoria.nome}
                       </td>
+                      {subtotalPorMes.map((total, idx) => (
+                        <td
+                          key={idx}
+                          className="data-tabular text-on-surface p-2 text-right font-semibold"
+                        >
+                          {formatarReaisCompacto(total)}
+                        </td>
+                      ))}
                     </tr>
                     {itens.map((item) => (
                       <tr
@@ -795,19 +800,6 @@ export function DashboardAnual({ ano }: { ano: number }) {
                         ))}
                       </tr>
                     ))}
-                    <tr className="border-outline-variant bg-surface-container-low/60 border-b-2 font-semibold">
-                      <td className="text-on-surface p-2">
-                        Subtotal {categoria.nome}
-                      </td>
-                      {subtotalPorMes.map((total, idx) => (
-                        <td
-                          key={idx}
-                          className="data-tabular text-on-surface p-2 text-right"
-                        >
-                          {formatarReaisCompacto(total)}
-                        </td>
-                      ))}
-                    </tr>
                   </Fragment>
                 );
               })}
