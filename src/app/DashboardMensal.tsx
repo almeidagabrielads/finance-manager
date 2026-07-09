@@ -48,7 +48,12 @@ type Lancamento = {
   pessoaPagouId: string;
 };
 
-type Pessoa = { id: string; nome: string };
+type Pessoa = {
+  id: string;
+  nome: string;
+  tipo: string;
+  integrantes: { pessoaId: string; peso: number }[];
+};
 type Categoria = { id: string; nome: string };
 
 function centavosParaReais(valor: number): string {
@@ -160,6 +165,27 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
     pessoas.find((p) => p.id === id)?.nome ?? "—";
   const nomeCategoria = (id: string | null) =>
     categorias.find((c) => c.id === id)?.nome ?? "Sem categoria";
+
+  // Valor a exibir por lançamento na visão filtrada: sem filtro (Geral) ou
+  // filtrando por um grupo, mostra o valor integral. Filtrando por uma
+  // pessoa individual, um lançamento com divisão em um grupo do qual ela
+  // participa mostra só a fração dela — coerente com "Gastos totais", que já
+  // soma essa mesma fração (ver resolverFracaoPorGrupo no backend).
+  const valorAtribuido = (l: Lancamento): number => {
+    const liquido = valorLiquidoCentavos(l);
+    if (!pessoaFiltro || l.pessoaDivisaoId === pessoaFiltro) return liquido;
+
+    const grupo = pessoas.find((p) => p.id === l.pessoaDivisaoId);
+    const integrante = grupo?.integrantes.find(
+      (i) => i.pessoaId === pessoaFiltro,
+    );
+    if (!grupo || !integrante) return liquido;
+
+    const somaPesos = grupo.integrantes.reduce((s, i) => s + i.peso, 0);
+    return somaPesos > 0
+      ? Math.round(liquido * (integrante.peso / somaPesos))
+      : liquido;
+  };
 
   const saldoDoMes = saldo?.porMes.find((m) => m.mes === mes) ?? null;
 
@@ -437,7 +463,7 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                     {nomePessoa(l.pessoaDivisaoId)}
                   </span>
                   <span className="data-tabular text-on-surface justify-self-end font-semibold">
-                    {centavosParaReais(valorLiquidoCentavos(l))}
+                    {centavosParaReais(valorAtribuido(l))}
                   </span>
                 </div>
               ))}
