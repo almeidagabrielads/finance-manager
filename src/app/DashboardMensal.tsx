@@ -52,7 +52,7 @@ type Pessoa = {
   id: string;
   nome: string;
   tipo: string;
-  integrantes: { pessoaId: string; peso: number }[];
+  integrantesDoGrupo: { pessoaId: string; peso: number }[];
 };
 type Categoria = { id: string; nome: string };
 
@@ -176,12 +176,12 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
     if (!pessoaFiltro || l.pessoaDivisaoId === pessoaFiltro) return liquido;
 
     const grupo = pessoas.find((p) => p.id === l.pessoaDivisaoId);
-    const integrante = grupo?.integrantes.find(
+    const integrante = grupo?.integrantesDoGrupo.find(
       (i) => i.pessoaId === pessoaFiltro,
     );
     if (!grupo || !integrante) return liquido;
 
-    const somaPesos = grupo.integrantes.reduce((s, i) => s + i.peso, 0);
+    const somaPesos = grupo.integrantesDoGrupo.reduce((s, i) => s + i.peso, 0);
     return somaPesos > 0
       ? Math.round(liquido * (integrante.peso / somaPesos))
       : liquido;
