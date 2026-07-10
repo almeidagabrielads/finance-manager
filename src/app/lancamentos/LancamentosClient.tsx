@@ -70,6 +70,34 @@ function dataParaInputDate(data: string): string {
   return data.slice(0, 10);
 }
 
+const NOMES_MESES = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
+
+// Primeiro e último dia do mês (0-indexado) no formato aceito por <input type="date">.
+function intervaloDoMes(
+  ano: number,
+  mes: number,
+): { inicio: string; fim: string } {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+  return {
+    inicio: `${ano}-${pad(mes + 1)}-01`,
+    fim: `${ano}-${pad(mes + 1)}-${pad(ultimoDia)}`,
+  };
+}
+
 function formatarMoeda(valorCentavos: number): string {
   return Math.abs(valorCentavos / 100).toLocaleString("pt-BR", {
     style: "currency",
@@ -125,14 +153,21 @@ export function LancamentosClient() {
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
 
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
-  const [filtroCategoriaId, setFiltroCategoriaId] = useState("");
-  const [filtroBancoId, setFiltroBancoId] = useState("");
-  const [filtroPessoaId, setFiltroPessoaId] = useState("");
+  const [anoFiltroMeses, setAnoFiltroMeses] = useState(() =>
+    new Date().getFullYear(),
+  );
+  const anosDisponiveis = useMemo(() => {
+    const anoAtual = new Date().getFullYear();
+    const inicio = Math.min(anoAtual - 6, anoFiltroMeses);
+    const fim = Math.max(anoAtual + 1, anoFiltroMeses);
+    const anos: number[] = [];
+    for (let ano = fim; ano >= inicio; ano--) anos.push(ano);
+    return anos;
+  }, [anoFiltroMeses]);
 
   const [form, setForm] = useState<FormLancamento>(formVazio({}));
 
@@ -149,7 +184,6 @@ export function LancamentosClient() {
   const [acoesEmMassaAberto, setAcoesEmMassaAberto] = useState(false);
   const [categoriaEmMassa, setCategoriaEmMassa] = useState("");
   const [paginaLancamentos, setPaginaLancamentos] = useState(0);
-  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const inputArquivoRef = useRef<HTMLInputElement>(null);
 
@@ -215,9 +249,6 @@ export function LancamentosClient() {
     const params = new URLSearchParams();
     if (filtroDataInicio) params.set("dataInicio", filtroDataInicio);
     if (filtroDataFim) params.set("dataFim", filtroDataFim);
-    if (filtroCategoriaId) params.set("categoriaId", filtroCategoriaId);
-    if (filtroBancoId) params.set("bancoId", filtroBancoId);
-    if (filtroPessoaId) params.set("pessoaId", filtroPessoaId);
 
     fetch(`/api/lancamentos?${params.toString()}`)
       .then(async (response) => {
@@ -236,14 +267,7 @@ export function LancamentosClient() {
     return () => {
       cancelado = true;
     };
-  }, [
-    filtroDataInicio,
-    filtroDataFim,
-    filtroCategoriaId,
-    filtroBancoId,
-    filtroPessoaId,
-    reloadToken,
-  ]);
+  }, [filtroDataInicio, filtroDataFim, reloadToken]);
 
   const nome = useMemo(() => {
     const mapaBancos = new Map(bancos.map((b) => [b.id, b.nome]));
@@ -572,16 +596,6 @@ export function LancamentosClient() {
           {erro}
         </p>
       )}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setMostrarFiltros((v) => !v)}
-          className="border-outline-variant bg-surface-container-lowest px-md text-on-surface hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
-        >
-          ☰ Filtros
-        </button>
-      </div>
 
       <div className="gap-lg grid grid-cols-1 lg:grid-cols-[1fr_360px]">
         {/* Lançamento Expresso */}
@@ -1251,103 +1265,56 @@ export function LancamentosClient() {
         </div>
       )}
 
-      {mostrarFiltros && (
-        <div className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-wrap items-end rounded-xl border">
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="f-inicio"
-            >
-              De
-            </label>
-            <input
-              id="f-inicio"
-              type="date"
-              className={inputClass}
-              value={filtroDataInicio}
-              onChange={(e) => setFiltroDataInicio(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="f-fim"
-            >
-              Até
-            </label>
-            <input
-              id="f-fim"
-              type="date"
-              className={inputClass}
-              value={filtroDataFim}
-              onChange={(e) => setFiltroDataFim(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="f-categoria"
-            >
-              Categoria
-            </label>
-            <select
-              id="f-categoria"
-              className={inputClass}
-              value={filtroCategoriaId}
-              onChange={(e) => setFiltroCategoriaId(e.target.value)}
-            >
-              <option value="">Todas</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="f-banco"
-            >
-              Banco
-            </label>
-            <select
-              id="f-banco"
-              className={inputClass}
-              value={filtroBancoId}
-              onChange={(e) => setFiltroBancoId(e.target.value)}
-            >
-              <option value="">Todos</option>
-              {bancos.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="f-pessoa"
-            >
-              Pessoa
-            </label>
-            <select
-              id="f-pessoa"
-              className={inputClass}
-              value={filtroPessoaId}
-              onChange={(e) => setFiltroPessoaId(e.target.value)}
-            >
-              <option value="">Todas</option>
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
+        <div className="flex items-center gap-2">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="f-ano"
+          >
+            Ano
+          </label>
+          <select
+            id="f-ano"
+            className={inputClass}
+            value={anoFiltroMeses}
+            onChange={(e) => setAnoFiltroMeses(Number(e.target.value))}
+          >
+            {anosDisponiveis.map((ano) => (
+              <option key={ano} value={ano}>
+                {ano}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
+        <div className="flex flex-wrap gap-1.5">
+          {NOMES_MESES.map((nomeMes, idx) => {
+            const { inicio, fim } = intervaloDoMes(anoFiltroMeses, idx);
+            const ativo = filtroDataInicio === inicio && filtroDataFim === fim;
+            return (
+              <button
+                key={nomeMes}
+                type="button"
+                onClick={() => {
+                  if (ativo) {
+                    setFiltroDataInicio("");
+                    setFiltroDataFim("");
+                  } else {
+                    setFiltroDataInicio(inicio);
+                    setFiltroDataFim(fim);
+                  }
+                }}
+                className={
+                  ativo
+                    ? "bg-primary px-md text-on-primary rounded-full py-1 text-xs font-semibold"
+                    : "border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low px-md rounded-full border py-1 text-xs"
+                }
+              >
+                {nomeMes}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="border-outline-variant bg-surface-container-lowest overflow-x-auto rounded-xl border">
         <table className="w-full border-collapse text-sm">
@@ -1453,17 +1420,11 @@ export function LancamentosClient() {
                 <LinhaLancamento
                   key={lancamento.id}
                   lancamento={lancamento}
-                  categorias={categorias}
-                  bancos={bancos}
                   pessoas={pessoas}
-                  investimentos={investimentos}
                   nome={nome}
-                  onAtualizar={atualizarLancamento}
                   onRemover={removerLancamento}
-                  emEdicao={editandoId === lancamento.id}
-                  onIniciarEdicao={() => setEditandoId(lancamento.id)}
-                  onCancelarEdicao={() => setEditandoId(null)}
                   onAbrirDetalhe={() => setDetalheId(lancamento.id)}
+                  selecionada={detalheId === lancamento.id}
                 />
               ))}
           </tbody>
@@ -1515,20 +1476,14 @@ export function LancamentosClient() {
 
       {lancamentoDetalhe && (
         <DetalheLancamentoDrawer
+          key={lancamentoDetalhe.id}
           lancamento={lancamentoDetalhe}
+          categorias={categorias}
+          bancos={bancos}
           pessoas={pessoas}
           investimentos={investimentos}
-          nome={nome}
           onFechar={() => setDetalheId(null)}
-          onEditar={() => {
-            setEditandoId(lancamentoDetalhe.id);
-            setDetalheId(null);
-          }}
-          onRemover={async () => {
-            if (await removerLancamento(lancamentoDetalhe)) {
-              setDetalheId(null);
-            }
-          }}
+          onSalvar={(input) => atualizarLancamento(lancamentoDetalhe.id, input)}
         />
       )}
     </div>
@@ -1537,288 +1492,36 @@ export function LancamentosClient() {
 
 function LinhaLancamento({
   lancamento,
-  categorias,
-  bancos,
   pessoas,
-  investimentos,
   nome,
-  onAtualizar,
   onRemover,
-  emEdicao,
-  onIniciarEdicao,
-  onCancelarEdicao,
   onAbrirDetalhe,
+  selecionada,
 }: {
   lancamento: Lancamento;
-  categorias: Categoria[];
-  bancos: Banco[];
   pessoas: Pessoa[];
-  investimentos: Investimento[];
   nome: {
     banco: (id: string) => string;
     pessoa: (id: string) => string;
     categoria: (id: string | null) => string;
     subcategoria: (id: string | null) => string;
   };
-  onAtualizar: (id: string, input: Partial<Lancamento>) => Promise<void>;
   onRemover: (lancamento: Lancamento) => Promise<boolean>;
-  emEdicao: boolean;
-  onIniciarEdicao: () => void;
-  onCancelarEdicao: () => void;
   onAbrirDetalhe: () => void;
+  selecionada: boolean;
 }) {
-  const [data, setData] = useState(dataParaInputDate(lancamento.data));
-  const [descricao, setDescricao] = useState(lancamento.descricaoPropria ?? "");
-  const [valor, setValor] = useState(
-    centavosParaReais(lancamento.valorCentavos),
-  );
-  const [categoriaId, setCategoriaId] = useState(
-    lancamento.categoriaId ?? SEM_CATEGORIA,
-  );
-  const [subcategoriaId, setSubcategoriaId] = useState(
-    lancamento.subcategoriaId ?? SEM_CATEGORIA,
-  );
-  const [bancoId, setBancoId] = useState(lancamento.bancoId);
-  const [pessoaDivisaoId, setPessoaDivisaoId] = useState(
-    lancamento.pessoaDivisaoId,
-  );
-  const [pessoaPagouId, setPessoaPagouId] = useState(lancamento.pessoaPagouId);
-  const [pagoComResgateInvestimento, setPagoComResgateInvestimento] = useState(
-    lancamento.pagoComResgateInvestimento ?? false,
-  );
-  const [investimentoResgateId, setInvestimentoResgateId] = useState(
-    lancamento.investimentoResgateId ?? "",
-  );
-
   const valorLiquido = lancamento.valorCentavos - lancamento.descontoCentavos;
-  const subcategoriasDaCategoria =
-    categorias.find((c) => c.id === categoriaId)?.subcategorias ?? [];
-
-  async function salvar() {
-    await onAtualizar(lancamento.id, {
-      data,
-      descricaoPropria: descricao || null,
-      valorCentavos: reaisParaCentavos(valor),
-      categoriaId: categoriaId || null,
-      subcategoriaId: subcategoriaId || null,
-      bancoId,
-      pessoaDivisaoId,
-      pessoaPagouId,
-      pagoComResgateInvestimento,
-      investimentoResgateId: pagoComResgateInvestimento
-        ? investimentoResgateId || null
-        : null,
-    });
-    onCancelarEdicao();
-  }
-
-  const inputClass =
-    "rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1";
-
-  if (emEdicao) {
-    return (
-      <tr className="border-outline-variant/60 bg-surface-container-low border-b">
-        <td colSpan={9} className="p-sm">
-          <div className="gap-sm flex flex-wrap items-end">
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Data
-              </label>
-              <input
-                type="date"
-                className={inputClass}
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Descrição
-              </label>
-              <input
-                className={inputClass}
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder={lancamento.descricaoOrigem ?? ""}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Valor
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className={`w-24 text-right ${inputClass}`}
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Categoria
-              </label>
-              <select
-                className={inputClass}
-                value={categoriaId}
-                onChange={(e) => {
-                  setCategoriaId(e.target.value);
-                  setSubcategoriaId(SEM_CATEGORIA);
-                }}
-              >
-                <option value={SEM_CATEGORIA}>Nenhuma</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Subcategoria
-              </label>
-              <select
-                className={inputClass}
-                value={subcategoriaId}
-                onChange={(e) => setSubcategoriaId(e.target.value)}
-                disabled={!categoriaId}
-              >
-                <option value={SEM_CATEGORIA}>Nenhuma</option>
-                {subcategoriasDaCategoria.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Banco
-              </label>
-              <select
-                className={inputClass}
-                value={bancoId}
-                onChange={(e) => setBancoId(e.target.value)}
-              >
-                {bancos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Divisão
-              </label>
-              <select
-                className={inputClass}
-                value={pessoaDivisaoId}
-                onChange={(e) => setPessoaDivisaoId(e.target.value)}
-              >
-                {pessoas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Pagou
-              </label>
-              <select
-                className={inputClass}
-                value={pessoaPagouId}
-                onChange={(e) => setPessoaPagouId(e.target.value)}
-              >
-                {pessoas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant flex items-center gap-1.5 text-xs font-semibold">
-                <input
-                  type="checkbox"
-                  checked={pagoComResgateInvestimento}
-                  onChange={(e) => {
-                    setPagoComResgateInvestimento(e.target.checked);
-                    if (!e.target.checked) setInvestimentoResgateId("");
-                  }}
-                />
-                Resgate de investimento
-              </label>
-              {pagoComResgateInvestimento && (
-                <select
-                  className={inputClass}
-                  value={investimentoResgateId}
-                  onChange={(e) => setInvestimentoResgateId(e.target.value)}
-                >
-                  <option value="">Não informado</option>
-                  {investimentos.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.produto}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="text-success hover:bg-surface-container rounded-full p-1.5 transition-colors"
-                onClick={salvar}
-                title="Salvar"
-                aria-label="Salvar"
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              </button>
-              <button
-                className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5 transition-colors"
-                onClick={onCancelarEdicao}
-                title="Cancelar"
-                aria-label="Cancelar"
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
   const divisaoPessoa = pessoas.find(
     (p) => p.id === lancamento.pessoaDivisaoId,
   );
 
   return (
     <tr
-      className="border-outline-variant/60 hover:bg-surface-container-low cursor-pointer border-b"
+      className={`hover:bg-surface-container-low cursor-pointer border-l-4 ${
+        selecionada
+          ? "border-l-primary bg-primary/5"
+          : "border-outline-variant/60 border-b border-l-transparent"
+      }`}
       onClick={onAbrirDetalhe}
     >
       <td className="p-2 whitespace-nowrap">
@@ -1860,26 +1563,7 @@ function LinhaLancamento({
       <td className="p-2 whitespace-nowrap">
         {nome.pessoa(lancamento.pessoaPagouId)}
       </td>
-      <td className="flex gap-2 p-2" onClick={(e) => e.stopPropagation()}>
-        <button
-          className="text-primary hover:bg-surface-container rounded-full p-1.5 transition-colors"
-          onClick={onIniciarEdicao}
-          title="Editar"
-          aria-label="Editar"
-        >
-          <svg
-            className="h-4 w-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-          </svg>
-        </button>
+      <td className="p-2" onClick={(e) => e.stopPropagation()}>
         <button
           className="text-danger hover:bg-surface-container rounded-full p-1.5 transition-colors"
           onClick={() => onRemover(lancamento)}
@@ -1909,41 +1593,75 @@ function LinhaLancamento({
 
 function DetalheLancamentoDrawer({
   lancamento,
+  categorias,
+  bancos,
   pessoas,
   investimentos,
-  nome,
   onFechar,
-  onEditar,
-  onRemover,
+  onSalvar,
 }: {
   lancamento: Lancamento;
+  categorias: Categoria[];
+  bancos: Banco[];
   pessoas: Pessoa[];
   investimentos: Investimento[];
-  nome: {
-    banco: (id: string) => string;
-    pessoa: (id: string) => string;
-    categoria: (id: string | null) => string;
-    subcategoria: (id: string | null) => string;
-  };
   onFechar: () => void;
-  onEditar: () => void;
-  onRemover: () => void;
+  onSalvar: (input: Partial<Lancamento>) => Promise<void>;
 }) {
-  const valorLiquido = lancamento.valorCentavos - lancamento.descontoCentavos;
-  const divisaoPessoa = pessoas.find(
-    (p) => p.id === lancamento.pessoaDivisaoId,
+  const [data, setData] = useState(dataParaInputDate(lancamento.data));
+  const [descricao, setDescricao] = useState(lancamento.descricaoPropria ?? "");
+  const [valor, setValor] = useState(
+    centavosParaReais(lancamento.valorCentavos),
   );
-  const categoriaLabel = lancamento.subcategoriaId
-    ? `${nome.categoria(lancamento.categoriaId)} (${nome.subcategoria(lancamento.subcategoriaId)})`
-    : nome.categoria(lancamento.categoriaId);
-  const investimentoResgate = investimentos.find(
-    (i) => i.id === lancamento.investimentoResgateId,
+  const [categoriaId, setCategoriaId] = useState(
+    lancamento.categoriaId ?? SEM_CATEGORIA,
   );
-  const resgateLabel = lancamento.pagoComResgateInvestimento
-    ? investimentoResgate
-      ? `Sim — ${investimentoResgate.produto}`
-      : "Sim"
-    : "Não";
+  const [subcategoriaId, setSubcategoriaId] = useState(
+    lancamento.subcategoriaId ?? SEM_CATEGORIA,
+  );
+  const [bancoId, setBancoId] = useState(lancamento.bancoId);
+  const [pessoaDivisaoId, setPessoaDivisaoId] = useState(
+    lancamento.pessoaDivisaoId,
+  );
+  const [pessoaPagouId, setPessoaPagouId] = useState(lancamento.pessoaPagouId);
+  const [pagoComResgateInvestimento, setPagoComResgateInvestimento] = useState(
+    lancamento.pagoComResgateInvestimento ?? false,
+  );
+  const [investimentoResgateId, setInvestimentoResgateId] = useState(
+    lancamento.investimentoResgateId ?? "",
+  );
+  const [salvando, setSalvando] = useState(false);
+
+  const subcategoriasDaCategoria =
+    categorias.find((c) => c.id === categoriaId)?.subcategorias ?? [];
+
+  async function salvar() {
+    setSalvando(true);
+    try {
+      await onSalvar({
+        data,
+        descricaoPropria: descricao || null,
+        valorCentavos: reaisParaCentavos(valor),
+        categoriaId: categoriaId || null,
+        subcategoriaId: subcategoriaId || null,
+        bancoId,
+        pessoaDivisaoId,
+        pessoaPagouId,
+        pagoComResgateInvestimento,
+        investimentoResgateId: pagoComResgateInvestimento
+          ? investimentoResgateId || null
+          : null,
+      });
+      onFechar();
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const inputClass =
+    "rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1.5 text-sm";
+  const labelClass =
+    "text-on-surface-variant text-xs font-semibold tracking-wide uppercase";
 
   return (
     <div
@@ -1980,72 +1698,191 @@ function DetalheLancamentoDrawer({
           </button>
         </div>
 
-        <CampoDetalhe label="Data" valor={dataParaInputDate(lancamento.data)} />
-        <CampoDetalhe
-          label="Descrição"
-          valor={
-            lancamento.descricaoPropria || lancamento.descricaoOrigem || "—"
-          }
-        />
-        <CampoDetalhe
-          label="Valor"
-          valor={`R$ ${centavosParaReais(valorLiquido)}`}
-        />
-        <CampoDetalhe label="Categoria" valor={categoriaLabel} />
-        <CampoDetalhe label="Banco" valor={nome.banco(lancamento.bancoId)} />
-        <div className="flex flex-col gap-1">
-          <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-            Divisão
-          </span>
-          {divisaoPessoa ? (
-            <PessoaBadge
-              nome={divisaoPessoa.nome}
-              pessoaId={divisaoPessoa.id}
-              compartilhado={divisaoPessoa.tipo !== "INDIVIDUAL"}
+        <div className="gap-sm grid grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-data">
+              Data
+            </label>
+            <input
+              id="dt-data"
+              type="date"
+              className={inputClass}
+              value={data}
+              onChange={(e) => setData(e.target.value)}
             />
-          ) : (
-            <span className="text-on-surface text-sm">
-              {nome.pessoa(lancamento.pessoaDivisaoId)}
-            </span>
-          )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-valor">
+              Valor
+            </label>
+            <input
+              id="dt-valor"
+              type="number"
+              step="0.01"
+              className={`text-right ${inputClass}`}
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+            />
+          </div>
         </div>
-        <CampoDetalhe
-          label="Pagou"
-          valor={nome.pessoa(lancamento.pessoaPagouId)}
-        />
-        <CampoDetalhe
-          label="Pago com resgate de investimento"
-          valor={resgateLabel}
-        />
 
-        <div className="border-outline-variant pt-md mt-auto flex gap-2 border-t">
+        <div className="flex flex-col gap-1">
+          <label className={labelClass} htmlFor="dt-descricao">
+            Descrição
+          </label>
+          <textarea
+            id="dt-descricao"
+            className={`${inputClass} resize-none`}
+            rows={3}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder={lancamento.descricaoOrigem ?? ""}
+          />
+        </div>
+
+        <div className="gap-sm grid grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-categoria">
+              Categoria
+            </label>
+            <select
+              id="dt-categoria"
+              className={inputClass}
+              value={categoriaId}
+              onChange={(e) => {
+                setCategoriaId(e.target.value);
+                setSubcategoriaId(SEM_CATEGORIA);
+              }}
+            >
+              <option value={SEM_CATEGORIA}>Nenhuma</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-subcategoria">
+              Subcategoria
+            </label>
+            <select
+              id="dt-subcategoria"
+              className={inputClass}
+              value={subcategoriaId}
+              onChange={(e) => setSubcategoriaId(e.target.value)}
+              disabled={!categoriaId}
+            >
+              <option value={SEM_CATEGORIA}>Nenhuma</option>
+              {subcategoriasDaCategoria.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className={labelClass} htmlFor="dt-banco">
+            Conta
+          </label>
+          <select
+            id="dt-banco"
+            className={inputClass}
+            value={bancoId}
+            onChange={(e) => setBancoId(e.target.value)}
+          >
+            {bancos.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="gap-sm grid grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-divisao">
+              Divisão
+            </label>
+            <select
+              id="dt-divisao"
+              className={inputClass}
+              value={pessoaDivisaoId}
+              onChange={(e) => setPessoaDivisaoId(e.target.value)}
+            >
+              {pessoas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-pagou">
+              Responsável
+            </label>
+            <select
+              id="dt-pagou"
+              className={inputClass}
+              value={pessoaPagouId}
+              onChange={(e) => setPessoaPagouId(e.target.value)}
+            >
+              {pessoas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-on-surface-variant flex items-center gap-1.5 text-xs font-semibold">
+            <input
+              type="checkbox"
+              checked={pagoComResgateInvestimento}
+              onChange={(e) => {
+                setPagoComResgateInvestimento(e.target.checked);
+                if (!e.target.checked) setInvestimentoResgateId("");
+              }}
+            />
+            Pago com resgate de investimento
+          </label>
+        </div>
+        {pagoComResgateInvestimento && (
+          <div className="flex flex-col gap-1">
+            <label className={labelClass} htmlFor="dt-investimento">
+              Investimento (opcional)
+            </label>
+            <select
+              id="dt-investimento"
+              className={inputClass}
+              value={investimentoResgateId}
+              onChange={(e) => setInvestimentoResgateId(e.target.value)}
+            >
+              <option value="">Não informado</option>
+              {investimentos.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.produto}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="border-outline-variant pt-md mt-auto border-t">
           <button
             type="button"
-            onClick={onEditar}
-            className="border-outline-variant px-md text-on-surface hover:bg-surface-container-low flex-1 rounded-full border py-2 text-sm font-semibold"
+            onClick={salvar}
+            disabled={salvando}
+            className="bg-primary px-md text-on-primary w-full rounded-full py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60"
           >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={onRemover}
-            className="bg-danger px-md text-on-danger flex-1 rounded-full py-2 text-sm font-semibold hover:opacity-90"
-          >
-            Remover
+            {salvando ? "Salvando..." : "Salvar Alterações"}
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function CampoDetalhe({ label, valor }: { label: string; valor: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-        {label}
-      </span>
-      <span className="text-on-surface text-sm break-words">{valor}</span>
     </div>
   );
 }
