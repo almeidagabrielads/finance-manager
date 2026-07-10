@@ -1,5 +1,6 @@
 import * as z from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { resolverFracaoPorGrupo } from "./pessoas";
 
 export const CriarLancamentoSchema = z.object({
   data: z.coerce.date(),
@@ -88,7 +89,7 @@ async function referenciasValidas(
   return true;
 }
 
-export function listarLancamentos(
+export async function listarLancamentos(
   prisma: PrismaClient,
   householdId: string,
   opts: {
@@ -100,6 +101,13 @@ export function listarLancamentos(
     pessoaId?: string;
   } = {},
 ) {
+  // Divisão dela ou de um grupo (CASAL/FAMILIA) do qual participa — mesma
+  // regra usada no resumo/saldo (ver resolverFracaoPorGrupo) — ou lançamentos
+  // que ela pagou diretamente, mesmo com divisão em outra pessoa.
+  const gruposDaPessoa = opts.pessoaId
+    ? await resolverFracaoPorGrupo(prisma, householdId, opts.pessoaId)
+    : undefined;
+
   return prisma.lancamento.findMany({
     where: {
       householdId,
@@ -117,7 +125,11 @@ export function listarLancamentos(
       ...(opts.pessoaId
         ? {
             OR: [
-              { pessoaDivisaoId: opts.pessoaId },
+              {
+                pessoaDivisaoId: {
+                  in: [opts.pessoaId, ...(gruposDaPessoa?.keys() ?? [])],
+                },
+              },
               { pessoaPagouId: opts.pessoaId },
             ],
           }

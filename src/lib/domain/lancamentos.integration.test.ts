@@ -3,7 +3,7 @@ import { limparBanco, prismaTest } from "@/test/prisma";
 import { criarCategoria } from "./categorias";
 import { criarSubcategoria } from "./subcategorias";
 import { criarBanco } from "./bancos";
-import { criarPessoa } from "./pessoas";
+import { criarPessoa, definirIntegrantes } from "./pessoas";
 import { criarInvestimento } from "./investimentos";
 import {
   atualizarLancamento,
@@ -463,6 +463,44 @@ describe("listarLancamentos (filtros)", () => {
     });
 
     expect(lancamentos).toHaveLength(2);
+  });
+
+  it("filtra por pessoa, incluindo lançamentos divididos com um grupo do qual ela participa", async () => {
+    const h = await criarHousehold();
+    const { banco, isa, gabi } = await montarCadastros(h.id);
+    const familia = await criarPessoa(prismaTest, h.id, {
+      nome: "Família",
+      tipo: "FAMILIA",
+    });
+    await definirIntegrantes(prismaTest, h.id, familia.id, [
+      { pessoaId: isa.id, peso: 60 },
+      { pessoaId: gabi.id, peso: 40 },
+    ]);
+
+    // Gasto do grupo Família, pago pela Gabi — Isa participa do grupo mas não
+    // é dona da divisão nem pagou; deve aparecer para ela mesmo assim.
+    await criarLancamento(prismaTest, h.id, {
+      data: new Date("2026-06-01"),
+      valorCentavos: 10_000,
+      bancoId: banco.id,
+      pessoaDivisaoId: familia.id,
+      pessoaPagouId: gabi.id,
+    });
+    // Gasto individual da Gabi, sem relação com a Isa ou o grupo.
+    await criarLancamento(prismaTest, h.id, {
+      data: new Date("2026-06-02"),
+      valorCentavos: 2000,
+      bancoId: banco.id,
+      pessoaDivisaoId: gabi.id,
+      pessoaPagouId: gabi.id,
+    });
+
+    const lancamentos = await listarLancamentos(prismaTest, h.id, {
+      pessoaId: isa.id,
+    });
+
+    expect(lancamentos).toHaveLength(1);
+    expect(lancamentos[0].valorCentavos).toBe(10_000);
   });
 
   it("filtra por banco", async () => {
