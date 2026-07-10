@@ -902,6 +902,8 @@ function VisaoMesAtual({
             })}
             <tr className="bg-surface-container-low font-semibold">
               <td className="p-3">Total consolidado</td>
+              <td className="p-3"></td>
+              <td className="p-3"></td>
               <td className="data-tabular p-3 text-right">
                 {centavosParaReais(totalPlanejado)}
               </td>
