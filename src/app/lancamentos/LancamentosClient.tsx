@@ -159,12 +159,17 @@ export function LancamentosClient() {
   const [anoFiltroMeses, setAnoFiltroMeses] = useState(() =>
     new Date().getFullYear(),
   );
-  // null = nenhum mês selecionado (sem filtro de período).
+  // null = nenhum mês selecionado — filtra pelo ano inteiro.
   const [mesFiltroSelecionado, setMesFiltroSelecionado] = useState<
     number | null
   >(null);
   const { inicio: filtroDataInicio, fim: filtroDataFim } = useMemo(() => {
-    if (mesFiltroSelecionado === null) return { inicio: "", fim: "" };
+    if (mesFiltroSelecionado === null) {
+      return {
+        inicio: `${anoFiltroMeses}-01-01`,
+        fim: `${anoFiltroMeses}-12-31`,
+      };
+    }
     return intervaloDoMes(anoFiltroMeses, mesFiltroSelecionado);
   }, [anoFiltroMeses, mesFiltroSelecionado]);
   const anosDisponiveis = useMemo(() => {
@@ -919,11 +924,10 @@ export function LancamentosClient() {
             onDragLeave={() => setArrastandoArquivo(false)}
             onDrop={onSoltarArquivo}
             onClick={() => inputArquivoRef.current?.click()}
-            className={`p-lg flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${
-              arrastandoArquivo
+            className={`p-lg flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${arrastandoArquivo
                 ? "border-primary bg-primary/5"
                 : "border-outline-variant"
-            }`}
+              }`}
           >
             <span
               className="bg-primary-container/20 flex h-10 w-10 items-center justify-center rounded-full text-lg"
@@ -1063,18 +1067,18 @@ export function LancamentosClient() {
                   const ehAjuste = linha.valorCentavos < 0;
                   const tipo = ehAjuste
                     ? {
-                        label: "Ajuste",
-                        classe: "bg-surface-container text-on-surface-variant",
-                      }
+                      label: "Ajuste",
+                      classe: "bg-surface-container text-on-surface-variant",
+                    }
                     : divisaoPessoa?.tipo === "INDIVIDUAL"
                       ? {
-                          label: "Individual",
-                          classe: "bg-secondary/10 text-secondary",
-                        }
+                        label: "Individual",
+                        classe: "bg-secondary/10 text-secondary",
+                      }
                       : {
-                          label: "Dividido",
-                          classe: "bg-primary/10 text-primary",
-                        };
+                        label: "Dividido",
+                        classe: "bg-primary/10 text-primary",
+                      };
                   return (
                     <tr
                       key={linha.hash}
@@ -1222,37 +1226,35 @@ export function LancamentosClient() {
         </div>
       )}
 
-      <div className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Select
-            id="f-ano"
-            className="w-28"
-            value={String(anoFiltroMeses)}
-            onChange={(v) => setAnoFiltroMeses(Number(v))}
-            options={anosDisponiveis.map((ano) => ({
-              value: String(ano),
-              label: String(ano),
-            }))}
-          />
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Select
+          id="f-ano"
+          className="w-28"
+          value={String(anoFiltroMeses)}
+          onChange={(v) => setAnoFiltroMeses(Number(v))}
+          options={anosDisponiveis.map((ano) => ({
+            value: String(ano),
+            label: String(ano),
+          }))}
+        />
 
-          {NOMES_MESES.map((nomeMes, idx) => {
-            const ativo = mesFiltroSelecionado === idx;
-            return (
-              <button
-                key={nomeMes}
-                type="button"
-                onClick={() => setMesFiltroSelecionado(ativo ? null : idx)}
-                className={
-                  ativo
-                    ? "bg-primary px-md text-on-primary rounded-full py-1 text-xs font-semibold"
-                    : "border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low px-md rounded-full border py-1 text-xs"
-                }
-              >
-                {nomeMes}
-              </button>
-            );
-          })}
-        </div>
+        {NOMES_MESES.map((nomeMes, idx) => {
+          const ativo = mesFiltroSelecionado === idx;
+          return (
+            <button
+              key={nomeMes}
+              type="button"
+              onClick={() => setMesFiltroSelecionado(ativo ? null : idx)}
+              className={
+                ativo
+                  ? "bg-primary px-md text-on-primary rounded-full py-1 text-xs font-semibold"
+                  : "border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low px-md rounded-full border py-1 text-xs"
+              }
+            >
+              {nomeMes}
+            </button>
+          );
+        })}
       </div>
 
       <div className="border-outline-variant bg-surface-container-lowest overflow-x-auto rounded-xl border">
@@ -1353,7 +1355,7 @@ export function LancamentosClient() {
               .slice(
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS +
-                  TAMANHO_PAGINA_LANCAMENTOS,
+                TAMANHO_PAGINA_LANCAMENTOS,
               )
               .map((lancamento) => (
                 <LinhaLancamento
@@ -1385,7 +1387,7 @@ export function LancamentosClient() {
             {Math.min(
               TAMANHO_PAGINA_LANCAMENTOS,
               lancamentosProcessados.length -
-                paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
+              paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
             )}{" "}
             de {lancamentosProcessados.length} lançamentos
           </span>
@@ -1456,11 +1458,10 @@ function LinhaLancamento({
 
   return (
     <tr
-      className={`hover:bg-surface-container-low cursor-pointer border-l-4 ${
-        selecionada
+      className={`hover:bg-surface-container-low cursor-pointer border-l-4 ${selecionada
           ? "border-l-primary bg-primary/5"
           : "border-outline-variant/60 border-b border-l-transparent"
-      }`}
+        }`}
       onClick={onAbrirDetalhe}
     >
       <td className="p-2 whitespace-nowrap">
