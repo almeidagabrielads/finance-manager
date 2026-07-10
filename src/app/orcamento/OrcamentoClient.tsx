@@ -230,10 +230,16 @@ export function OrcamentoClient() {
             value={pessoaFiltro}
             onChange={setPessoaFiltro}
             options={[
-              { value: TOTAL_CASA, label: "Compartilhado (casa toda)" },
+              { value: TOTAL_CASA, label: "Total (casa toda)" },
               ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
             ]}
           />
+          {!editavel && (
+            <span className="text-on-surface-variant text-xs">
+              Somatório dos integrantes — somente leitura. Selecione uma
+              pessoa para editar.
+            </span>
+          )}
         </div>
 
         {aba === "mes" && (
