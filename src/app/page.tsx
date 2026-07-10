@@ -1,7 +1,17 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { DashboardClient } from "./DashboardClient";
+import { decryptSession, SESSION_COOKIE } from "@/lib/auth/session";
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies();
+  const session = decryptSession(cookieStore.get(SESSION_COOKIE)?.value);
+
+  if (!session) {
+    redirect("/login");
+  }
+
   return (
     <main className="flex w-full flex-col">
       <div className="gap-lg p-lg mx-auto flex w-full max-w-6xl flex-col">
