@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { unicosPorChave, unicosPorId } from "@/lib/dedupe";
+import { Select } from "./components/Select";
 
 const MESES = [
   "Jan",
@@ -469,19 +470,15 @@ export function DashboardAnual({ ano }: { ano: number }) {
           >
             Visualizando
           </label>
-          <select
+          <Select
             id="pessoaFiltro"
             value={pessoaFiltro}
-            onChange={(e) => setPessoaFiltro(e.target.value)}
-            className="border-outline-variant bg-surface-container-lowest text-on-surface px-md rounded-full border py-1.5 text-sm font-semibold"
-          >
-            <option value="">Geral</option>
-            {pessoas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
+            onChange={setPessoaFiltro}
+            options={[
+              { value: "", label: "Geral" },
+              ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
+            ]}
+          />
         </div>
         <Link
           href="/configuracoes/exportar-dados"

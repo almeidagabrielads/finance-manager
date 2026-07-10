@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import { FAIXAS_LABEL } from "./InvestimentosClient";
 
@@ -509,18 +510,15 @@ export function RelatorioInvestimentos({
         >
           Ano
         </label>
-        <select
+        <Select
           id="ano-relatorio"
-          className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1 text-sm"
-          value={ano}
-          onChange={(e) => setAno(Number(e.target.value))}
-        >
-          {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+          value={String(ano)}
+          onChange={(v) => setAno(Number(v))}
+          options={[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({
+            value: String(a),
+            label: String(a),
+          }))}
+        />
       </div>
 
       <div className="flex flex-col gap-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Select } from "../components/Select";
 import {
   TIPOS_INVESTIMENTO,
   parseErro,
@@ -102,19 +103,12 @@ export function EditarInvestimentoModal({
               >
                 Banco
               </label>
-              <select
+              <Select
                 id="editar-banco"
-                className={inputClass}
                 value={bancoId}
-                onChange={(e) => setBancoId(e.target.value)}
-                required
-              >
-                {bancos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={setBancoId}
+                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+              />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -124,19 +118,12 @@ export function EditarInvestimentoModal({
               >
                 Titular
               </label>
-              <select
+              <Select
                 id="editar-titular"
-                className={inputClass}
                 value={pessoaId}
-                onChange={(e) => setPessoaId(e.target.value)}
-                required
-              >
-                {pessoas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={setPessoaId}
+                options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+              />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -146,18 +133,15 @@ export function EditarInvestimentoModal({
               >
                 Tipo
               </label>
-              <select
+              <Select
                 id="editar-tipo"
-                className={inputClass}
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoInvestimento)}
-              >
-                {TIPOS_INVESTIMENTO.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setTipo(v as TipoInvestimento)}
+                options={TIPOS_INVESTIMENTO.map((t) => ({
+                  value: t.value,
+                  label: t.label,
+                }))}
+              />
             </div>
           </div>
 
@@ -205,18 +189,18 @@ export function EditarInvestimentoModal({
               >
                 Vencimento/liquidez
               </label>
-              <select
+              <Select
                 id="editar-modo-liquidez"
-                className={inputClass}
                 value={modoLiquidez}
-                onChange={(e) =>
-                  setModoLiquidez(e.target.value as "DIAS" | "DATA" | "NENHUM")
+                onChange={(v) =>
+                  setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")
                 }
-              >
-                <option value="DIAS">Prazo (D+n)</option>
-                <option value="DATA">Data de vencimento</option>
-                <option value="NENHUM">Indefinido</option>
-              </select>
+                options={[
+                  { value: "DIAS", label: "Prazo (D+n)" },
+                  { value: "DATA", label: "Data de vencimento" },
+                  { value: "NENHUM", label: "Indefinido" },
+                ]}
+              />
             </div>
 
             {modoLiquidez === "DIAS" && (
@@ -277,7 +261,7 @@ export function EditarInvestimentoModal({
             <button
               type="button"
               onClick={onClose}
-              className="border-outline-variant text-on-surface px-md rounded-full border py-1.5 text-xs font-semibold hover:bg-surface-container-low"
+              className="border-outline-variant text-on-surface px-md hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
             >
               Cancelar
             </button>

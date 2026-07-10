@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { Select } from "../../components/Select";
 
 const MOEDAS = [
   { value: "BRL", label: "Real Brasileiro (BRL)" },
@@ -96,12 +97,12 @@ function PreferenciaCard({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-md rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
-      <div className="flex items-center gap-md">
+    <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex items-center justify-between rounded-xl border">
+      <div className="gap-md flex items-center">
         <span className="text-on-surface-variant">{icone}</span>
         <div>
-          <h3 className="text-sm font-semibold text-on-surface">{titulo}</h3>
-          <p className="text-sm text-on-surface-variant">{descricao}</p>
+          <h3 className="text-on-surface text-sm font-semibold">{titulo}</h3>
+          <p className="text-on-surface-variant text-sm">{descricao}</p>
         </div>
       </div>
       {children}
@@ -164,43 +165,34 @@ export function PreferenciasClient() {
   }
 
   if (!preferencias) {
-    return <p className="text-sm text-on-surface-variant">Carregando…</p>;
+    return <p className="text-on-surface-variant text-sm">Carregando…</p>;
   }
 
-  const selectClass =
-    "rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-sm";
-
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
       {salvando ? (
-        <p className="text-xs text-on-surface-variant">Salvando…</p>
+        <p className="text-on-surface-variant text-xs">Salvando…</p>
       ) : (
-        salvo && <p className="text-xs text-success">Preferências salvas.</p>
+        salvo && <p className="text-success text-xs">Preferências salvas.</p>
       )}
 
-      <div className="flex flex-col gap-md">
+      <div className="gap-md flex flex-col">
         <PreferenciaCard
           icone={<IconeMoeda />}
           titulo="Moeda Principal"
           descricao="Defina a moeda padrão para seus relatórios"
         >
-          <select
-            aria-label="Moeda principal"
-            className={selectClass}
+          <Select
+            ariaLabel="Moeda principal"
             value={preferencias.moeda}
-            onChange={(e) => salvar({ moeda: e.target.value })}
-          >
-            {MOEDAS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+            onChange={(moeda) => salvar({ moeda })}
+            options={MOEDAS.map((m) => ({ value: m.value, label: m.label }))}
+          />
         </PreferenciaCard>
 
         <PreferenciaCard
@@ -208,18 +200,12 @@ export function PreferenciasClient() {
           titulo="Idioma"
           descricao="Idioma da interface do sistema"
         >
-          <select
-            aria-label="Idioma"
-            className={selectClass}
+          <Select
+            ariaLabel="Idioma"
             value={preferencias.idioma}
-            onChange={(e) => salvar({ idioma: e.target.value })}
-          >
-            {IDIOMAS.map((i) => (
-              <option key={i.value} value={i.value}>
-                {i.label}
-              </option>
-            ))}
-          </select>
+            onChange={(idioma) => salvar({ idioma })}
+            options={IDIOMAS.map((i) => ({ value: i.value, label: i.label }))}
+          />
         </PreferenciaCard>
 
         <PreferenciaCard
@@ -227,7 +213,7 @@ export function PreferenciasClient() {
           titulo="Tema do Sistema"
           descricao="Escolha entre o modo claro ou escuro"
         >
-          <div className="flex rounded-full border border-outline-variant p-0.5">
+          <div className="border-outline-variant flex rounded-full border p-0.5">
             {TEMAS.map((t) => (
               <button
                 key={t.value}
@@ -235,8 +221,8 @@ export function PreferenciasClient() {
                 onClick={() => salvar({ tema: t.value })}
                 className={
                   preferencias.tema === t.value
-                    ? "rounded-full bg-primary px-md py-1 text-xs font-semibold text-on-primary"
-                    : "rounded-full px-md py-1 text-xs font-semibold text-on-surface-variant hover:text-on-surface"
+                    ? "bg-primary px-md text-on-primary rounded-full py-1 text-xs font-semibold"
+                    : "px-md text-on-surface-variant hover:text-on-surface rounded-full py-1 text-xs font-semibold"
                 }
               >
                 {t.label}

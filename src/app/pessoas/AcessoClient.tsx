@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const PAPEIS = [
@@ -39,15 +40,21 @@ type Atividade = {
 
 const LIMITE_ATIVO_MS = 5 * 60 * 1000;
 
-function statusAcesso(lastSeenAt: string | null): { online: boolean; label: string } {
+function statusAcesso(lastSeenAt: string | null): {
+  online: boolean;
+  label: string;
+} {
   if (!lastSeenAt) return { online: false, label: "Nunca acessou" };
   const diffMs = Date.now() - new Date(lastSeenAt).getTime();
-  if (diffMs < LIMITE_ATIVO_MS) return { online: true, label: "Ativo(a) agora" };
+  if (diffMs < LIMITE_ATIVO_MS)
+    return { online: true, label: "Ativo(a) agora" };
 
   const minutos = Math.floor(diffMs / 60000);
-  if (minutos < 60) return { online: false, label: `Último acesso: ${minutos}min atrás` };
+  if (minutos < 60)
+    return { online: false, label: `Último acesso: ${minutos}min atrás` };
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return { online: false, label: `Último acesso: ${horas}h atrás` };
+  if (horas < 24)
+    return { online: false, label: `Último acesso: ${horas}h atrás` };
   const dias = Math.floor(horas / 24);
   return { online: false, label: `Último acesso: ${dias}d atrás` };
 }
@@ -180,14 +187,14 @@ export function AcessoClient() {
   }
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {dialogConfirmacao}
 
       <div className="flex justify-end gap-2">
         {souGestor && (
           <button
             onClick={() => setModalAberto(true)}
-            className="w-fit shrink-0 rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
+            className="bg-primary px-md text-on-primary w-fit shrink-0 rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
           >
             Convidar membro
           </button>
@@ -195,18 +202,18 @@ export function AcessoClient() {
       </div>
 
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-sm sm:grid-cols-2">
+      <div className="gap-sm grid grid-cols-1 sm:grid-cols-2">
         {membros?.map((membro) => {
           const status = statusAcesso(membro.lastSeenAt);
           return (
             <div
               key={membro.id}
-              className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+              className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -216,44 +223,43 @@ export function AcessoClient() {
                     {membro.nome.charAt(0).toUpperCase()}
                   </span>
                   <div>
-                    <h3 className="text-base font-semibold text-on-surface">
+                    <h3 className="text-on-surface text-base font-semibold">
                       {membro.nome}
                     </h3>
-                    <span className="text-xs font-semibold text-on-surface-variant">
+                    <span className="text-on-surface-variant text-xs font-semibold">
                       {labelPapel(membro.role)}
                     </span>
                   </div>
                 </div>
-                {souGestor && membro.role !== "PROPRIETARIO" && membro.id !== euId && (
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="rounded-lg border border-outline-variant bg-surface-container-lowest px-1 py-0.5 text-xs"
-                      value={membro.role}
-                      onChange={(e) => alterarPapel(membro.id, e.target.value)}
-                    >
-                      {PAPEIS.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      className="text-xs font-medium text-danger"
-                      onClick={() => removerMembro(membro)}
-                    >
-                      Remover
-                    </button>
-                  </div>
-                )}
+                {souGestor &&
+                  membro.role !== "PROPRIETARIO" &&
+                  membro.id !== euId && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={membro.role}
+                        onChange={(v) => alterarPapel(membro.id, v)}
+                        options={PAPEIS.map((p) => ({
+                          value: p.value,
+                          label: p.label,
+                        }))}
+                      />
+                      <button
+                        className="text-danger text-xs font-medium"
+                        onClick={() => removerMembro(membro)}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  )}
               </div>
 
-              <p className="text-sm text-on-surface-variant">{membro.email}</p>
+              <p className="text-on-surface-variant text-sm">{membro.email}</p>
 
-              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+              <div className="text-on-surface-variant flex items-center gap-1.5 text-xs">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${status.online ? "bg-success" : "bg-outline"}`}
                 />
-                <span className="font-medium uppercase tracking-wide">
+                <span className="font-medium tracking-wide uppercase">
                   {status.label}
                 </span>
                 {membro.lastDevice && <span>· {membro.lastDevice}</span>}
@@ -265,12 +271,12 @@ export function AcessoClient() {
 
       {atividades.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+          <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
             Logs de atividade recentes
           </h3>
-          <div className="overflow-hidden rounded-xl border border-outline-variant">
+          <div className="border-outline-variant overflow-hidden rounded-xl border">
             <table className="w-full text-sm">
-              <thead className="bg-surface-container-low text-left text-xs font-semibold text-on-surface-variant">
+              <thead className="bg-surface-container-low text-on-surface-variant text-left text-xs font-semibold">
                 <tr>
                   <ColumnHeader
                     label="Ação"
@@ -318,7 +324,7 @@ export function AcessoClient() {
               </thead>
               <tbody>
                 {atividadesProcessadas.map((a) => (
-                  <tr key={a.id} className="border-t border-outline-variant">
+                  <tr key={a.id} className="border-outline-variant border-t">
                     <td className="p-sm">{a.acao}</td>
                     <td className="p-sm text-on-surface-variant">
                       {a.user?.nome ?? "—"}
@@ -335,7 +341,7 @@ export function AcessoClient() {
             </table>
           </div>
           {atividadesProcessadas.length === 0 && (
-            <p className="p-sm text-sm text-on-surface-variant">
+            <p className="p-sm text-on-surface-variant text-sm">
               Nenhuma atividade corresponde aos filtros das colunas.
             </p>
           )}
@@ -387,82 +393,76 @@ function ConvidarMembroModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-lg">
+    <div className="p-lg fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form
         onSubmit={enviar}
-        className="flex w-full max-w-[26rem] flex-col gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+        className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex w-full max-w-[26rem] flex-col rounded-xl border"
       >
-        <h3 className="text-base font-semibold text-on-surface">
+        <h3 className="text-on-surface text-base font-semibold">
           Convidar membro
         </h3>
-        <p className="text-xs text-on-surface-variant">
-          Crie uma conta de acesso e compartilhe a senha provisória com a
-          pessoa — ainda não há envio automático de convite por e-mail.
+        <p className="text-on-surface-variant text-xs">
+          Crie uma conta de acesso e compartilhe a senha provisória com a pessoa
+          — ainda não há envio automático de convite por e-mail.
         </p>
 
         {erro && (
-          <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+          <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
             {erro}
           </p>
         )}
 
-        <label className="flex flex-col gap-1 text-xs font-semibold text-on-surface-variant">
+        <label className="text-on-surface-variant flex flex-col gap-1 text-xs font-semibold">
           Nome
           <input
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm font-normal text-on-surface"
+            className="border-outline-variant bg-surface-container-lowest text-on-surface rounded-lg border px-2 py-1 text-sm font-normal"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             required
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-on-surface-variant">
+        <label className="text-on-surface-variant flex flex-col gap-1 text-xs font-semibold">
           Email
           <input
             type="email"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm font-normal text-on-surface"
+            className="border-outline-variant bg-surface-container-lowest text-on-surface rounded-lg border px-2 py-1 text-sm font-normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-on-surface-variant">
+        <label className="text-on-surface-variant flex flex-col gap-1 text-xs font-semibold">
           Senha provisória
           <input
             type="text"
             minLength={8}
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm font-normal text-on-surface"
+            className="border-outline-variant bg-surface-container-lowest text-on-surface rounded-lg border px-2 py-1 text-sm font-normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-on-surface-variant">
+        <div className="text-on-surface-variant flex flex-col gap-1 text-xs font-semibold">
           Papel
-          <select
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm font-normal text-on-surface"
+          <Select
             value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            {PAPEIS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={setRole}
+            options={PAPEIS.map((p) => ({ value: p.value, label: p.label }))}
+          />
+        </div>
 
         <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
             onClick={onFechar}
-            className="rounded-full px-md py-1.5 text-xs font-semibold text-on-surface-variant"
+            className="px-md text-on-surface-variant rounded-full py-1.5 text-xs font-semibold"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={enviando}
-            className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
+            className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
           >
             {enviando ? "Enviando…" : "Convidar"}
           </button>

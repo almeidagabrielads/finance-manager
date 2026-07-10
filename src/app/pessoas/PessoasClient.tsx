@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
+import { Select } from "../components/Select";
 
 const TIPOS_PESSOA = [
   { value: "INDIVIDUAL", label: "Individual" },
@@ -172,7 +173,10 @@ export function PessoasClient() {
     return true;
   }
 
-  async function definirIntegrantes(grupoId: string, integrantes: Integrante[]) {
+  async function definirIntegrantes(
+    grupoId: string,
+    integrantes: Integrante[],
+  ) {
     setErro(null);
     const response = await fetch(`/api/pessoas/${grupoId}/integrantes`, {
       method: "PUT",
@@ -276,18 +280,15 @@ export function PessoasClient() {
           >
             Tipo
           </label>
-          <select
+          <Select
             id="novo-tipo"
-            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={novoTipo}
-            onChange={(e) => setNovoTipo(e.target.value as TipoPessoa)}
-          >
-            {TIPOS_PESSOA.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setNovoTipo(v as TipoPessoa)}
+            options={TIPOS_PESSOA.map((t) => ({
+              value: t.value,
+              label: t.label,
+            }))}
+          />
         </div>
         <button
           type="submit"
@@ -407,17 +408,14 @@ function PessoaItem({
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <select
-              className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1 text-xs"
+            <Select
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoPessoa)}
-            >
-              {TIPOS_PESSOA.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setTipo(v as TipoPessoa)}
+              options={TIPOS_PESSOA.map((t) => ({
+                value: t.value,
+                label: t.label,
+              }))}
+            />
             <div className="flex items-center gap-1">
               <button
                 title="Salvar"

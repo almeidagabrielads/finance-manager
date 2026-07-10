@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 type Pessoa = { id: string; nome: string; tipo: string };
@@ -41,7 +42,12 @@ type Acerto = {
   para: { id: string; nome: string };
 };
 
-const BARRAS = ["bg-secondary", "bg-tertiary", "bg-success", "bg-danger"] as const;
+const BARRAS = [
+  "bg-secondary",
+  "bg-tertiary",
+  "bg-success",
+  "bg-danger",
+] as const;
 
 function hashSimples(texto: string): number {
   let hash = 0;
@@ -150,7 +156,8 @@ export function DivisaoClient() {
   const [resolvido, setResolvido] = useState(false);
   const [filtroPessoa, setFiltroPessoa] = useState("");
   const [mostrarTodosLancamentos, setMostrarTodosLancamentos] = useState(false);
-  const [mostrarHistoricoCompleto, setMostrarHistoricoCompleto] = useState(false);
+  const [mostrarHistoricoCompleto, setMostrarHistoricoCompleto] =
+    useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -308,57 +315,65 @@ export function DivisaoClient() {
     : historico.slice(0, 3);
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-wrap items-end justify-between gap-md">
-        <div className="flex flex-wrap items-end gap-md">
+      <div className="gap-md flex flex-wrap items-end justify-between">
+        <div className="gap-md flex flex-wrap items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="dataInicio">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="dataInicio"
+            >
               De
             </label>
             <input
               id="dataInicio"
               type="date"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+              className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="dataFim">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="dataFim"
+            >
               Até
             </label>
             <input
               id="dataFim"
               type="date"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+              className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
             />
           </div>
           {resumo && resumo.participantes.length > 0 && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant" htmlFor="filtroPessoa">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="filtroPessoa"
+              >
                 Filtrar por pessoa
               </label>
-              <select
+              <Select
                 id="filtroPessoa"
-                className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
                 value={filtroPessoa}
-                onChange={(e) => setFiltroPessoa(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {resumo.participantes.map((id) => (
-                  <option key={id} value={id}>
-                    {nome(id)}
-                  </option>
-                ))}
-              </select>
+                onChange={setFiltroPessoa}
+                options={[
+                  { value: "", label: "Todos" },
+                  ...resumo.participantes.map((id) => ({
+                    value: id,
+                    label: nome(id),
+                  })),
+                ]}
+              />
             </div>
           )}
         </div>
@@ -367,23 +382,28 @@ export function DivisaoClient() {
           <div className="flex flex-col items-end gap-1">
             <button
               onClick={resolverAcerto}
-              disabled={resolvendo || resumo.transferenciasSugeridas.length === 0}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
+              disabled={
+                resolvendo || resumo.transferenciasSugeridas.length === 0
+              }
+              className="bg-primary px-md text-on-primary flex items-center gap-1.5 rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
             >
               <IconeChecklist />
               {resolvendo ? "Resolvendo…" : "Resolver acerto"}
             </button>
             {resolvido && (
-              <span className="text-xs text-success">Acerto registrado.</span>
+              <span className="text-success text-xs">Acerto registrado.</span>
             )}
           </div>
         )}
       </div>
 
       {buscou && resumo === null && (
-        <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-lg text-sm text-on-surface-variant">
+        <p className="border-outline-variant bg-surface-container-lowest p-lg text-on-surface-variant rounded-xl border text-sm">
           É preciso cadastrar pelo menos duas pessoas do tipo Individual em{" "}
-          <Link href="/pessoas" className="font-medium text-primary hover:underline">
+          <Link
+            href="/pessoas"
+            className="text-primary font-medium hover:underline"
+          >
             Pessoas
           </Link>{" "}
           para calcular o acerto de contas. Uma casa com uma única pessoa não
@@ -392,11 +412,13 @@ export function DivisaoClient() {
       )}
 
       {resumo && resumo.gruposSemComposicao.length > 0 && (
-        <p className="rounded-xl border border-danger/30 bg-danger-container p-lg text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-lg text-on-danger-container rounded-xl border text-sm">
           {resumo.gruposSemComposicao.map((g) => g.nome).join(", ")}{" "}
           {resumo.gruposSemComposicao.length === 1 ? "não tem" : "não têm"}{" "}
           integrantes cadastrados — os gastos atribuídos a{" "}
-          {resumo.gruposSemComposicao.length === 1 ? "esse grupo" : "esses grupos"}{" "}
+          {resumo.gruposSemComposicao.length === 1
+            ? "esse grupo"
+            : "esses grupos"}{" "}
           neste período ficaram de fora do acerto. Configure a composição em{" "}
           <Link href="/pessoas" className="font-medium underline">
             Pessoas
@@ -407,7 +429,7 @@ export function DivisaoClient() {
 
       {resumo && (
         <>
-          <div className="grid grid-cols-1 gap-md lg:grid-cols-3">
+          <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
             {resumo.participantes.map((id) => {
               const pago =
                 resumo.totalPagoPorPessoa.find((t) => t.pessoaId === id)
@@ -417,7 +439,7 @@ export function DivisaoClient() {
               return (
                 <div
                   key={id}
-                  className="flex flex-col gap-md rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+                  className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border"
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -425,17 +447,19 @@ export function DivisaoClient() {
                     >
                       {nome(id).charAt(0).toUpperCase()}
                     </span>
-                    <h3 className="text-base font-semibold text-on-surface">
+                    <h3 className="text-on-surface text-base font-semibold">
                       {nome(id)}
                     </h3>
                   </div>
                   <div>
-                    <p className="text-xs text-on-surface-variant">Pagou no total</p>
-                    <p className="text-2xl font-bold text-on-surface">
+                    <p className="text-on-surface-variant text-xs">
+                      Pagou no total
+                    </p>
+                    <p className="text-on-surface text-2xl font-bold">
                       {centavosParaReais(pago)}
                     </p>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                  <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
                     <div
                       className={`h-full rounded-full ${corBarra(id)}`}
                       style={{ width: `${percentual}%` }}
@@ -445,8 +469,8 @@ export function DivisaoClient() {
               );
             })}
 
-            <div className="flex flex-col justify-center gap-2 rounded-xl bg-primary p-lg text-on-primary lg:col-span-1">
-              <h3 className="text-center text-xs font-semibold uppercase tracking-wide text-on-primary/70">
+            <div className="bg-primary p-lg text-on-primary flex flex-col justify-center gap-2 rounded-xl lg:col-span-1">
+              <h3 className="text-on-primary/70 text-center text-xs font-semibold tracking-wide uppercase">
                 Resultado do período
               </h3>
               {resumo.transferenciasSugeridas.length === 0 ? (
@@ -461,7 +485,7 @@ export function DivisaoClient() {
                       para {nome(t.paraId)}
                     </p>
                   ))}
-                  <p className="text-sm text-on-primary/70">
+                  <p className="text-on-primary/70 text-sm">
                     Baseado nos gastos compartilhados do período
                   </p>
                 </div>
@@ -469,14 +493,14 @@ export function DivisaoClient() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-md lg:grid-cols-3">
-            <div className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg lg:col-span-2">
-              <h3 className="text-base font-semibold text-on-surface">
+          <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
+            <div className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border lg:col-span-2">
+              <h3 className="text-on-surface text-base font-semibold">
                 Detalhamento compartilhado
               </h3>
-              <div className="overflow-hidden rounded-lg border border-outline-variant">
+              <div className="border-outline-variant overflow-hidden rounded-lg border">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-container-low text-left text-xs font-semibold text-on-surface-variant">
+                  <thead className="bg-surface-container-low text-on-surface-variant text-left text-xs font-semibold">
                     <tr>
                       <ColumnHeader
                         label="Despesa"
@@ -525,10 +549,13 @@ export function DivisaoClient() {
                   </thead>
                   <tbody>
                     {lancamentosVisiveis.map((l) => (
-                      <tr key={l.id} className="border-t border-outline-variant">
+                      <tr
+                        key={l.id}
+                        className="border-outline-variant border-t"
+                      >
                         <td className="p-sm">
                           {l.descricao || "—"}
-                          <span className="ml-2 text-xs text-on-surface-variant">
+                          <span className="text-on-surface-variant ml-2 text-xs">
                             {formatarDataCurta(l.data)}
                           </span>
                         </td>
@@ -553,7 +580,7 @@ export function DivisaoClient() {
               {lancamentosProcessados.length > 6 && (
                 <button
                   onClick={() => setMostrarTodosLancamentos((v) => !v)}
-                  className="text-sm font-medium text-primary hover:underline"
+                  className="text-primary text-sm font-medium hover:underline"
                 >
                   {mostrarTodosLancamentos
                     ? "Mostrar menos"
@@ -561,7 +588,7 @@ export function DivisaoClient() {
                 </button>
               )}
               {lancamentosProcessados.length === 0 && (
-                <p className="text-sm text-on-surface-variant">
+                <p className="text-on-surface-variant text-sm">
                   {lancamentosFiltrados.length === 0
                     ? "Nenhuma despesa considerada no acerto para este período."
                     : "Nenhuma despesa corresponde aos filtros das colunas."}
@@ -569,10 +596,10 @@ export function DivisaoClient() {
               )}
             </div>
 
-            <div className="flex flex-col gap-md">
-              <div className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
+            <div className="gap-md flex flex-col">
+              <div className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-on-surface">
+                  <h3 className="text-on-surface text-base font-semibold">
                     Histórico de acertos
                   </h3>
                   <span className="text-on-surface-variant">
@@ -580,7 +607,7 @@ export function DivisaoClient() {
                   </span>
                 </div>
                 {historico.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant">
+                  <p className="text-on-surface-variant text-sm">
                     Nenhum acerto resolvido ainda.
                   </p>
                 ) : (
@@ -588,21 +615,22 @@ export function DivisaoClient() {
                     {historicoVisivel.map((a) => (
                       <li
                         key={a.id}
-                        className="flex items-center justify-between gap-2 border-l-2 border-primary pl-2"
+                        className="border-primary flex items-center justify-between gap-2 border-l-2 pl-2"
                       >
                         <div>
-                          <p className="text-sm font-medium text-on-surface">
-                            {nome(a.de.id)} → {nome(a.para.id)} · {nomeMes(a.dataInicio)}
+                          <p className="text-on-surface text-sm font-medium">
+                            {nome(a.de.id)} → {nome(a.para.id)} ·{" "}
+                            {nomeMes(a.dataInicio)}
                           </p>
-                          <p className="text-xs text-on-surface-variant">
+                          <p className="text-on-surface-variant text-xs">
                             Resolvido em {formatarDataCurta(a.resolvidoEm)}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-sm font-semibold text-success">
+                          <span className="text-success text-sm font-semibold">
                             {centavosParaReais(a.valorCentavos)}
                           </span>
-                          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
+                          <span className="bg-success/15 text-success rounded-full px-2 py-0.5 text-[10px] font-semibold">
                             PAGO
                           </span>
                         </div>
@@ -613,7 +641,7 @@ export function DivisaoClient() {
                 {historico.length > 3 && (
                   <button
                     onClick={() => setMostrarHistoricoCompleto((v) => !v)}
-                    className="rounded-lg border border-outline-variant py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-low"
+                    className="border-outline-variant text-on-surface-variant hover:bg-surface-container-low rounded-lg border py-1.5 text-sm font-medium"
                   >
                     {mostrarHistoricoCompleto
                       ? "Mostrar menos"
@@ -622,24 +650,26 @@ export function DivisaoClient() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-md rounded-xl border border-outline-variant bg-surface-container-lowest p-lg">
-                <h3 className="text-base font-semibold text-on-surface">
+              <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
+                <h3 className="text-on-surface text-base font-semibold">
                   Impacto no orçamento
                 </h3>
                 {resumo.totalPagoPorPessoa.map((t) => {
                   const percentual =
-                    totalPagoGeral > 0 ? (t.totalCentavos / totalPagoGeral) * 100 : 0;
+                    totalPagoGeral > 0
+                      ? (t.totalCentavos / totalPagoGeral) * 100
+                      : 0;
                   return (
                     <div key={t.pessoaId} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-on-surface-variant">
                           Gasto {nome(t.pessoaId)}
                         </span>
-                        <span className="font-semibold text-on-surface">
+                        <span className="text-on-surface font-semibold">
                           {percentual.toFixed(1)}%
                         </span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                      <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
                         <div
                           className={`h-full rounded-full ${corBarra(t.pessoaId)}`}
                           style={{ width: `${percentual}%` }}
@@ -649,9 +679,9 @@ export function DivisaoClient() {
                   );
                 })}
                 {resumo.insight && (
-                  <p className="rounded-lg bg-surface-container-low p-sm text-xs text-on-surface-variant">
-                    Este período {nome(resumo.insight.pessoaId)} cobriu a
-                    maior parte das despesas em {resumo.insight.categoriaNome}.
+                  <p className="bg-surface-container-low p-sm text-on-surface-variant rounded-lg text-xs">
+                    Este período {nome(resumo.insight.pessoaId)} cobriu a maior
+                    parte das despesas em {resumo.insight.categoriaNome}.
                   </p>
                 )}
               </div>

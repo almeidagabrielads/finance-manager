@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PessoaBadge } from "../components/PessoaBadge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import type { FiltroColuna } from "@/lib/domain/tabela";
 
@@ -155,11 +156,17 @@ export function LancamentosClient() {
   const [toast, setToast] = useState<string | null>(null);
   const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
 
-  const [filtroDataInicio, setFiltroDataInicio] = useState("");
-  const [filtroDataFim, setFiltroDataFim] = useState("");
   const [anoFiltroMeses, setAnoFiltroMeses] = useState(() =>
     new Date().getFullYear(),
   );
+  // null = nenhum mês selecionado (sem filtro de período).
+  const [mesFiltroSelecionado, setMesFiltroSelecionado] = useState<
+    number | null
+  >(null);
+  const { inicio: filtroDataInicio, fim: filtroDataFim } = useMemo(() => {
+    if (mesFiltroSelecionado === null) return { inicio: "", fim: "" };
+    return intervaloDoMes(anoFiltroMeses, mesFiltroSelecionado);
+  }, [anoFiltroMeses, mesFiltroSelecionado]);
   const anosDisponiveis = useMemo(() => {
     const anoAtual = new Date().getFullYear();
     const inicio = Math.min(anoAtual - 6, anoFiltroMeses);
@@ -631,25 +638,21 @@ export function LancamentosClient() {
               >
                 Categoria
               </label>
-              <select
+              <Select
                 id="l-categoria"
-                className={inputClass}
                 value={form.categoriaId}
-                onChange={(e) =>
+                onChange={(v) =>
                   setForm({
                     ...form,
-                    categoriaId: e.target.value,
+                    categoriaId: v,
                     subcategoriaId: SEM_CATEGORIA,
                   })
                 }
-              >
-                <option value={SEM_CATEGORIA}>Nenhuma</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: SEM_CATEGORIA, label: "Nenhuma" },
+                  ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+                ]}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <label
@@ -658,22 +661,19 @@ export function LancamentosClient() {
               >
                 Subcategoria
               </label>
-              <select
+              <Select
                 id="l-subcategoria"
-                className={inputClass}
                 value={form.subcategoriaId}
-                onChange={(e) =>
-                  setForm({ ...form, subcategoriaId: e.target.value })
-                }
+                onChange={(v) => setForm({ ...form, subcategoriaId: v })}
                 disabled={!form.categoriaId}
-              >
-                <option value={SEM_CATEGORIA}>Nenhuma</option>
-                {subcategoriasDaCategoriaSelecionada.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: SEM_CATEGORIA, label: "Nenhuma" },
+                  ...subcategoriasDaCategoriaSelecionada.map((s) => ({
+                    value: s.id,
+                    label: s.nome,
+                  })),
+                ]}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <label
@@ -682,19 +682,12 @@ export function LancamentosClient() {
               >
                 Banco / Cartão
               </label>
-              <select
+              <Select
                 id="l-banco"
-                className={inputClass}
                 value={form.bancoId}
-                onChange={(e) => setForm({ ...form, bancoId: e.target.value })}
-                required
-              >
-                {bancos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, bancoId: v })}
+                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+              />
             </div>
           </div>
 
@@ -746,22 +739,15 @@ export function LancamentosClient() {
               >
                 Divisão
               </label>
-              <select
+              <Select
                 id="l-divisao"
-                className={inputClass}
                 value={form.pessoaDivisaoId}
-                onChange={(e) =>
-                  setForm({ ...form, pessoaDivisaoId: e.target.value })
-                }
-                required
-              >
-                {pessoas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                    {p.tipo === "CASAL" ? " (50/50)" : ""}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setForm({ ...form, pessoaDivisaoId: v })}
+                options={pessoas.map((p) => ({
+                  value: p.id,
+                  label: `${p.nome}${p.tipo === "CASAL" ? " (50/50)" : ""}`,
+                }))}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <label
@@ -827,21 +813,20 @@ export function LancamentosClient() {
                 >
                   Investimento (opcional)
                 </label>
-                <select
+                <Select
                   id="l-investimento"
-                  className={inputClass}
                   value={form.investimentoResgateId}
-                  onChange={(e) =>
-                    setForm({ ...form, investimentoResgateId: e.target.value })
+                  onChange={(v) =>
+                    setForm({ ...form, investimentoResgateId: v })
                   }
-                >
-                  <option value="">Não informado</option>
-                  {investimentos.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.produto}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Não informado" },
+                    ...investimentos.map((i) => ({
+                      value: i.id,
+                      label: i.produto,
+                    })),
+                  ]}
+                />
               </div>
             )}
           </div>
@@ -864,18 +849,12 @@ export function LancamentosClient() {
               >
                 Banco / Cartão
               </label>
-              <select
+              <Select
                 id="i-banco"
-                className={inputClass}
                 value={importBancoId}
-                onChange={(e) => setImportBancoId(e.target.value)}
-              >
-                {bancos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={setImportBancoId}
+                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <label
@@ -884,19 +863,15 @@ export function LancamentosClient() {
               >
                 Modelo do arquivo
               </label>
-              <select
+              <Select
                 id="i-template"
-                className={inputClass}
                 value={importTemplateId}
-                onChange={(e) => setImportTemplateId(e.target.value)}
-              >
-                <option value="">Selecione...</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nomeExibicao}
-                  </option>
-                ))}
-              </select>
+                onChange={setImportTemplateId}
+                options={templates.map((t) => ({
+                  value: t.id,
+                  label: t.nomeExibicao,
+                }))}
+              />
             </div>
             <div className="gap-sm grid grid-cols-2">
               <div className="flex flex-col gap-1">
@@ -906,18 +881,15 @@ export function LancamentosClient() {
                 >
                   Divisão padrão
                 </label>
-                <select
+                <Select
                   id="i-divisão"
-                  className={inputClass}
                   value={importPessoaDivisaoId}
-                  onChange={(e) => setImportPessoaDivisaoId(e.target.value)}
-                >
-                  {pessoas.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setImportPessoaDivisaoId}
+                  options={pessoas.map((p) => ({
+                    value: p.id,
+                    label: p.nome,
+                  }))}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label
@@ -926,18 +898,15 @@ export function LancamentosClient() {
                 >
                   Pagou
                 </label>
-                <select
+                <Select
                   id="i-pagou"
-                  className={inputClass}
                   value={importPessoaPagouId}
-                  onChange={(e) => setImportPessoaPagouId(e.target.value)}
-                >
-                  {pessoas.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setImportPessoaPagouId}
+                  options={pessoas.map((p) => ({
+                    value: p.id,
+                    label: p.nome,
+                  }))}
+                />
               </div>
             </div>
           </div>
@@ -1043,19 +1012,15 @@ export function LancamentosClient() {
                 >
                   Aplicar categoria às linhas selecionadas
                 </label>
-                <select
+                <Select
                   id="massa-categoria"
-                  className={inputClass}
                   value={categoriaEmMassa}
-                  onChange={(e) => setCategoriaEmMassa(e.target.value)}
-                >
-                  <option value="">Selecione...</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setCategoriaEmMassa}
+                  options={categorias.map((c) => ({
+                    value: c.id,
+                    label: c.nome,
+                  }))}
+                />
               </div>
               <button
                 type="button"
@@ -1139,58 +1104,50 @@ export function LancamentosClient() {
                         )}
                       </td>
                       <td className="p-2">
-                        <select
-                          className={inputClass}
+                        <Select
+                          placeholder="—"
                           value={linha.categoriaId}
-                          onChange={(e) =>
+                          onChange={(v) =>
                             atualizarLinhaRevisao(linha.hash, {
-                              categoriaId: e.target.value,
+                              categoriaId: v,
                               subcategoriaId: "",
                             })
                           }
-                        >
-                          <option value="">—</option>
-                          {categorias.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.nome}
-                            </option>
-                          ))}
-                        </select>
+                          options={categorias.map((c) => ({
+                            value: c.id,
+                            label: c.nome,
+                          }))}
+                        />
                         {categoriaAtual && (
-                          <select
-                            className={`mt-1 ${inputClass}`}
+                          <Select
+                            className="mt-1"
+                            placeholder="—"
                             value={linha.subcategoriaId}
-                            onChange={(e) =>
+                            onChange={(v) =>
                               atualizarLinhaRevisao(linha.hash, {
-                                subcategoriaId: e.target.value,
+                                subcategoriaId: v,
                               })
                             }
-                          >
-                            <option value="">—</option>
-                            {categoriaAtual.subcategorias.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.nome}
-                              </option>
-                            ))}
-                          </select>
+                            options={categoriaAtual.subcategorias.map((s) => ({
+                              value: s.id,
+                              label: s.nome,
+                            }))}
+                          />
                         )}
                       </td>
                       <td className="p-2">
-                        <select
-                          className={inputClass}
+                        <Select
                           value={linha.pessoaDivisaoId}
-                          onChange={(e) =>
+                          onChange={(v) =>
                             atualizarLinhaRevisao(linha.hash, {
-                              pessoaDivisaoId: e.target.value,
+                              pessoaDivisaoId: v,
                             })
                           }
-                        >
-                          {pessoas.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nome}
-                            </option>
-                          ))}
-                        </select>
+                          options={pessoas.map((p) => ({
+                            value: p.id,
+                            label: p.nome,
+                          }))}
+                        />
                       </td>
                       <td className="p-2">
                         <span
@@ -1266,43 +1223,25 @@ export function LancamentosClient() {
       )}
 
       <div className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
-        <div className="flex items-center gap-2">
-          <label
-            className="text-on-surface-variant text-xs font-semibold"
-            htmlFor="f-ano"
-          >
-            Ano
-          </label>
-          <select
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Select
             id="f-ano"
-            className={inputClass}
-            value={anoFiltroMeses}
-            onChange={(e) => setAnoFiltroMeses(Number(e.target.value))}
-          >
-            {anosDisponiveis.map((ano) => (
-              <option key={ano} value={ano}>
-                {ano}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+            className="w-28"
+            value={String(anoFiltroMeses)}
+            onChange={(v) => setAnoFiltroMeses(Number(v))}
+            options={anosDisponiveis.map((ano) => ({
+              value: String(ano),
+              label: String(ano),
+            }))}
+          />
+
           {NOMES_MESES.map((nomeMes, idx) => {
-            const { inicio, fim } = intervaloDoMes(anoFiltroMeses, idx);
-            const ativo = filtroDataInicio === inicio && filtroDataFim === fim;
+            const ativo = mesFiltroSelecionado === idx;
             return (
               <button
                 key={nomeMes}
                 type="button"
-                onClick={() => {
-                  if (ativo) {
-                    setFiltroDataInicio("");
-                    setFiltroDataFim("");
-                  } else {
-                    setFiltroDataInicio(inicio);
-                    setFiltroDataFim(fim);
-                  }
-                }}
+                onClick={() => setMesFiltroSelecionado(ativo ? null : idx)}
                 className={
                   ativo
                     ? "bg-primary px-md text-on-primary rounded-full py-1 text-xs font-semibold"
@@ -1745,41 +1684,36 @@ function DetalheLancamentoDrawer({
             <label className={labelClass} htmlFor="dt-categoria">
               Categoria
             </label>
-            <select
+            <Select
               id="dt-categoria"
-              className={inputClass}
               value={categoriaId}
-              onChange={(e) => {
-                setCategoriaId(e.target.value);
+              onChange={(v) => {
+                setCategoriaId(v);
                 setSubcategoriaId(SEM_CATEGORIA);
               }}
-            >
-              <option value={SEM_CATEGORIA}>Nenhuma</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: SEM_CATEGORIA, label: "Nenhuma" },
+                ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+              ]}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass} htmlFor="dt-subcategoria">
               Subcategoria
             </label>
-            <select
+            <Select
               id="dt-subcategoria"
-              className={inputClass}
               value={subcategoriaId}
-              onChange={(e) => setSubcategoriaId(e.target.value)}
+              onChange={setSubcategoriaId}
               disabled={!categoriaId}
-            >
-              <option value={SEM_CATEGORIA}>Nenhuma</option>
-              {subcategoriasDaCategoria.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nome}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: SEM_CATEGORIA, label: "Nenhuma" },
+                ...subcategoriasDaCategoria.map((s) => ({
+                  value: s.id,
+                  label: s.nome,
+                })),
+              ]}
+            />
           </div>
         </div>
 
@@ -1787,18 +1721,12 @@ function DetalheLancamentoDrawer({
           <label className={labelClass} htmlFor="dt-banco">
             Conta
           </label>
-          <select
+          <Select
             id="dt-banco"
-            className={inputClass}
             value={bancoId}
-            onChange={(e) => setBancoId(e.target.value)}
-          >
-            {bancos.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nome}
-              </option>
-            ))}
-          </select>
+            onChange={setBancoId}
+            options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+          />
         </div>
 
         <div className="gap-sm grid grid-cols-2">
@@ -1806,35 +1734,23 @@ function DetalheLancamentoDrawer({
             <label className={labelClass} htmlFor="dt-divisao">
               Divisão
             </label>
-            <select
+            <Select
               id="dt-divisao"
-              className={inputClass}
               value={pessoaDivisaoId}
-              onChange={(e) => setPessoaDivisaoId(e.target.value)}
-            >
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setPessoaDivisaoId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass} htmlFor="dt-pagou">
               Responsável
             </label>
-            <select
+            <Select
               id="dt-pagou"
-              className={inputClass}
               value={pessoaPagouId}
-              onChange={(e) => setPessoaPagouId(e.target.value)}
-            >
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setPessoaPagouId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+            />
           </div>
         </div>
 
@@ -1856,19 +1772,18 @@ function DetalheLancamentoDrawer({
             <label className={labelClass} htmlFor="dt-investimento">
               Investimento (opcional)
             </label>
-            <select
+            <Select
               id="dt-investimento"
-              className={inputClass}
               value={investimentoResgateId}
-              onChange={(e) => setInvestimentoResgateId(e.target.value)}
-            >
-              <option value="">Não informado</option>
-              {investimentos.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.produto}
-                </option>
-              ))}
-            </select>
+              onChange={setInvestimentoResgateId}
+              options={[
+                { value: "", label: "Não informado" },
+                ...investimentos.map((i) => ({
+                  value: i.id,
+                  label: i.produto,
+                })),
+              ]}
+            />
           </div>
         )}
 

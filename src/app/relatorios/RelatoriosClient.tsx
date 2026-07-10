@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { unicosPorChave, unicosPorId } from "@/lib/dedupe";
+import { Select } from "../components/Select";
 
 const MESES = [
   "Jan",
@@ -539,19 +540,15 @@ export function RelatoriosClient() {
               >
                 Categoria
               </label>
-              <select
+              <Select
                 id="categoriaFiltro"
-                className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
                 value={categoriaFiltro}
-                onChange={(e) => setCategoriaFiltro(e.target.value)}
-              >
-                <option value="">Todas as categorias</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoriaFiltro}
+                options={[
+                  { value: "", label: "Todas as categorias" },
+                  ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+                ]}
+              />
             </div>
             <button
               onClick={gerarRelatorioPersonalizado}

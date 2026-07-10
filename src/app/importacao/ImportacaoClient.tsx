@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Select } from "../components/Select";
 
 type Banco = { id: string; nome: string; ativo: boolean };
 type Pessoa = { id: string; nome: string };
@@ -203,15 +204,15 @@ export function ImportacaoClient() {
   const podeAnalisar = bancoId && templateId && arquivo;
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
       {resultado && (
-        <p className="rounded-lg border border-success/30 bg-success/10 p-sm text-sm text-success">
+        <p className="border-success/30 bg-success/10 p-sm text-success rounded-lg border text-sm">
           {resultado.criados} lançamento(s) importado(s).{" "}
           {resultado.duplicadosIgnorados > 0 &&
             `${resultado.duplicadosIgnorados} duplicado(s) ignorado(s).`}
@@ -220,100 +221,86 @@ export function ImportacaoClient() {
 
       <form
         onSubmit={analisarCsv}
-        className="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+        className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-3 rounded-xl border"
       >
         <div className="flex flex-wrap gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="banco">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="banco"
+            >
               Banco / meio de pagamento
             </label>
-            <select
+            <Select
               id="banco"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={bancoId}
-              onChange={(e) => setBancoId(e.target.value)}
-              required
-            >
-              <option value="">Selecione...</option>
-              {bancos
+              onChange={setBancoId}
+              options={bancos
                 .filter((b) => b.ativo)
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-            </select>
+                .map((b) => ({ value: b.id, label: b.nome }))}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="template">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="template"
+            >
               Modelo do CSV
             </label>
-            <select
+            <Select
               id="template"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-              required
-            >
-              <option value="">Selecione...</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nomeExibicao}
-                </option>
-              ))}
-            </select>
+              onChange={setTemplateId}
+              options={templates.map((t) => ({
+                value: t.id,
+                label: t.nomeExibicao,
+              }))}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa-divisao">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="pessoa-divisao"
+            >
               Divisão
             </label>
-            <select
+            <Select
               id="pessoa-divisao"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={pessoaDivisaoId}
-              onChange={(e) => setPessoaDivisaoId(e.target.value)}
-              required
-            >
-              <option value="">Selecione...</option>
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setPessoaDivisaoId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant" htmlFor="pessoa-pagou">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="pessoa-pagou"
+            >
               Quem pagou
             </label>
-            <select
+            <Select
               id="pessoa-pagou"
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
               value={pessoaPagouId}
-              onChange={(e) => setPessoaPagouId(e.target.value)}
-              required
-            >
-              <option value="">Selecione...</option>
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setPessoaPagouId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+            />
           </div>
         </div>
 
         {templateId && (
-          <p className="text-xs text-on-surface-variant">
+          <p className="text-on-surface-variant text-xs">
             {templates.find((t) => t.id === templateId)?.descricao}
           </p>
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="arquivo">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="arquivo"
+          >
             Arquivo CSV
           </label>
           <input
@@ -327,14 +314,14 @@ export function ImportacaoClient() {
         <button
           type="submit"
           disabled={!podeAnalisar || carregando}
-          className="w-fit rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary disabled:opacity-50 hover:opacity-90"
+          className="bg-primary px-md text-on-primary w-fit rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
         >
           Analisar CSV
         </button>
       </form>
 
       {erros.length > 0 && (
-        <div className="rounded-xl border border-tertiary-container/30 bg-tertiary-container/10 p-sm text-sm text-tertiary-container">
+        <div className="border-tertiary-container/30 bg-tertiary-container/10 p-sm text-tertiary-container rounded-xl border text-sm">
           <p className="font-medium">
             {erros.length} linha(s) não puderam ser lidas:
           </p>
@@ -352,7 +339,7 @@ export function ImportacaoClient() {
         <div className="flex flex-col gap-3">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-outline-variant text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+              <tr className="border-outline-variant text-on-surface-variant border-b text-left text-xs font-semibold tracking-wide uppercase">
                 <th className="p-2"></th>
                 <th className="p-2">Data</th>
                 <th className="p-2">Descrição</th>
@@ -369,8 +356,9 @@ export function ImportacaoClient() {
                 return (
                   <tr
                     key={linha.hash}
-                    className={`border-b border-outline-variant/60 ${linha.duplicado ? "opacity-50" : ""
-                      }`}
+                    className={`border-outline-variant/60 border-b ${
+                      linha.duplicado ? "opacity-50" : ""
+                    }`}
                   >
                     <td className="p-2">
                       <input
@@ -388,7 +376,7 @@ export function ImportacaoClient() {
                     <td className="p-2">
                       {linha.descricaoOrigem}
                       {linha.duplicado && (
-                        <span className="ml-2 rounded-full bg-surface-container px-1.5 py-0.5 text-xs text-on-surface-variant">
+                        <span className="bg-surface-container text-on-surface-variant ml-2 rounded-full px-1.5 py-0.5 text-xs">
                           já importado
                         </span>
                       )}
@@ -397,46 +385,32 @@ export function ImportacaoClient() {
                       {formatarCentavos(linha.valorCentavos)}
                     </td>
                     <td className="p-2">
-                      <select
-                        className="rounded-lg border border-outline-variant bg-surface-container-lowest px-1 py-0.5"
+                      <Select
+                        placeholder="—"
                         value={linha.categoriaId}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           atualizarLinha(linha.hash, {
-                            categoriaId: e.target.value,
+                            categoriaId: v,
                             subcategoriaId: "",
                           })
                         }
-                      >
-                        <option value="">—</option>
-                        {categorias
+                        options={categorias
                           .filter((c) => c.ativo)
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.nome}
-                            </option>
-                          ))}
-                      </select>
+                          .map((c) => ({ value: c.id, label: c.nome }))}
+                      />
                     </td>
                     <td className="p-2">
-                      <select
-                        className="rounded-lg border border-outline-variant bg-surface-container-lowest px-1 py-0.5"
+                      <Select
+                        placeholder="—"
                         value={linha.subcategoriaId}
                         disabled={!categoriaAtual}
-                        onChange={(e) =>
-                          atualizarLinha(linha.hash, {
-                            subcategoriaId: e.target.value,
-                          })
+                        onChange={(v) =>
+                          atualizarLinha(linha.hash, { subcategoriaId: v })
                         }
-                      >
-                        <option value="">—</option>
-                        {categoriaAtual?.subcategorias
+                        options={(categoriaAtual?.subcategorias ?? [])
                           .filter((s) => s.ativo)
-                          .map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.nome}
-                            </option>
-                          ))}
-                      </select>
+                          .map((s) => ({ value: s.id, label: s.nome }))}
+                      />
                     </td>
                   </tr>
                 );
@@ -447,7 +421,7 @@ export function ImportacaoClient() {
           <button
             onClick={confirmarImportacao}
             disabled={carregando}
-            className="w-fit rounded-full bg-success px-md py-1.5 text-xs font-semibold text-on-success disabled:opacity-50 hover:opacity-90"
+            className="bg-success px-md text-on-success w-fit rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
           >
             Confirmar importação
           </button>

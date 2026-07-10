@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Select } from "../components/Select";
 import {
   TIPOS_INVESTIMENTO,
   parseErro,
@@ -30,8 +31,8 @@ export function FinalizarInvestimentoModal({
   const [valorResgatado, setValorResgatado] = useState(
     (investimento.valorAtualCentavos / 100).toFixed(2),
   );
-  const [dataResgate, setDataResgate] = useState(
-    () => new Date().toISOString().slice(0, 10),
+  const [dataResgate, setDataResgate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [reinvestir, setReinvestir] = useState(false);
   const [valorReinvestido, setValorReinvestido] = useState("");
@@ -148,7 +149,7 @@ export function FinalizarInvestimentoModal({
             />
           </div>
 
-          <label className="gap-1.5 text-on-surface flex cursor-pointer items-center text-sm">
+          <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
             <input
               type="checkbox"
               checked={reinvestir}
@@ -185,19 +186,15 @@ export function FinalizarInvestimentoModal({
                   >
                     Banco
                   </label>
-                  <select
+                  <Select
                     id="novo-banco"
-                    className={inputClass}
                     value={novoBancoId}
-                    onChange={(e) => setNovoBancoId(e.target.value)}
-                    required
-                  >
-                    {bancos.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.nome}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setNovoBancoId}
+                    options={bancos.map((b) => ({
+                      value: b.id,
+                      label: b.nome,
+                    }))}
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -207,20 +204,15 @@ export function FinalizarInvestimentoModal({
                   >
                     Tipo
                   </label>
-                  <select
+                  <Select
                     id="novo-tipo"
-                    className={inputClass}
                     value={novoTipo}
-                    onChange={(e) =>
-                      setNovoTipo(e.target.value as TipoInvestimento)
-                    }
-                  >
-                    {TIPOS_INVESTIMENTO.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setNovoTipo(v as TipoInvestimento)}
+                    options={TIPOS_INVESTIMENTO.map((t) => ({
+                      value: t.value,
+                      label: t.label,
+                    }))}
+                  />
                 </div>
 
                 <div className="flex min-w-[140px] flex-1 flex-col gap-1">
@@ -248,20 +240,18 @@ export function FinalizarInvestimentoModal({
                   >
                     Vencimento/liquidez
                   </label>
-                  <select
+                  <Select
                     id="novo-modo-liquidez"
-                    className={inputClass}
                     value={modoLiquidez}
-                    onChange={(e) =>
-                      setModoLiquidez(
-                        e.target.value as "DIAS" | "DATA" | "NENHUM",
-                      )
+                    onChange={(v) =>
+                      setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")
                     }
-                  >
-                    <option value="DIAS">Prazo (D+n)</option>
-                    <option value="DATA">Data de vencimento</option>
-                    <option value="NENHUM">Indefinido</option>
-                  </select>
+                    options={[
+                      { value: "DIAS", label: "Prazo (D+n)" },
+                      { value: "DATA", label: "Data de vencimento" },
+                      { value: "NENHUM", label: "Indefinido" },
+                    ]}
+                  />
                 </div>
 
                 {modoLiquidez === "DIAS" && (
@@ -305,7 +295,7 @@ export function FinalizarInvestimentoModal({
             </div>
           )}
 
-          <label className="gap-1.5 text-on-surface flex cursor-pointer items-center text-sm">
+          <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
             <input
               type="checkbox"
               checked={criarReceita}
@@ -325,7 +315,7 @@ export function FinalizarInvestimentoModal({
             <button
               type="button"
               onClick={onClose}
-              className="border-outline-variant text-on-surface px-md rounded-full border py-1.5 text-xs font-semibold hover:bg-surface-container-low"
+              className="border-outline-variant text-on-surface px-md hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
             >
               Cancelar
             </button>

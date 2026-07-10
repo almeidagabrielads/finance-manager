@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
+import { Select } from "../components/Select";
 
 const TIPOS_BANCO = [
   { value: "CARTAO_CREDITO", label: "Cartão de crédito" },
@@ -209,55 +210,58 @@ export function BancosClient() {
   }
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
       <form
         onSubmit={criarBanco}
-        className="flex flex-wrap items-end gap-sm rounded-xl border border-outline-variant bg-surface-container-lowest p-lg"
+        className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-wrap items-end rounded-xl border"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-nome">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="novo-nome"
+          >
             Novo banco
           </label>
           <input
             id="novo-nome"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
+            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             required
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-on-surface-variant" htmlFor="novo-tipo">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="novo-tipo"
+          >
             Tipo
           </label>
-          <select
+          <Select
             id="novo-tipo"
-            className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1"
             value={novoTipo}
-            onChange={(e) => setNovoTipo(e.target.value as TipoBanco)}
-          >
-            {TIPOS_BANCO.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setNovoTipo(v as TipoBanco)}
+            options={TIPOS_BANCO.map((t) => ({
+              value: t.value,
+              label: t.label,
+            }))}
+          />
         </div>
         <button
           type="submit"
-          className="rounded-full bg-primary px-md py-1.5 text-xs font-semibold text-on-primary hover:opacity-90"
+          className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
         >
           Adicionar
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm text-on-surface-variant">
+      <label className="text-on-surface-variant flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={mostrarInativos}
@@ -266,7 +270,7 @@ export function BancosClient() {
         Mostrar bancos inativos
       </label>
 
-      <div className="grid grid-cols-1 gap-sm sm:grid-cols-2">
+      <div className="gap-sm grid grid-cols-1 sm:grid-cols-2">
         {bancos?.map((banco) => (
           <BancoItem
             key={banco.id}
@@ -278,7 +282,9 @@ export function BancosClient() {
       </div>
 
       {bancos?.length === 0 && (
-        <p className="text-sm text-on-surface-variant">Nenhum banco encontrado.</p>
+        <p className="text-on-surface-variant text-sm">
+          Nenhum banco encontrado.
+        </p>
       )}
     </div>
   );
@@ -313,7 +319,7 @@ function BancoItem({
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-lg ${
+      className={`border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border ${
         banco.ativo ? "" : "opacity-60"
       }`}
     >
@@ -326,30 +332,27 @@ function BancoItem({
               {iniciais(nome) || "?"}
             </span>
             <input
-              className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-sm"
+              className="border-outline-variant bg-surface-container-lowest min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               autoFocus
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <select
-              className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1 text-xs"
+            <Select
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoBanco)}
-            >
-              {TIPOS_BANCO.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setTipo(v as TipoBanco)}
+              options={TIPOS_BANCO.map((t) => ({
+                value: t.value,
+                label: t.label,
+              }))}
+            />
             <div className="flex items-center gap-1">
               <button
                 title="Salvar"
                 aria-label="Salvar"
                 onClick={salvar}
-                className="rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
               >
                 <IconeCheck />
               </button>
@@ -357,7 +360,7 @@ function BancoItem({
                 title="Cancelar"
                 aria-label="Cancelar"
                 onClick={cancelar}
-                className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
               >
                 <IconeX />
               </button>
@@ -373,10 +376,10 @@ function BancoItem({
               {iniciais(banco.nome)}
             </span>
             <div>
-              <h3 className="text-base font-semibold text-on-surface">
+              <h3 className="text-on-surface text-base font-semibold">
                 {banco.nome}
               </h3>
-              <span className="text-xs font-semibold text-on-surface-variant">
+              <span className="text-on-surface-variant text-xs font-semibold">
                 {labelTipo(banco.tipo)}
                 {!banco.ativo && " · Inativo"}
               </span>
@@ -387,7 +390,7 @@ function BancoItem({
               title="Editar"
               aria-label="Editar"
               onClick={() => setEditando(true)}
-              className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+              className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
             >
               <IconeLapis />
             </button>
@@ -397,8 +400,8 @@ function BancoItem({
               onClick={() => onAlternarAtivo(banco)}
               className={
                 banco.ativo
-                  ? "rounded-full p-1.5 text-danger transition-colors hover:bg-danger-container"
-                  : "rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                  ? "text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
+                  : "text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
               }
             >
               {banco.ativo ? <IconeInativar /> : <IconeReativar />}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { corPessoa, corPessoaSvg } from "../components/PessoaBadge";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 
 const SUBTIPOS_RECEITA = [
@@ -142,7 +143,7 @@ function GraficoTotalPorPessoaEMes({
   const baseline = margemTopo + alturaBarras - padding;
 
   return (
-    <div className="flex flex-col gap-sm">
+    <div className="gap-sm flex flex-col">
       <svg
         viewBox={`0 0 ${largura} ${altura}`}
         className="w-full"
@@ -209,7 +210,7 @@ function GraficoTotalPorPessoaEMes({
           );
         })}
       </svg>
-      <div className="flex flex-wrap gap-md">
+      <div className="gap-md flex flex-wrap">
         {pessoas.map((p) => (
           <div key={p.id} className="flex items-center gap-1.5 text-xs">
             <span
@@ -609,8 +610,7 @@ export function ReceitasClient() {
   const receitasExibidas = receitasOrdenadas.filter((r) =>
     mesesExibidos.has(mesParaInputMonth(r.mes)),
   );
-  const haMaisMeses =
-    modo === "anual" && mesesDistintos.length > mesesVisiveis;
+  const haMaisMeses = modo === "anual" && mesesDistintos.length > mesesVisiveis;
 
   const colunasReceitas = useMemo<ColunaTabela<Receita>[]>(
     () => [
@@ -708,7 +708,9 @@ export function ReceitasClient() {
 
   async function removerReceita(receita: Receita) {
     if (
-      !(await confirmar("Remover essa receita? Essa ação não pode ser desfeita."))
+      !(await confirmar(
+        "Remover essa receita? Essa ação não pode ser desfeita.",
+      ))
     ) {
       return;
     }
@@ -738,49 +740,50 @@ export function ReceitasClient() {
   const botaoSetaClass =
     "flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary";
   const botaoToggleClass = (ativo: boolean) =>
-    `rounded-full px-md py-1.5 text-sm font-semibold transition-colors ${ativo
-      ? "bg-primary text-on-primary"
-      : "text-on-surface-variant hover:text-on-surface"
+    `rounded-full px-md py-1.5 text-sm font-semibold transition-colors ${
+      ativo
+        ? "bg-primary text-on-primary"
+        : "text-on-surface-variant hover:text-on-surface"
     }`;
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="gap-lg flex flex-col">
       {dialogConfirmacao}
 
       {toast && (
-        <div className="fixed bottom-lg right-lg z-50 flex items-center gap-2 rounded-xl bg-primary px-md py-2.5 text-sm font-medium text-on-primary shadow-lg">
+        <div className="bottom-lg right-lg bg-primary px-md text-on-primary fixed z-50 flex items-center gap-2 rounded-xl py-2.5 text-sm font-medium shadow-lg">
           <span aria-hidden>✓</span> {toast}
         </div>
       )}
 
       {erro && (
-        <p className="rounded-lg border border-danger/30 bg-danger-container p-sm text-sm text-on-danger-container">
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-md">
+      <div className="gap-md flex flex-wrap items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Receitas</h1>
-          <p className="text-sm text-on-surface-variant">
+          <h1 className="text-on-surface text-2xl font-bold">Receitas</h1>
+          <p className="text-on-surface-variant text-sm">
             Salários, vouchers e outras entradas por pessoa e mês. Gestão
             colaborativa para o nosso lar.
           </p>
         </div>
-        <div className="flex gap-sm">
-          <div className="flex flex-col gap-1 rounded-xl bg-primary px-lg py-3 text-on-primary">
-            <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+        <div className="gap-sm flex">
+          <div className="bg-primary px-lg text-on-primary flex flex-col gap-1 rounded-xl py-3">
+            <span className="text-xs font-semibold tracking-wide uppercase opacity-80">
               Total do Mês ({NOMES_MES[mes - 1]})
             </span>
             <span className="data-tabular text-2xl font-bold">
               {formatarMoeda(totalDoMes)}
             </span>
           </div>
-          <div className="flex flex-col gap-1 rounded-xl bg-surface-container-high px-lg py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+          <div className="bg-surface-container-high px-lg flex flex-col gap-1 rounded-xl py-3">
+            <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Total do Ano ({ano})
             </span>
-            <span className="data-tabular text-2xl font-bold text-on-tertiary-container">
+            <span className="data-tabular text-on-tertiary-container text-2xl font-bold">
               {formatarMoeda(totalDoAno)}
             </span>
           </div>
@@ -788,7 +791,7 @@ export function ReceitasClient() {
       </div>
 
       <div className={`${cardClass} p-lg`}>
-        <h2 className="mb-md text-base font-bold text-on-surface">
+        <h2 className="mb-md text-on-surface text-base font-bold">
           Total por Pessoa e Mês ({ano})
         </h2>
         {pessoas.length > 0 && receitas ? (
@@ -798,16 +801,18 @@ export function ReceitasClient() {
             nomePessoa={nomePessoa}
           />
         ) : (
-          <p className="text-sm text-on-surface-variant">
+          <p className="text-on-surface-variant text-sm">
             Sem dados suficientes para exibir o gráfico.
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-md">
-        <div className="flex items-center gap-md">
-          <h2 className="text-lg font-bold text-on-surface">
-            {modo === "mensal" ? `${NOMES_MES[mes - 1]} ${ano}` : `Ano de ${ano}`}
+      <div className="gap-md flex flex-wrap items-center justify-between">
+        <div className="gap-md flex items-center">
+          <h2 className="text-on-surface text-lg font-bold">
+            {modo === "mensal"
+              ? `${NOMES_MES[mes - 1]} ${ano}`
+              : `Ano de ${ano}`}
           </h2>
           {modo === "mensal" ? (
             <div className="flex items-center gap-1.5">
@@ -846,7 +851,7 @@ export function ReceitasClient() {
           )}
         </div>
 
-        <div className="flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest p-1">
+        <div className="border-outline-variant bg-surface-container-lowest flex items-center gap-1 rounded-full border p-1">
           <button
             onClick={() => setModo("mensal")}
             className={botaoToggleClass(modo === "mensal")}
@@ -863,38 +868,31 @@ export function ReceitasClient() {
       </div>
 
       <div className={`${cardClass} p-lg`}>
-        <div className="mb-md flex items-center gap-2 border-b border-outline-variant pb-md text-on-surface">
+        <div className="mb-md border-outline-variant pb-md text-on-surface flex items-center gap-2 border-b">
           <IconePlusCirculo />
           <h2 className="text-base font-bold">Registrar Nova Entrada</h2>
         </div>
         <form
           onSubmit={criarReceita}
-          className="flex flex-wrap items-end gap-sm"
+          className="gap-sm flex flex-wrap items-end"
         >
           <div className="flex flex-col gap-1">
             <label
-              className="text-xs font-semibold text-on-surface-variant"
+              className="text-on-surface-variant text-xs font-semibold"
               htmlFor="nova-pessoa"
             >
               Responsável
             </label>
-            <select
+            <Select
               id="nova-pessoa"
-              className={inputClass}
               value={novaPessoaId}
-              onChange={(e) => setNovaPessoaId(e.target.value)}
-              required
-            >
-              {pessoas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setNovaPessoaId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label
-              className="text-xs font-semibold text-on-surface-variant"
+              className="text-on-surface-variant text-xs font-semibold"
               htmlFor="novo-mes"
             >
               Referência
@@ -910,27 +908,24 @@ export function ReceitasClient() {
           </div>
           <div className="flex flex-col gap-1">
             <label
-              className="text-xs font-semibold text-on-surface-variant"
+              className="text-on-surface-variant text-xs font-semibold"
               htmlFor="novo-subtipo"
             >
               Tipo / Categoria
             </label>
-            <select
+            <Select
               id="novo-subtipo"
-              className={inputClass}
               value={novoSubtipo}
-              onChange={(e) => setNovoSubtipo(e.target.value as SubtipoReceita)}
-            >
-              {SUBTIPOS_RECEITA.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setNovoSubtipo(v as SubtipoReceita)}
+              options={SUBTIPOS_RECEITA.map((s) => ({
+                value: s.value,
+                label: s.label,
+              }))}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label
-              className="text-xs font-semibold text-on-surface-variant"
+              className="text-on-surface-variant text-xs font-semibold"
               htmlFor="novo-valor"
             >
               Valor (R$)
@@ -946,9 +941,9 @@ export function ReceitasClient() {
               required
             />
           </div>
-          <div className="flex flex-1 min-w-[180px] flex-col gap-1">
+          <div className="flex min-w-[180px] flex-1 flex-col gap-1">
             <label
-              className="text-xs font-semibold text-on-surface-variant"
+              className="text-on-surface-variant text-xs font-semibold"
               htmlFor="nova-descricao"
             >
               Descrição (Opcional)
@@ -964,7 +959,7 @@ export function ReceitasClient() {
           </div>
           <button
             type="submit"
-            className="flex items-center gap-2 rounded-full bg-primary px-md py-2 text-xs font-semibold text-on-primary hover:opacity-90"
+            className="bg-primary px-md text-on-primary flex items-center gap-2 rounded-full py-2 text-xs font-semibold hover:opacity-90"
           >
             <IconeSalvar /> Salvar Entrada
           </button>
@@ -972,27 +967,28 @@ export function ReceitasClient() {
       </div>
 
       <div className={cardClass}>
-        <div className="flex flex-wrap items-center justify-between gap-md p-lg pb-md">
+        <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-on-surface">
+            <h2 className="text-on-surface text-base font-bold">
               Extrato Detalhado
             </h2>
-            <span className="rounded-full bg-surface-container px-sm py-0.5 text-xs font-semibold text-on-surface-variant">
+            <span className="bg-surface-container px-sm text-on-surface-variant rounded-full py-0.5 text-xs font-semibold">
               {receitasFiltradas.length}{" "}
               {receitasFiltradas.length === 1
                 ? "item encontrado"
                 : "itens encontrados"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-sm">
-            <div className="flex rounded-full border border-outline-variant p-0.5 text-xs font-semibold">
+          <div className="gap-sm flex flex-wrap items-center">
+            <div className="border-outline-variant flex rounded-full border p-0.5 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setPessoaFiltro(null)}
-                className={`rounded-full px-sm py-1 transition-colors ${pessoaFiltro === null
+                className={`px-sm rounded-full py-1 transition-colors ${
+                  pessoaFiltro === null
                     ? "bg-surface-container-high text-on-surface"
                     : "text-on-surface-variant hover:text-on-surface"
-                  }`}
+                }`}
               >
                 Todos
               </button>
@@ -1001,17 +997,18 @@ export function ReceitasClient() {
                   key={p.id}
                   type="button"
                   onClick={() => setPessoaFiltro(p.id)}
-                  className={`rounded-full px-sm py-1 transition-colors ${pessoaFiltro === p.id
+                  className={`px-sm rounded-full py-1 transition-colors ${
+                    pessoaFiltro === p.id
                       ? "bg-surface-container-high text-on-surface"
                       : "text-on-surface-variant hover:text-on-surface"
-                    }`}
+                  }`}
                 >
                   {p.nome}
                 </button>
               ))}
             </div>
             <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant">
+              <span className="text-on-surface-variant pointer-events-none absolute top-1/2 left-2 -translate-y-1/2">
                 <IconeBusca />
               </span>
               <input
@@ -1027,7 +1024,7 @@ export function ReceitasClient() {
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
             <thead>
-              <tr className="border-y border-outline-variant text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+              <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
                 <ColumnHeader
                   label="Responsável"
                   chave="responsavel"
@@ -1101,7 +1098,7 @@ export function ReceitasClient() {
         </div>
 
         {receitasParaExibir.length === 0 && (
-          <p className="p-lg text-sm text-on-surface-variant">
+          <p className="p-lg text-on-surface-variant text-sm">
             {receitasExibidas.length === 0
               ? "Nenhuma receita encontrada."
               : "Nenhuma receita corresponde aos filtros das colunas."}
@@ -1112,7 +1109,7 @@ export function ReceitasClient() {
           <button
             type="button"
             onClick={() => setMesesVisiveis((v) => v + MESES_INICIAIS)}
-            className="w-full border-t border-outline-variant py-md text-center text-sm font-semibold text-primary hover:bg-surface-container-low"
+            className="border-outline-variant py-md text-primary hover:bg-surface-container-low w-full border-t text-center text-sm font-semibold"
           >
             Carregar meses anteriores
           </button>
@@ -1183,43 +1180,34 @@ function LinhaReceita({
 
   if (editando) {
     return (
-      <tr className="border-b border-outline-variant/60 bg-surface-container-low">
+      <tr className="border-outline-variant/60 bg-surface-container-low border-b">
         <td colSpan={6} className="p-sm">
-          <div className="flex flex-wrap items-end gap-sm">
+          <div className="gap-sm flex flex-wrap items-end">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
+              <label className="text-on-surface-variant text-xs font-semibold">
                 Responsável
               </label>
-              <select
-                className={inputClass}
+              <Select
                 value={pessoaId}
-                onChange={(e) => setPessoaId(e.target.value)}
-              >
-                {pessoas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={setPessoaId}
+                options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
+              />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
+              <label className="text-on-surface-variant text-xs font-semibold">
                 Tipo / Categoria
               </label>
-              <select
-                className={inputClass}
+              <Select
                 value={subtipo}
-                onChange={(e) => setSubtipo(e.target.value as SubtipoReceita)}
-              >
-                {SUBTIPOS_RECEITA.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setSubtipo(v as SubtipoReceita)}
+                options={SUBTIPOS_RECEITA.map((s) => ({
+                  value: s.value,
+                  label: s.label,
+                }))}
+              />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
+              <label className="text-on-surface-variant text-xs font-semibold">
                 Descrição
               </label>
               <input
@@ -1232,7 +1220,7 @@ function LinhaReceita({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
+              <label className="text-on-surface-variant text-xs font-semibold">
                 Mês
               </label>
               <input
@@ -1243,7 +1231,7 @@ function LinhaReceita({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
+              <label className="text-on-surface-variant text-xs font-semibold">
                 Valor
               </label>
               <input
@@ -1256,7 +1244,7 @@ function LinhaReceita({
             </div>
             <div className="flex gap-2">
               <button
-                className="rounded-full p-1.5 text-success transition-colors hover:bg-success/15"
+                className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
                 onClick={salvar}
                 title="Salvar"
                 aria-label="Salvar"
@@ -1264,7 +1252,7 @@ function LinhaReceita({
                 <IconeCheck />
               </button>
               <button
-                className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
                 onClick={cancelar}
                 title="Cancelar"
                 aria-label="Cancelar"
@@ -1283,9 +1271,9 @@ function LinhaReceita({
   );
 
   return (
-    <tr className="border-b border-outline-variant/60 hover:bg-surface-container-low">
+    <tr className="border-outline-variant/60 hover:bg-surface-container-low border-b">
       <td className="p-md">
-        <div className="flex items-center gap-2 font-medium text-on-surface">
+        <div className="text-on-surface flex items-center gap-2 font-medium">
           <span
             className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${corPessoa(receita.pessoaId)}`}
           >
@@ -1295,15 +1283,15 @@ function LinhaReceita({
         </div>
       </td>
       <td className="p-md">
-        <div className="flex items-center gap-1.5 text-on-surface-variant">
-          <IconeCategoria className="h-4 w-4 text-on-surface" />
+        <div className="text-on-surface-variant flex items-center gap-1.5">
+          <IconeCategoria className="text-on-surface h-4 w-4" />
           <span className="text-on-surface">{labelCategoria}</span>
         </div>
       </td>
       <td className="p-md text-on-surface-variant">
         {receita.descricao ?? "—"}
       </td>
-      <td className="p-md whitespace-nowrap text-on-surface-variant">
+      <td className="p-md text-on-surface-variant whitespace-nowrap">
         {formatarMesAno(mesParaInputMonth(receita.mes))}
       </td>
       <td className="data-tabular p-md text-right font-medium">
@@ -1312,7 +1300,7 @@ function LinhaReceita({
       <td className="p-md">
         <div className="flex justify-end gap-2">
           <button
-            className="rounded-full p-1.5 text-primary transition-colors hover:bg-primary/10"
+            className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
             onClick={() => setEditando(true)}
             title="Editar"
             aria-label="Editar"
@@ -1320,7 +1308,7 @@ function LinhaReceita({
             <IconeLapis />
           </button>
           <button
-            className="rounded-full p-1.5 text-danger transition-colors hover:bg-danger-container"
+            className="text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
             onClick={() => onRemover(receita)}
             title="Remover"
             aria-label="Remover"

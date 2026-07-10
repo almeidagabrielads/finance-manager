@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { unicosPorChave, unicosPorId } from "@/lib/dedupe";
 import { gerarInsightMensal } from "@/lib/domain/insightsOrcamento";
+import { Select } from "../components/Select";
 
 const MESES = [
   "Jan",
@@ -220,19 +221,15 @@ export function OrcamentoClient() {
           >
             Pessoa/grupo
           </label>
-          <select
+          <Select
             id="pessoa"
-            className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1"
             value={pessoaFiltro}
-            onChange={(e) => setPessoaFiltro(e.target.value)}
-          >
-            <option value={GRUPO_FAMILIA}>Compartilhado (casa toda)</option>
-            {pessoas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
+            onChange={setPessoaFiltro}
+            options={[
+              { value: GRUPO_FAMILIA, label: "Compartilhado (casa toda)" },
+              ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
+            ]}
+          />
         </div>
 
         {aba === "mes" && (

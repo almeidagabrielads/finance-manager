@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { unicosPorId } from "@/lib/dedupe";
 import { valorLiquidoCentavos } from "@/lib/domain/lancamentos";
+import { Select } from "./components/Select";
 
 type SaldoMensal = {
   mes: number;
@@ -98,7 +99,9 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
       // aparecendo até serem quitadas.
       fetch(`/api/relatorios/divisao?dataFim=${fim}`),
       fetch(`/api/relatorios/planejado-vs-real?ano=${ano}${pessoaQuery}`),
-      fetch(`/api/lancamentos?dataInicio=${inicio}&dataFim=${fim}${pessoaQuery}`),
+      fetch(
+        `/api/lancamentos?dataInicio=${inicio}&dataFim=${fim}${pessoaQuery}`,
+      ),
       fetch("/api/pessoas"),
       fetch("/api/categorias"),
     ])
@@ -246,19 +249,15 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
         >
           Visualizando
         </label>
-        <select
+        <Select
           id="pessoaFiltro"
           value={pessoaFiltro}
-          onChange={(e) => setPessoaFiltro(e.target.value)}
-          className="border-outline-variant bg-surface-container-lowest text-on-surface px-md rounded-full border py-1.5 text-sm font-semibold"
-        >
-          <option value="">Geral</option>
-          {pessoas.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
+          onChange={setPessoaFiltro}
+          options={[
+            { value: "", label: "Geral" },
+            ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
+          ]}
+        />
       </div>
 
       {erro && (
@@ -274,22 +273,27 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
             <div>
               <p className="text-on-surface-variant text-xs">Receita total</p>
               <p className="data-tabular text-on-surface text-2xl font-semibold">
-                {saldoDoMes ? centavosParaReais(saldoDoMes.receitaCentavos) : "—"}
+                {saldoDoMes
+                  ? centavosParaReais(saldoDoMes.receitaCentavos)
+                  : "—"}
               </p>
             </div>
             <div>
               <p className="text-on-surface-variant text-xs">Gastos totais</p>
               <p className="data-tabular text-on-surface text-2xl font-semibold">
-                {saldoDoMes ? centavosParaReais(saldoDoMes.despesaCentavos) : "—"}
+                {saldoDoMes
+                  ? centavosParaReais(saldoDoMes.despesaCentavos)
+                  : "—"}
               </p>
             </div>
             <div>
               <p className="text-on-surface-variant text-xs">Saldo do mês</p>
               <p
-                className={`data-tabular text-2xl font-semibold ${saldoDoMes && saldoDoMes.saldoCentavos < 0
-                  ? "text-danger"
-                  : "text-on-surface"
-                  }`}
+                className={`data-tabular text-2xl font-semibold ${
+                  saldoDoMes && saldoDoMes.saldoCentavos < 0
+                    ? "text-danger"
+                    : "text-on-surface"
+                }`}
               >
                 {saldoDoMes ? centavosParaReais(saldoDoMes.saldoCentavos) : "—"}
               </p>
@@ -319,10 +323,11 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                 {divisao.participantes.slice(0, 2).map((id, i) => (
                   <span
                     key={id}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${i === 0
-                      ? "bg-tertiary-container text-on-tertiary-container"
-                      : "bg-secondary text-on-secondary"
-                      }`}
+                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${
+                      i === 0
+                        ? "bg-tertiary-container text-on-tertiary-container"
+                        : "bg-secondary text-on-secondary"
+                    }`}
                   >
                     {nomePessoa(id).charAt(0).toUpperCase()}
                   </span>
@@ -379,9 +384,9 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                 const percentual =
                   c.planejadoCentavos > 0
                     ? Math.min(
-                      (c.realCentavos / c.planejadoCentavos) * 100,
-                      100,
-                    )
+                        (c.realCentavos / c.planejadoCentavos) * 100,
+                        100,
+                      )
                     : 100;
                 return (
                   <div key={c.categoriaId} className="flex flex-col gap-1">
@@ -390,8 +395,9 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                         {nomeCategoria(c.categoriaId)}
                       </span>
                       <span
-                        className={`data-tabular text-xs font-medium ${estourou ? "text-danger" : "text-on-surface-variant"
-                          }`}
+                        className={`data-tabular text-xs font-medium ${
+                          estourou ? "text-danger" : "text-on-surface-variant"
+                        }`}
                       >
                         {centavosParaReais(c.realCentavos)} /{" "}
                         {centavosParaReais(c.planejadoCentavos)}
@@ -417,10 +423,11 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
               Total planejado: {centavosParaReais(totalPlanejadoCentavos)}
             </span>
             <span
-              className={`data-tabular font-semibold ${totalPlanejadoCentavos - totalRealCentavos < 0
-                ? "text-danger"
-                : "text-on-surface"
-                }`}
+              className={`data-tabular font-semibold ${
+                totalPlanejadoCentavos - totalRealCentavos < 0
+                  ? "text-danger"
+                  : "text-on-surface"
+              }`}
             >
               Saldo:{" "}
               {centavosParaReais(totalPlanejadoCentavos - totalRealCentavos)}

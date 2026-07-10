@@ -8,6 +8,7 @@ import { EditarInvestimentoModal } from "./EditarInvestimentoModal";
 import { NovoInvestimentoModal } from "./NovoInvestimentoModal";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { ColumnHeader } from "../components/ColumnHeader";
+import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import { filtroEstaAtivo } from "@/lib/domain/tabela";
 import { diasAteResgate, diasParaFaixa } from "@/lib/domain/investimentos";
@@ -161,8 +162,7 @@ export function InvestimentosClient() {
     null,
   );
   const [liquidez, setLiquidez] = useState<FaixaLiquidez[] | null>(null);
-  const [mostrarNovoInvestimento, setMostrarNovoInvestimento] =
-    useState(false);
+  const [mostrarNovoInvestimento, setMostrarNovoInvestimento] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
@@ -357,7 +357,9 @@ export function InvestimentosClient() {
     const unicos = (valores: string[]) =>
       [...new Set(valores)].sort((a, b) => a.localeCompare(b, "pt-BR"));
     return {
-      banco: unicos(base.map((inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—")),
+      banco: unicos(
+        base.map((inv) => bancosPorId.get(inv.bancoId)?.nome ?? "—"),
+      ),
       tipo: unicos(base.map((inv) => labelTipo(inv.tipo))),
       titular: unicos(
         base.map((inv) => pessoasPorId.get(inv.pessoaId)?.nome ?? "—"),
@@ -466,7 +468,7 @@ export function InvestimentosClient() {
               <button
                 type="button"
                 onClick={() => setMostrarNovoInvestimento(true)}
-                className="bg-primary text-on-primary gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold hover:opacity-90 flex items-center"
+                className="bg-primary text-on-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold hover:opacity-90"
               >
                 <IconePlusCirculo />
                 Novo Investimento
@@ -482,7 +484,7 @@ export function InvestimentosClient() {
                   Limpar filtros
                 </button>
               )}
-              <label className="gap-1.5 text-on-surface-variant flex cursor-pointer items-center text-xs font-semibold">
+              <label className="text-on-surface-variant flex cursor-pointer items-center gap-1.5 text-xs font-semibold">
                 <input
                   type="checkbox"
                   checked={mostrarFinalizados}
@@ -497,18 +499,15 @@ export function InvestimentosClient() {
                 >
                   Posições do ano
                 </label>
-                <select
+                <Select
                   id="ano-posicoes"
-                  className="border-outline-variant bg-surface-container-lowest rounded-lg border px-2 py-1 text-sm"
-                  value={anoPosicoes}
-                  onChange={(e) => setAnoPosicoes(Number(e.target.value))}
-                >
-                  {[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
+                  value={String(anoPosicoes)}
+                  onChange={(v) => setAnoPosicoes(Number(v))}
+                  options={[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({
+                    value: String(a),
+                    label: String(a),
+                  }))}
+                />
               </div>
             </div>
           </div>
@@ -694,7 +693,6 @@ export function InvestimentosClient() {
           )}
         </div>
       )}
-
     </div>
   );
 }
