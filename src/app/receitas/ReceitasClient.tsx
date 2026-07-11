@@ -853,30 +853,29 @@ export function ReceitasClient() {
           )}
         </div>
 
-        <div className="border-outline-variant bg-surface-container-lowest flex items-center gap-1 rounded-full border p-1">
+        <div className="gap-md flex items-center">
+          <div className="border-outline-variant bg-surface-container-lowest flex items-center gap-1 rounded-full border p-1">
+            <button
+              onClick={() => setModo("mensal")}
+              className={botaoToggleClass(modo === "mensal")}
+            >
+              Mensal
+            </button>
+            <button
+              onClick={() => setModo("anual")}
+              className={botaoToggleClass(modo === "anual")}
+            >
+              Anual
+            </button>
+          </div>
           <button
-            onClick={() => setModo("mensal")}
-            className={botaoToggleClass(modo === "mensal")}
+            type="button"
+            onClick={() => setModalAberto(true)}
+            className="bg-primary px-lg text-on-primary flex items-center gap-2 rounded-full py-2.5 text-sm font-semibold hover:opacity-90"
           >
-            Mensal
-          </button>
-          <button
-            onClick={() => setModo("anual")}
-            className={botaoToggleClass(modo === "anual")}
-          >
-            Anual
+            <IconePlusCirculo /> Registrar Nova Entrada
           </button>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setModalAberto(true)}
-          className="bg-primary px-lg text-on-primary flex items-center gap-2 rounded-full py-2.5 text-sm font-semibold hover:opacity-90"
-        >
-          <IconePlusCirculo /> Registrar Nova Entrada
-        </button>
       </div>
 
       {modalAberto && (
