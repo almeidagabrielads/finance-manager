@@ -107,6 +107,7 @@ function corRampaLiquidez(indice: number): string {
 type LinhaRendimento = {
   mes: string;
   posicaoCentavos: number;
+  aporteRetiradaCentavos: number;
   rendimentoAcumuladoRealPercentual: number;
   cdiAcumuladoPercentual: number;
 };
@@ -455,6 +456,14 @@ function GraficoRendimento({ linhas }: { linhas: LinhaRendimento[] }) {
               {formatarReais(linhaAtiva.posicaoCentavos)}
             </span>
           </span>
+          {linhaAtiva.aporteRetiradaCentavos !== 0 && (
+            <span className="text-on-surface-variant">
+              {linhaAtiva.aporteRetiradaCentavos > 0 ? "Aporte" : "Retirada"}:{" "}
+              <span className="text-on-surface font-medium">
+                {formatarReais(Math.abs(linhaAtiva.aporteRetiradaCentavos))}
+              </span>
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <span className="bg-primary h-2 w-2 rounded-full" />
             <span className="text-on-surface-variant">Carteira:</span>

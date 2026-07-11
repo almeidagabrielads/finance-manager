@@ -323,6 +323,11 @@ model PosicaoPatrimonio {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   pessoaId      String?
+  // Fluxo de caixa do mês não relacionado a rendimento: positivo = aporte,
+  // negativo = retirada. Descontado da variação bruta ao calcular rendimento
+  // real (ver src/lib/domain/rendimento.ts) para que aportes/retiradas não
+  // sejam contabilizados como ganho/perda de mercado.
+  aporteRetiradaCentavos Int       @default(0)
   banco         Banco     @relation(fields: [bancoId], references: [id])
   household     Household @relation(fields: [householdId], references: [id])
   pessoa        Pessoa?   @relation(fields: [pessoaId], references: [id])

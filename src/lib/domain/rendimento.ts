@@ -7,6 +7,10 @@ export type PosicaoMensal = {
   // Sempre o 1º dia do mês em UTC.
   mes: Date;
   valorCentavos: number;
+  // Fluxo de caixa do mês não relacionado a rendimento: positivo = aporte,
+  // negativo = retirada. Descontado da variação bruta para não contar como
+  // ganho/perda de mercado. Ausente/0 = nenhum aporte ou retirada no mês.
+  aporteRetiradaCentavos?: number;
 };
 
 export type CdiDoMes = {
@@ -20,6 +24,9 @@ export type LinhaRendimento = {
   posicaoCentavos: number;
   // null no primeiro mês da série — não há posição anterior para comparar.
   variacaoCentavos: number | null;
+  // Fluxo de caixa do mês (aporte positivo / retirada negativo) já excluído
+  // de variacaoCentavos ao calcular o rendimento real abaixo.
+  aporteRetiradaCentavos: number;
   rendimentoMensalRealPercentual: number | null;
   rendimentoAcumuladoRealCentavos: number;
   rendimentoAcumuladoRealPercentual: number;
@@ -66,9 +73,18 @@ export function calcularRendimento(
       ? posicao.valorCentavos - anterior.valorCentavos
       : null;
 
+    const aporteRetiradaCentavos = posicao.aporteRetiradaCentavos ?? 0;
+
+    // Rendimento real = variação de patrimônio menos o que entrou/saiu por
+    // aporte/retirada — só a parte que veio de ganho/perda de mercado conta.
+    const rendimentoMensalRealCentavos =
+      variacaoCentavos !== null
+        ? variacaoCentavos - aporteRetiradaCentavos
+        : null;
+
     const rendimentoMensalRealPercentual =
       anterior && anterior.valorCentavos !== 0
-        ? (variacaoCentavos! / anterior.valorCentavos) * 100
+        ? (rendimentoMensalRealCentavos! / anterior.valorCentavos) * 100
         : null;
 
     const rendimentoMensalEsperadoCentavos = anterior
@@ -80,12 +96,13 @@ export function calcularRendimento(
       : null;
 
     const diferencaRealEsperadoCentavos =
-      variacaoCentavos !== null && rendimentoMensalEsperadoCentavos !== null
-        ? variacaoCentavos - rendimentoMensalEsperadoCentavos
+      rendimentoMensalRealCentavos !== null &&
+      rendimentoMensalEsperadoCentavos !== null
+        ? rendimentoMensalRealCentavos - rendimentoMensalEsperadoCentavos
         : null;
 
     if (anterior) {
-      rendimentoAcumuladoRealCentavos += variacaoCentavos!;
+      rendimentoAcumuladoRealCentavos += rendimentoMensalRealCentavos!;
       rendimentoAcumuladoRealPercentual += rendimentoMensalRealPercentual ?? 0;
       cdiAcumuladoPercentual += cdiMensalPercentual ?? 0;
       rendimentoAcumuladoEsperadoCentavos +=
@@ -96,6 +113,7 @@ export function calcularRendimento(
       mes: posicao.mes,
       posicaoCentavos: posicao.valorCentavos,
       variacaoCentavos,
+      aporteRetiradaCentavos,
       rendimentoMensalRealPercentual,
       rendimentoAcumuladoRealCentavos,
       rendimentoAcumuladoRealPercentual,
@@ -154,7 +172,7 @@ export async function buscarHistoricoRendimento(
       mes: { gte: dataInicial, lte: dataFinal },
       ...(opts.pessoaId !== undefined ? { pessoaId: opts.pessoaId } : {}),
     },
-    select: { mes: true, valorCentavos: true },
+    select: { mes: true, valorCentavos: true, aporteRetiradaCentavos: true },
     orderBy: { mes: "asc" },
   });
 
@@ -167,8 +185,14 @@ export async function buscarHistoricoRendimento(
     const mes = new Date(
       Date.UTC(p.mes.getUTCFullYear(), p.mes.getUTCMonth(), 1),
     );
-    const acumulado = porMes.get(chave) ?? { mes, valorCentavos: 0 };
+    const acumulado = porMes.get(chave) ?? {
+      mes,
+      valorCentavos: 0,
+      aporteRetiradaCentavos: 0,
+    };
     acumulado.valorCentavos += p.valorCentavos;
+    acumulado.aporteRetiradaCentavos =
+      (acumulado.aporteRetiradaCentavos ?? 0) + p.aporteRetiradaCentavos;
     porMes.set(chave, acumulado);
   }
   const posicoes: PosicaoMensal[] = Array.from(porMes.values()).sort(

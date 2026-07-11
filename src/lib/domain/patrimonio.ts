@@ -13,14 +13,24 @@ export const CriarPosicaoPatrimonioSchema = z.object({
     .number()
     .int("Valor deve ser um inteiro em centavos.")
     .nonnegative("Valor não pode ser negativo."),
+  // Fluxo de caixa do mês não relacionado a rendimento: positivo = aporte,
+  // negativo = retirada. Ver rendimento.ts para como isso entra no cálculo.
+  aporteRetiradaCentavos: z
+    .number()
+    .int("Valor deve ser um inteiro em centavos.")
+    .default(0),
 });
 
 export const AtualizarPosicaoPatrimonioSchema =
   CriarPosicaoPatrimonioSchema.partial();
 
-export type CriarPosicaoPatrimonioInput = z.infer<
-  typeof CriarPosicaoPatrimonioSchema
->;
+// aporteRetiradaCentavos tem default no schema, então o z.infer (output) o
+// torna obrigatório — mas quem chama criarPosicaoPatrimonio direto (sem
+// passar pelo .safeParse da rota) deve poder omiti-lo.
+export type CriarPosicaoPatrimonioInput = Omit<
+  z.infer<typeof CriarPosicaoPatrimonioSchema>,
+  "aporteRetiradaCentavos"
+> & { aporteRetiradaCentavos?: number };
 export type AtualizarPosicaoPatrimonioInput = z.infer<
   typeof AtualizarPosicaoPatrimonioSchema
 >;
@@ -100,6 +110,7 @@ export async function criarPosicaoPatrimonio(
       pessoaId: input.pessoaId ?? null,
       mes: primeiroDiaDoMesUTC(input.mes),
       valorCentavos: input.valorCentavos,
+      aporteRetiradaCentavos: input.aporteRetiradaCentavos ?? 0,
       householdId,
     },
   });

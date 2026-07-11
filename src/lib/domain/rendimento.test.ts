@@ -114,6 +114,70 @@ describe("calcularRendimento", () => {
   });
 });
 
+describe("calcularRendimento com aporte/retirada", () => {
+  const cdi: CdiDoMes[] = [
+    { mes: mes(2026, 1), percentual: 1 },
+    { mes: mes(2026, 2), percentual: 1 },
+    { mes: mes(2026, 3), percentual: 1 },
+  ];
+
+  it("retirada não é contabilizada como perda de rendimento", () => {
+    const posicoes: PosicaoMensal[] = [
+      { mes: mes(2026, 1), valorCentavos: 1_000_000 },
+      // Patrimônio caiu 300_000, mas 300_000 foram retirados — sem retirada,
+      // a posição teria ficado igual (rendimento real = 0).
+      {
+        mes: mes(2026, 2),
+        valorCentavos: 700_000,
+        aporteRetiradaCentavos: -300_000,
+      },
+    ];
+
+    const [, fev] = calcularRendimento(posicoes, cdi);
+
+    expect(fev.variacaoCentavos).toBe(-300_000);
+    expect(fev.aporteRetiradaCentavos).toBe(-300_000);
+    expect(fev.rendimentoMensalRealPercentual).toBeCloseTo(0, 6);
+    expect(fev.rendimentoAcumuladoRealCentavos).toBe(0);
+  });
+
+  it("aporte não é contabilizado como ganho de rendimento", () => {
+    const posicoes: PosicaoMensal[] = [
+      { mes: mes(2026, 1), valorCentavos: 1_000_000 },
+      // Patrimônio subiu 200_000, todos de aporte — rendimento real = 0.
+      {
+        mes: mes(2026, 2),
+        valorCentavos: 1_200_000,
+        aporteRetiradaCentavos: 200_000,
+      },
+    ];
+
+    const [, fev] = calcularRendimento(posicoes, cdi);
+
+    expect(fev.variacaoCentavos).toBe(200_000);
+    expect(fev.rendimentoMensalRealPercentual).toBeCloseTo(0, 6);
+  });
+
+  it("separa corretamente ganho de mercado de retirada no mesmo mês", () => {
+    const posicoes: PosicaoMensal[] = [
+      { mes: mes(2026, 1), valorCentavos: 1_000_000 },
+      // Rendeu 50_000 (5%) e depois retirou 300_000: variação bruta =
+      // -250_000, mas o rendimento real é os 50_000 de ganho.
+      {
+        mes: mes(2026, 2),
+        valorCentavos: 750_000,
+        aporteRetiradaCentavos: -300_000,
+      },
+    ];
+
+    const [, fev] = calcularRendimento(posicoes, cdi);
+
+    expect(fev.variacaoCentavos).toBe(-250_000);
+    expect(fev.rendimentoMensalRealPercentual).toBeCloseTo(5, 6);
+    expect(fev.rendimentoAcumuladoRealCentavos).toBe(50_000);
+  });
+});
+
 describe("projetarPatrimonioFuturo", () => {
   it("projeta patrimônio futuro por juros compostos a uma taxa mensal fixa", () => {
     const projecao = projetarPatrimonioFuturo(1_000_000, 1, 3);
