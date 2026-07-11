@@ -447,6 +447,7 @@ export function ReceitasClient() {
   const [novaDescricao, setNovaDescricao] = useState("");
   const [novoValor, setNovoValor] = useState("");
   const [novoMes, setNovoMes] = useState("");
+  const [modalAberto, setModalAberto] = useState(false);
 
   const [pessoaFiltro, setPessoaFiltro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -679,6 +680,7 @@ export function ReceitasClient() {
     setNovoValor("");
     setNovaDescricao("");
     setToast("Receita salva com sucesso!");
+    setModalAberto(false);
     carregar();
   }
 
@@ -867,104 +869,139 @@ export function ReceitasClient() {
         </div>
       </div>
 
-      <div className={`${cardClass} p-lg`}>
-        <div className="mb-md border-outline-variant pb-md text-on-surface flex items-center gap-2 border-b">
-          <IconePlusCirculo />
-          <h2 className="text-base font-bold">Registrar Nova Entrada</h2>
-        </div>
-        <form
-          onSubmit={criarReceita}
-          className="gap-sm flex flex-wrap items-end"
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setModalAberto(true)}
+          className="bg-primary px-lg text-on-primary flex items-center gap-2 rounded-full py-2.5 text-sm font-semibold hover:opacity-90"
         >
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="nova-pessoa"
-            >
-              Responsável
-            </label>
-            <Select
-              id="nova-pessoa"
-              value={novaPessoaId}
-              onChange={setNovaPessoaId}
-              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="novo-mes"
-            >
-              Referência
-            </label>
-            <input
-              id="novo-mes"
-              type="month"
-              className={inputClass}
-              value={novoMes}
-              onChange={(e) => setNovoMes(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="novo-subtipo"
-            >
-              Tipo / Categoria
-            </label>
-            <Select
-              id="novo-subtipo"
-              value={novoSubtipo}
-              onChange={(v) => setNovoSubtipo(v as SubtipoReceita)}
-              options={SUBTIPOS_RECEITA.map((s) => ({
-                value: s.value,
-                label: s.label,
-              }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="novo-valor"
-            >
-              Valor (R$)
-            </label>
-            <input
-              id="novo-valor"
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              className={`w-32 text-right ${inputClass}`}
-              value={novoValor}
-              onChange={(e) => setNovoValor(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex min-w-[180px] flex-1 flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="nova-descricao"
-            >
-              Descrição (Opcional)
-            </label>
-            <input
-              id="nova-descricao"
-              placeholder="Ex: Dividendos..."
-              className={inputClass}
-              value={novaDescricao}
-              onChange={(e) => setNovaDescricao(e.target.value)}
-              required={novoSubtipo === "OUTROS"}
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-primary px-md text-on-primary flex items-center gap-2 rounded-full py-2 text-xs font-semibold hover:opacity-90"
-          >
-            <IconeSalvar /> Salvar Entrada
-          </button>
-        </form>
+          <IconePlusCirculo /> Registrar Nova Entrada
+        </button>
       </div>
+
+      {modalAberto && (
+        <div className="p-lg fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/40">
+          <div className="gap-md rounded-2xl border-outline-variant bg-surface-container-lowest p-lg flex w-full max-w-[36rem] flex-col border shadow-lg">
+            <div className="border-outline-variant pb-md text-on-surface flex items-center justify-between gap-2 border-b">
+              <div className="flex items-center gap-2">
+                <IconePlusCirculo />
+                <h2 className="text-base font-bold">Registrar Nova Entrada</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalAberto(false)}
+                aria-label="Fechar"
+                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
+              >
+                <IconeX />
+              </button>
+            </div>
+            <form onSubmit={criarReceita} className="gap-md flex flex-col">
+              <div className="gap-md grid grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="nova-pessoa"
+                  >
+                    Responsável
+                  </label>
+                  <Select
+                    id="nova-pessoa"
+                    value={novaPessoaId}
+                    onChange={setNovaPessoaId}
+                    options={pessoas.map((p) => ({
+                      value: p.id,
+                      label: p.nome,
+                    }))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="novo-mes"
+                  >
+                    Referência
+                  </label>
+                  <input
+                    id="novo-mes"
+                    type="month"
+                    className={inputClass}
+                    value={novoMes}
+                    onChange={(e) => setNovoMes(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="novo-subtipo"
+                  >
+                    Tipo / Categoria
+                  </label>
+                  <Select
+                    id="novo-subtipo"
+                    value={novoSubtipo}
+                    onChange={(v) => setNovoSubtipo(v as SubtipoReceita)}
+                    options={SUBTIPOS_RECEITA.map((s) => ({
+                      value: s.value,
+                      label: s.label,
+                    }))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="novo-valor"
+                  >
+                    Valor (R$)
+                  </label>
+                  <input
+                    id="novo-valor"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    className={`text-right ${inputClass}`}
+                    value={novoValor}
+                    onChange={(e) => setNovoValor(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="col-span-2 flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="nova-descricao"
+                  >
+                    Descrição (Opcional)
+                  </label>
+                  <input
+                    id="nova-descricao"
+                    placeholder="Ex: Dividendos..."
+                    className={inputClass}
+                    value={novaDescricao}
+                    onChange={(e) => setNovaDescricao(e.target.value)}
+                    required={novoSubtipo === "OUTROS"}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModalAberto(false)}
+                  className="border-outline-variant px-md text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-primary px-md text-on-primary flex items-center gap-2 rounded-full py-2 text-xs font-semibold hover:opacity-90"
+                >
+                  <IconeSalvar /> Salvar Entrada
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className={cardClass}>
         <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
