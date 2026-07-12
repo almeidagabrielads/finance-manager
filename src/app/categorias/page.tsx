@@ -7,10 +7,10 @@ export default function CategoriasPage() {
       <div className="flex flex-col gap-lg">
         <div>
           <h2 className="text-lg font-semibold text-on-surface">
-            Categorias & Orçamento
+            Categorias
           </h2>
           <p className="text-sm text-on-surface-variant">
-            Categorias, subcategorias e percentual sugerido do orçamento.
+            Categorias e subcategorias — ative ou inative conforme o uso.
           </p>
         </div>
         <CategoriasClient />

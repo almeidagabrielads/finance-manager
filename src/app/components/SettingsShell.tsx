@@ -40,7 +40,7 @@ const ITENS = [
   },
   {
     href: "/categorias",
-    label: "Categorias & Orçamento",
+    label: "Categorias",
     icon: (
       <>
         <rect x="4" y="14" width="4" height="7" />
