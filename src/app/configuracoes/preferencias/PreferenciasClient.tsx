@@ -20,10 +20,17 @@ const TEMAS = [
   { value: "ESCURO", label: "Escuro" },
 ] as const;
 
+const MODOS_PARCELAMENTO = [
+  { value: "GRADUAL", label: "Gradual" },
+  { value: "AVISTA", label: "À vista" },
+  { value: "PREVISAO", label: "Previsão" },
+] as const;
+
 type Preferencias = {
   moeda: string;
   idioma: string;
   tema: string;
+  modoParcelamentoPadrao: string;
 };
 
 async function parseErro(response: Response): Promise<string> {
@@ -81,6 +88,25 @@ function IconeLua() {
       strokeLinejoin="round"
     >
       <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+    </svg>
+  );
+}
+
+function IconeParcelamento() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M7 15h.01" />
+      <path d="M11 15h4" />
     </svg>
   );
 }
@@ -229,6 +255,24 @@ export function PreferenciasClient() {
               </button>
             ))}
           </div>
+        </PreferenciaCard>
+
+        <PreferenciaCard
+          icone={<IconeParcelamento />}
+          titulo="Modo de Parcelamento Padrão"
+          descricao="Modo sugerido ao criar uma nova compra parcelada"
+        >
+          <Select
+            ariaLabel="Modo de parcelamento padrão"
+            value={preferencias.modoParcelamentoPadrao}
+            onChange={(modoParcelamentoPadrao) =>
+              salvar({ modoParcelamentoPadrao })
+            }
+            options={MODOS_PARCELAMENTO.map((m) => ({
+              value: m.value,
+              label: m.label,
+            }))}
+          />
         </PreferenciaCard>
       </div>
     </div>

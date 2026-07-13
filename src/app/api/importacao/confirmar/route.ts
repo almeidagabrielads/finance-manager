@@ -15,6 +15,10 @@ const LinhaSchema = z.object({
   bancoId: z.string().trim().min(1).nullish(),
   pessoaDivisaoId: z.string().trim().min(1).nullish(),
   pessoaPagouId: z.string().trim().min(1).nullish(),
+  usarComoParcelamento: z.boolean().optional(),
+  modoParcelamento: z.enum(["GRADUAL", "AVISTA", "PREVISAO"]).optional(),
+  parcelaAtual: z.number().int().positive().optional(),
+  parcelaTotal: z.number().int().positive().optional(),
 });
 
 const ConfirmarSchema = z.object({

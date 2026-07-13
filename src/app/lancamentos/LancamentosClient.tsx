@@ -12,6 +12,7 @@ import {
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import type { FiltroColuna } from "@/lib/domain/tabela";
 import { buscarTemplate, gerarExemploCsv } from "@/lib/domain/import/templates";
+import { ParcelamentosPanel } from "./ParcelamentosPanel";
 
 type Subcategoria = { id: string; nome: string; categoriaId: string };
 type Categoria = { id: string; nome: string; subcategorias: Subcategoria[] };
@@ -35,7 +36,29 @@ type Lancamento = {
   pagoComResgateInvestimento: boolean;
   investimentoResgateId: string | null;
   tipoGasto: string;
+  parcelamentoId: string | null;
+  numeroParcela: number | null;
+  previsto: boolean;
 };
+
+const MODOS_PARCELAMENTO = [
+  {
+    value: "GRADUAL",
+    label: "Gradual",
+    descricao: "Lança só a parcela atual, mês a mês.",
+  },
+  {
+    value: "AVISTA",
+    label: "À vista",
+    descricao: "Lança o valor total agora, sem impacto futuro.",
+  },
+  {
+    value: "PREVISAO",
+    label: "Previsão",
+    descricao:
+      "Já lança todas as parcelas futuras, comprometendo o orçamento.",
+  },
+] as const;
 
 type LinhaPreview = {
   numeroLinha: number;
@@ -56,6 +79,7 @@ type LinhaPreview = {
   bancoSugeridoId: string | null;
   pessoaDivisaoSugeridaId: string | null;
   pessoaPagouSugeridaId: string | null;
+  parcelaDetectada: { atual: number; total: number } | null;
 };
 
 type ErroImportacao = { numeroLinha: number; motivo: string };
@@ -67,6 +91,8 @@ type LinhaRevisao = LinhaPreview & {
   bancoId: string;
   pessoaDivisaoId: string;
   pessoaPagouId: string;
+  usarComoParcelamento: boolean;
+  modoParcelamento: string;
 };
 
 async function parseErro(response: Response): Promise<string> {
@@ -151,11 +177,15 @@ type FormLancamento = {
   pagoComResgateInvestimento: boolean;
   investimentoResgateId: string;
   tipoGasto: string;
+  parcelar: boolean;
+  quantidadeParcelas: string;
+  modoParcelamento: string;
 };
 
 function formVazio(defaults: {
   bancoId?: string;
   pessoaId?: string;
+  modoParcelamentoPadrao?: string;
 }): FormLancamento {
   return {
     data: new Date().toISOString().slice(0, 10),
@@ -170,6 +200,9 @@ function formVazio(defaults: {
     pagoComResgateInvestimento: false,
     investimentoResgateId: "",
     tipoGasto: "VARIAVEL",
+    parcelar: false,
+    quantidadeParcelas: "2",
+    modoParcelamento: defaults.modoParcelamentoPadrao ?? "GRADUAL",
   };
 }
 
@@ -180,9 +213,16 @@ export function LancamentosClient() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [investimentos, setInvestimentos] = useState<Investimento[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[] | null>(null);
+  const [parcelamentosPorId, setParcelamentosPorId] = useState<
+    Map<string, number>
+  >(new Map());
   const [erro, setErro] = useState<string | null>(null);
   const [naoAutenticado, setNaoAutenticado] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [reloadPainelParcelamentos, setReloadPainelParcelamentos] =
+    useState(0);
+  const [modoParcelamentoPadrao, setModoParcelamentoPadrao] =
+    useState("GRADUAL");
   const [toast, setToast] = useState<string | null>(null);
   const { confirmar, dialog: dialogConfirmacao } = useConfirmDialog();
 
@@ -253,6 +293,7 @@ export function LancamentosClient() {
 
   function carregar() {
     setReloadToken((t) => t + 1);
+    setReloadPainelParcelamentos((t) => t + 1);
   }
 
   function abrirModalNovo() {
@@ -311,8 +352,9 @@ export function LancamentosClient() {
       fetch("/api/investimentos?incluirFinalizados=true").then((r) =>
         r.ok ? r.json() : null,
       ),
+      fetch("/api/preferencias").then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([cats, bcs, pes, tpls, invs]) => {
+      .then(([cats, bcs, pes, tpls, invs, prefs]) => {
         if (cancelado) return;
         if (
           cats === null ||
@@ -330,10 +372,16 @@ export function LancamentosClient() {
         setPessoas(pes);
         setTemplates(tpls);
         setInvestimentos(invs);
+        const modoPadrao: string = prefs?.modoParcelamentoPadrao ?? "GRADUAL";
+        setModoParcelamentoPadrao(modoPadrao);
         setForm((atual) =>
           atual.bancoId || atual.pessoaDivisaoId
             ? atual
-            : formVazio({ bancoId: bcs[0]?.id, pessoaId: pes[0]?.id }),
+            : formVazio({
+                bancoId: bcs[0]?.id,
+                pessoaId: pes[0]?.id,
+                modoParcelamentoPadrao: modoPadrao,
+              }),
         );
         setImportBancoId((atual) => atual || (bcs[0]?.id ?? ""));
         setImportPessoaDivisaoId((atual) => atual || (pes[0]?.id ?? ""));
@@ -347,6 +395,22 @@ export function LancamentosClient() {
       cancelado = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    fetch("/api/parcelamentos?incluirQuitados=true")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((lista: { id: string; quantidadeParcelas: number }[] | null) => {
+        if (cancelado || !lista) return;
+        setParcelamentosPorId(
+          new Map(lista.map((p) => [p.id, p.quantidadeParcelas])),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [reloadToken, reloadPainelParcelamentos]);
 
   useEffect(() => {
     let cancelado = false;
@@ -504,6 +568,12 @@ export function LancamentosClient() {
     if (f.desconto.trim() !== "" && reaisParaCentavos(f.desconto) < 0) {
       return "Desconto não pode ser negativo.";
     }
+    if (f.parcelar) {
+      const quantidade = Number(f.quantidadeParcelas);
+      if (!Number.isInteger(quantidade) || quantidade < 2) {
+        return "Informe uma quantidade de parcelas válida (mínimo 2).";
+      }
+    }
     return null;
   }
 
@@ -515,32 +585,58 @@ export function LancamentosClient() {
       return;
     }
     setErro(null);
-    const response = await fetch("/api/lancamentos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: form.data,
-        descricaoPropria: form.descricaoPropria || null,
-        valorCentavos: reaisParaCentavos(form.valor),
-        descontoCentavos: reaisParaCentavos(form.desconto),
-        categoriaId: form.categoriaId || null,
-        subcategoriaId: form.subcategoriaId || null,
-        bancoId: form.bancoId,
-        pessoaDivisaoId: form.pessoaDivisaoId,
-        pessoaPagouId: form.pessoaPagouId,
-        pagoComResgateInvestimento: form.pagoComResgateInvestimento,
-        investimentoResgateId: form.investimentoResgateId || null,
-        tipoGasto: form.tipoGasto,
-      }),
-    });
+    const response = form.parcelar
+      ? await fetch("/api/parcelamentos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            descricaoPropria: form.descricaoPropria || null,
+            valorParcelaCentavos: reaisParaCentavos(form.valor),
+            quantidadeParcelas: Number(form.quantidadeParcelas),
+            dataPrimeiraParcela: form.data,
+            modo: form.modoParcelamento,
+            categoriaId: form.categoriaId || null,
+            subcategoriaId: form.subcategoriaId || null,
+            bancoId: form.bancoId,
+            pessoaDivisaoId: form.pessoaDivisaoId,
+            pessoaPagouId: form.pessoaPagouId,
+            tipoGasto: form.tipoGasto,
+          }),
+        })
+      : await fetch("/api/lancamentos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: form.data,
+            descricaoPropria: form.descricaoPropria || null,
+            valorCentavos: reaisParaCentavos(form.valor),
+            descontoCentavos: reaisParaCentavos(form.desconto),
+            categoriaId: form.categoriaId || null,
+            subcategoriaId: form.subcategoriaId || null,
+            bancoId: form.bancoId,
+            pessoaDivisaoId: form.pessoaDivisaoId,
+            pessoaPagouId: form.pessoaPagouId,
+            pagoComResgateInvestimento: form.pagoComResgateInvestimento,
+            investimentoResgateId: form.investimentoResgateId || null,
+            tipoGasto: form.tipoGasto,
+          }),
+        });
     if (!response.ok) {
       setErro(await parseErro(response));
       return;
     }
     setForm((atual) => ({
-      ...formVazio({ bancoId: atual.bancoId, pessoaId: atual.pessoaDivisaoId }),
+      ...formVazio({
+        bancoId: atual.bancoId,
+        pessoaId: atual.pessoaDivisaoId,
+        modoParcelamentoPadrao: atual.modoParcelamento,
+      }),
     }));
-    setToast("Lançamento salvo com sucesso!");
+    setToast(
+      form.parcelar
+        ? "Parcelamento criado com sucesso!"
+        : "Lançamento salvo com sucesso!",
+    );
     setModalNovoAberto(false);
     carregar();
   }
@@ -701,6 +797,8 @@ export function LancamentosClient() {
         bancoId: linha.bancoSugeridoId ?? importBancoId,
         pessoaDivisaoId: linha.pessoaDivisaoSugeridaId ?? importPessoaDivisaoId,
         pessoaPagouId: linha.pessoaPagouSugeridaId ?? importPessoaPagouId,
+        usarComoParcelamento: linha.parcelaDetectada !== null,
+        modoParcelamento: modoParcelamentoPadrao,
       }));
       setLinhasRevisao((atual) => {
         const hashesAtuais = new Set(atual.map((l) => l.hash));
@@ -766,6 +864,14 @@ export function LancamentosClient() {
           bancoId: l.bancoId || null,
           pessoaDivisaoId: l.pessoaDivisaoId || null,
           pessoaPagouId: l.pessoaPagouId || null,
+          ...(l.parcelaDetectada && l.usarComoParcelamento
+            ? {
+                usarComoParcelamento: true,
+                modoParcelamento: l.modoParcelamento,
+                parcelaAtual: l.parcelaDetectada.atual,
+                parcelaTotal: l.parcelaDetectada.total,
+              }
+            : {}),
         })),
       }),
     });
@@ -778,9 +884,16 @@ export function LancamentosClient() {
     setLinhasRevisao((atual) =>
       atual.filter((l) => !hashesConfirmadas.has(l.hash)),
     );
-    setToast(
-      `${body.criados} lançamento(s) aprovado(s)${body.duplicadosIgnorados ? `, ${body.duplicadosIgnorados} duplicado(s) ignorado(s)` : ""}.`,
-    );
+    const partesResumo = [`${body.criados} lançamento(s) aprovado(s)`];
+    if (body.parcelamentosCriados)
+      partesResumo.push(`${body.parcelamentosCriados} parcelamento(s) novo(s)`);
+    if (body.parcelasAnexadas)
+      partesResumo.push(
+        `${body.parcelasAnexadas} parcela(s) anexada(s) a parcelamentos existentes`,
+      );
+    if (body.duplicadosIgnorados)
+      partesResumo.push(`${body.duplicadosIgnorados} duplicado(s) ignorado(s)`);
+    setToast(partesResumo.join(", ") + ".");
     carregar();
   }
 
@@ -830,6 +943,10 @@ export function LancamentosClient() {
       <div className="gap-sm flex items-center justify-between">
         <h1 className="text-on-surface text-2xl font-bold">Lançamentos</h1>
         <div className="flex gap-2">
+          <ParcelamentosPanel
+            onAlterado={carregar}
+            refreshSignal={reloadPainelParcelamentos}
+          />
           <button
             type="button"
             onClick={abrirModalNovo}
@@ -1123,6 +1240,78 @@ export function LancamentosClient() {
                   placeholder="0,00"
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-on-surface flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.parcelar}
+                  onChange={(e) =>
+                    setForm({ ...form, parcelar: e.target.checked })
+                  }
+                />
+                Parcelar?
+              </label>
+              {form.parcelar && (
+                <div className="bg-surface-container-low gap-sm p-sm flex flex-col rounded-lg">
+                  <p className="text-on-surface-variant text-xs">
+                    O valor informado acima é o valor de <strong>uma</strong>{" "}
+                    parcela.
+                  </p>
+                  <div className="gap-sm grid grid-cols-1 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1">
+                      <label
+                        className="text-on-surface-variant text-xs font-semibold"
+                        htmlFor="l-qtd-parcelas"
+                      >
+                        Quantidade de parcelas{" "}
+                        <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="l-qtd-parcelas"
+                        type="number"
+                        min={2}
+                        step={1}
+                        className={inputClass}
+                        value={form.quantidadeParcelas}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            quantidadeParcelas: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label
+                        className="text-on-surface-variant text-xs font-semibold"
+                        htmlFor="l-modo-parcelamento"
+                      >
+                        Modo de parcelamento
+                      </label>
+                      <Select
+                        id="l-modo-parcelamento"
+                        value={form.modoParcelamento}
+                        onChange={(v) =>
+                          setForm({ ...form, modoParcelamento: v })
+                        }
+                        options={MODOS_PARCELAMENTO.map((m) => ({
+                          value: m.value,
+                          label: m.label,
+                        }))}
+                      />
+                    </div>
+                  </div>
+                  <ul className="text-on-surface-variant gap-0.5 flex flex-col text-xs">
+                    {MODOS_PARCELAMENTO.map((m) => (
+                      <li key={m.value}>
+                        <strong>{m.label}:</strong> {m.descricao}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -1632,6 +1821,40 @@ export function LancamentosClient() {
                                   já importado
                                 </span>
                               )}
+                              {linha.parcelaDetectada && (
+                                <div className="bg-tertiary-container/10 border-tertiary-container/30 p-1.5 mt-1 flex flex-col gap-1 rounded-lg border">
+                                  <label className="text-tertiary-container flex items-start gap-1.5 text-xs">
+                                    <input
+                                      type="checkbox"
+                                      checked={linha.usarComoParcelamento}
+                                      onChange={(e) =>
+                                        atualizarLinhaRevisao(linha.hash, {
+                                          usarComoParcelamento:
+                                            e.target.checked,
+                                        })
+                                      }
+                                    />
+                                    Isso parece ser a parcela{" "}
+                                    {linha.parcelaDetectada.atual} de{" "}
+                                    {linha.parcelaDetectada.total} — importar
+                                    como parcelamento?
+                                  </label>
+                                  {linha.usarComoParcelamento && (
+                                    <Select
+                                      value={linha.modoParcelamento}
+                                      onChange={(v) =>
+                                        atualizarLinhaRevisao(linha.hash, {
+                                          modoParcelamento: v,
+                                        })
+                                      }
+                                      options={MODOS_PARCELAMENTO.map((m) => ({
+                                        value: m.value,
+                                        label: m.label,
+                                      }))}
+                                    />
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td className="p-2">
                               <Select
@@ -2040,6 +2263,12 @@ export function LancamentosClient() {
                   lancamento={lancamento}
                   pessoas={pessoas}
                   nome={nome}
+                  quantidadeParcelasTotal={
+                    lancamento.parcelamentoId
+                      ? (parcelamentosPorId.get(lancamento.parcelamentoId) ??
+                        null)
+                      : null
+                  }
                   onRemover={removerLancamento}
                   onAbrirDetalhe={() => setDetalheId(lancamento.id)}
                   selecionada={detalheId === lancamento.id}
@@ -2112,6 +2341,7 @@ function LinhaLancamento({
   lancamento,
   pessoas,
   nome,
+  quantidadeParcelasTotal,
   onRemover,
   onAbrirDetalhe,
   selecionada,
@@ -2124,6 +2354,7 @@ function LinhaLancamento({
     categoria: (id: string | null) => string;
     subcategoria: (id: string | null) => string;
   };
+  quantidadeParcelasTotal: number | null;
   onRemover: (lancamento: Lancamento) => Promise<boolean>;
   onAbrirDetalhe: () => void;
   selecionada: boolean;
@@ -2139,19 +2370,35 @@ function LinhaLancamento({
         selecionada
           ? "border-l-primary bg-primary/5"
           : "border-outline-variant/60 border-b border-l-transparent"
-      }`}
+      } ${lancamento.previsto ? "italic opacity-60" : ""}`}
       onClick={onAbrirDetalhe}
     >
       <td className="p-2 whitespace-nowrap">
         {dataParaInputDate(lancamento.data)}
       </td>
-      <td
-        className="max-w-xs truncate p-2"
-        title={
-          lancamento.descricaoPropria || lancamento.descricaoOrigem || undefined
-        }
-      >
-        {lancamento.descricaoPropria || lancamento.descricaoOrigem || "—"}
+      <td className="max-w-xs p-2">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="truncate"
+            title={
+              lancamento.descricaoPropria ||
+              lancamento.descricaoOrigem ||
+              undefined
+            }
+          >
+            {lancamento.descricaoPropria || lancamento.descricaoOrigem || "—"}
+          </span>
+          {lancamento.parcelamentoId && quantidadeParcelasTotal && (
+            <span className="bg-secondary-container text-on-secondary-container shrink-0 rounded-full px-1.5 py-0.5 text-xs font-semibold not-italic">
+              {lancamento.numeroParcela ?? "—"}/{quantidadeParcelasTotal}
+            </span>
+          )}
+          {lancamento.previsto && (
+            <span className="text-on-surface-variant shrink-0 text-xs not-italic">
+              previsto
+            </span>
+          )}
+        </span>
       </td>
       <td className="data-tabular p-2 text-right whitespace-nowrap">
         R$ {centavosParaReais(valorLiquido)}

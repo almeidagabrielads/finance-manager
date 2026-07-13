@@ -84,7 +84,13 @@ describe("gerarPreviewImportacao + confirmarImportacao — importação nova", (
       })),
     });
 
-    expect(resultado).toEqual({ ok: true, criados: 2, duplicadosIgnorados: 0 });
+    expect(resultado).toEqual({
+      ok: true,
+      criados: 2,
+      duplicadosIgnorados: 0,
+      parcelamentosCriados: 0,
+      parcelasAnexadas: 0,
+    });
 
     const lancamentos = await prismaTest.lancamento.findMany({
       where: { householdId: h.id },
@@ -179,7 +185,13 @@ describe("gerarPreviewImportacao + confirmarImportacao — detecção de duplica
       })),
     });
 
-    expect(resultado).toEqual({ ok: true, criados: 0, duplicadosIgnorados: 2 });
+    expect(resultado).toEqual({
+      ok: true,
+      criados: 0,
+      duplicadosIgnorados: 2,
+      parcelamentosCriados: 0,
+      parcelasAnexadas: 0,
+    });
 
     const total = await prismaTest.lancamento.count({
       where: { householdId: h.id },
@@ -300,5 +312,165 @@ describe("gerarPreviewImportacao — sugestão de categoria", () => {
     );
     expect(linhaMercado?.duplicado).toBe(true);
     expect(linhaMercado?.categoriaSugeridaId).toBeNull();
+  });
+});
+
+describe("gerarPreviewImportacao — detecção de parcela", () => {
+  it("expõe parcelaDetectada quando a descrição indica uma parcela", async () => {
+    const h = await criarHousehold();
+    const { banco } = await montarCadastros(h.id);
+    const csv = [
+      "date,title,amount",
+      "2026-06-10,Loja X Parcela 3/12,100.00",
+    ].join("\n");
+
+    const preview = await gerarPreviewImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      templateId: "nubank_cartao",
+      csvTexto: csv,
+    });
+
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.linhas[0].parcelaDetectada).toEqual({ atual: 3, total: 12 });
+  });
+});
+
+describe("confirmarImportacao — parcelamento", () => {
+  it("cria um novo Parcelamento ao confirmar uma linha detectada como parcela", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+
+    const resultado = await confirmarImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      pessoaDivisaoId: isa.id,
+      pessoaPagouId: isa.id,
+      linhas: [
+        {
+          data: "2026-06-10",
+          descricaoOrigem: "Loja X Parcela 3/12",
+          valorCentavos: 10000,
+          usarComoParcelamento: true,
+          modoParcelamento: "GRADUAL",
+          parcelaAtual: 3,
+          parcelaTotal: 12,
+        },
+      ],
+    });
+
+    expect(resultado).toEqual({
+      ok: true,
+      criados: 0,
+      duplicadosIgnorados: 0,
+      parcelamentosCriados: 1,
+      parcelasAnexadas: 0,
+    });
+
+    const parcelamento = await prismaTest.parcelamento.findFirst({
+      where: { householdId: h.id },
+      include: { lancamentos: true },
+    });
+    expect(parcelamento?.valorTotalCentavos).toBe(120000);
+    expect(parcelamento?.quantidadeParcelas).toBe(12);
+    // Volta 2 meses (parcela 3 -> parcela 1 em abril/2026).
+    expect(parcelamento?.dataPrimeiraParcela.toISOString().slice(0, 10)).toBe(
+      "2026-04-10",
+    );
+    expect(parcelamento?.lancamentos).toHaveLength(1);
+    expect(parcelamento?.lancamentos[0].numeroParcela).toBe(3);
+  });
+
+  it("anexa a um Parcelamento já existente em vez de duplicar o cabeçalho", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+
+    await confirmarImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      pessoaDivisaoId: isa.id,
+      pessoaPagouId: isa.id,
+      linhas: [
+        {
+          data: "2026-06-10",
+          descricaoOrigem: "Loja X Parcela 3/12",
+          valorCentavos: 10000,
+          usarComoParcelamento: true,
+          modoParcelamento: "GRADUAL",
+          parcelaAtual: 3,
+          parcelaTotal: 12,
+        },
+      ],
+    });
+
+    const resultado = await confirmarImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      pessoaDivisaoId: isa.id,
+      pessoaPagouId: isa.id,
+      linhas: [
+        {
+          data: "2026-07-10",
+          descricaoOrigem: "Loja X Parcela 4/12",
+          valorCentavos: 10000,
+          usarComoParcelamento: true,
+          modoParcelamento: "GRADUAL",
+          parcelaAtual: 4,
+          parcelaTotal: 12,
+        },
+      ],
+    });
+
+    expect(resultado).toEqual({
+      ok: true,
+      criados: 0,
+      duplicadosIgnorados: 0,
+      parcelamentosCriados: 0,
+      parcelasAnexadas: 1,
+    });
+
+    const parcelamentos = await prismaTest.parcelamento.findMany({
+      where: { householdId: h.id },
+      include: { lancamentos: true },
+    });
+    expect(parcelamentos).toHaveLength(1);
+    expect(parcelamentos[0].lancamentos.map((l) => l.numeroParcela).sort()).toEqual([
+      3, 4,
+    ]);
+  });
+
+  it("ignora silenciosamente se a mesma parcela já foi anexada antes", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+    const linha = {
+      data: "2026-06-10",
+      descricaoOrigem: "Loja X Parcela 3/12",
+      valorCentavos: 10000,
+      usarComoParcelamento: true,
+      modoParcelamento: "GRADUAL" as const,
+      parcelaAtual: 3,
+      parcelaTotal: 12,
+    };
+
+    await confirmarImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      pessoaDivisaoId: isa.id,
+      pessoaPagouId: isa.id,
+      linhas: [linha],
+    });
+
+    const resultado = await confirmarImportacao(prismaTest, h.id, {
+      bancoId: banco.id,
+      pessoaDivisaoId: isa.id,
+      pessoaPagouId: isa.id,
+      linhas: [linha],
+    });
+
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.parcelamentosCriados).toBe(0);
+    expect(resultado.parcelasAnexadas).toBe(0);
+
+    const total = await prismaTest.lancamento.count({
+      where: { householdId: h.id },
+    });
+    expect(total).toBe(1);
   });
 });

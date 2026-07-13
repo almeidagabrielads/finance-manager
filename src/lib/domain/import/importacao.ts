@@ -3,6 +3,13 @@ import { parseImportacao, type ErroImportacao } from "./parser";
 import { buscarTemplate } from "./templates";
 import { calcularHashImportacao } from "./hash";
 import { buscarCandidatosSugestao, melhorCandidato } from "./sugestaoCategoria";
+import type { ParcelaDetectada } from "./parcelaDetector";
+import {
+  dataDaParcela,
+  dividirParcelas,
+  encontrarParcelamentoCorrespondente,
+  type ModoParcelamento,
+} from "../parcelamentos";
 
 export type LinhaPreview = {
   numeroLinha: number;
@@ -31,6 +38,9 @@ export type LinhaPreview = {
   bancoSugeridoId: string | null;
   pessoaDivisaoSugeridaId: string | null;
   pessoaPagouSugeridaId: string | null;
+  // "parcela X de Y" detectada no texto da descrição (ver parcelaDetector.ts)
+  // — a revisão pode oferecer "importar como parcelamento" quando presente.
+  parcelaDetectada: ParcelaDetectada | null;
 };
 
 export type ResultadoPreview =
@@ -206,6 +216,7 @@ export async function gerarPreviewImportacao(
       bancoSugeridoId,
       pessoaDivisaoSugeridaId: divisoesResolvidas[indice],
       pessoaPagouSugeridaId: pagadoresResolvidos[indice],
+      parcelaDetectada: linha.parcelaDetectada,
     };
   });
 
@@ -226,10 +237,24 @@ export type LinhaConfirmacao = {
   bancoId?: string | null;
   pessoaDivisaoId?: string | null;
   pessoaPagouId?: string | null;
+  // Marca que esta linha é uma parcela detectada (ver parcelaDetectada no
+  // preview) e deve virar/anexar-se a um Parcelamento em vez de um
+  // Lancamento avulso. parcelaAtual/parcelaTotal vêm do valor detectado (ou
+  // corrigido pelo usuário) na tela de revisão.
+  usarComoParcelamento?: boolean;
+  modoParcelamento?: "GRADUAL" | "AVISTA" | "PREVISAO";
+  parcelaAtual?: number;
+  parcelaTotal?: number;
 };
 
 export type ResultadoConfirmacao =
-  | { ok: true; criados: number; duplicadosIgnorados: number }
+  | {
+      ok: true;
+      criados: number;
+      duplicadosIgnorados: number;
+      parcelamentosCriados: number;
+      parcelasAnexadas: number;
+    }
   | { ok: false; erro: string };
 
 // Grava as linhas selecionadas pelo usuário na tela de preview. Linhas cujo
@@ -324,6 +349,12 @@ export async function confirmarImportacao(
     ]);
 
   const dados = [];
+  const linhasParcelamento: {
+    linha: LinhaConfirmacao;
+    bancoFinal: string;
+    pessoaDivisaoFinal: string;
+    pessoaPagouFinal: string;
+  }[] = [];
   for (const linha of opts.linhas) {
     if (linha.categoriaId && !categoriasValidas.has(linha.categoriaId)) {
       return {
@@ -368,6 +399,22 @@ export async function confirmarImportacao(
       };
     }
 
+    if (linha.usarComoParcelamento) {
+      if (!linha.parcelaAtual || !linha.parcelaTotal) {
+        return {
+          ok: false,
+          erro: `Informe a parcela atual e o total de parcelas para a linha "${linha.descricaoOrigem}".`,
+        };
+      }
+      linhasParcelamento.push({
+        linha,
+        bancoFinal,
+        pessoaDivisaoFinal,
+        pessoaPagouFinal,
+      });
+      continue;
+    }
+
     const data = new Date(linha.data);
     const hash = calcularHashImportacao({
       data,
@@ -392,14 +439,148 @@ export async function confirmarImportacao(
     });
   }
 
-  const resultado = await prisma.lancamento.createMany({
-    data: dados,
-    skipDuplicates: true,
-  });
+  const resultado =
+    dados.length > 0
+      ? await prisma.lancamento.createMany({ data: dados, skipDuplicates: true })
+      : { count: 0 };
+
+  let parcelamentosCriados = 0;
+  let parcelasAnexadas = 0;
+
+  // Cada linha marcada como parcelamento é processada sequencialmente (não
+  // numa única transaction para todas) — a falha de uma compra não deve
+  // reverter as demais linhas já confirmadas.
+  for (const { linha, bancoFinal, pessoaDivisaoFinal, pessoaPagouFinal } of linhasParcelamento) {
+    const data = new Date(linha.data);
+    const atual = linha.parcelaAtual!;
+    const total = linha.parcelaTotal!;
+    const valorTotalCentavos = linha.valorCentavos * total;
+    const dataPrimeiraParcela = dataDaParcela(data, -(atual - 1));
+
+    const existente = await encontrarParcelamentoCorrespondente(
+      prisma,
+      householdId,
+      {
+        bancoId: bancoFinal,
+        valorTotalCentavos,
+        quantidadeParcelas: total,
+        dataPrimeiraParcela,
+      },
+    );
+
+    if (existente) {
+      const jaTemEssaParcela = existente.lancamentos.some(
+        (l) => l.numeroParcela === atual,
+      );
+      if (jaTemEssaParcela) continue; // já importada antes, ignora silenciosamente
+
+      await prisma.lancamento.create({
+        data: {
+          householdId,
+          descricaoOrigem: linha.descricaoOrigem,
+          descricaoPropria: linha.descricaoPropria ?? null,
+          categoriaId: linha.categoriaId ?? null,
+          subcategoriaId: linha.subcategoriaId ?? null,
+          bancoId: bancoFinal,
+          pessoaDivisaoId: pessoaDivisaoFinal,
+          pessoaPagouId: pessoaPagouFinal,
+          tipoGasto: existente.tipoGasto,
+          data,
+          valorCentavos: linha.valorCentavos,
+          numeroParcela: atual,
+          previsto: false,
+          parcelamentoId: existente.id,
+        },
+      });
+      parcelasAnexadas++;
+    } else {
+      // Não usa criarParcelamento aqui porque ele sempre assume que a
+      // primeira parcela lançada é a nº 1 — mas um extrato pode ser
+      // importado começando no meio da série (ex.: primeira vez que o
+      // household importa e a compra já estava na parcela 3/12). Constrói o
+      // header + as parcelas manualmente, posicionadas em relação a `atual`.
+      const modo: ModoParcelamento = linha.modoParcelamento ?? "GRADUAL";
+      const valoresParcelas = dividirParcelas(valorTotalCentavos, total);
+      const dadosLancamentoBase = {
+        householdId,
+        descricaoOrigem: linha.descricaoOrigem,
+        descricaoPropria: linha.descricaoPropria ?? null,
+        categoriaId: linha.categoriaId ?? null,
+        subcategoriaId: linha.subcategoriaId ?? null,
+        bancoId: bancoFinal,
+        pessoaDivisaoId: pessoaDivisaoFinal,
+        pessoaPagouId: pessoaPagouFinal,
+        tipoGasto: "VARIAVEL" as const,
+      };
+
+      await prisma.$transaction(async (tx) => {
+        const header = await tx.parcelamento.create({
+          data: {
+            householdId,
+            descricaoOrigem: linha.descricaoOrigem,
+            descricaoPropria: linha.descricaoPropria ?? null,
+            valorTotalCentavos,
+            quantidadeParcelas: total,
+            dataPrimeiraParcela,
+            modo,
+            categoriaId: linha.categoriaId ?? null,
+            subcategoriaId: linha.subcategoriaId ?? null,
+            bancoId: bancoFinal,
+            pessoaDivisaoId: pessoaDivisaoFinal,
+            pessoaPagouId: pessoaPagouFinal,
+            tipoGasto: "VARIAVEL",
+          },
+        });
+
+        if (modo === "AVISTA") {
+          await tx.lancamento.create({
+            data: {
+              ...dadosLancamentoBase,
+              data: dataPrimeiraParcela,
+              valorCentavos: valorTotalCentavos,
+              numeroParcela: null,
+              previsto: false,
+              parcelamentoId: header.id,
+            },
+          });
+        } else if (modo === "GRADUAL") {
+          await tx.lancamento.create({
+            data: {
+              ...dadosLancamentoBase,
+              data,
+              valorCentavos: linha.valorCentavos,
+              numeroParcela: atual,
+              previsto: false,
+              parcelamentoId: header.id,
+            },
+          });
+        } else {
+          // PREVISAO: parcelas anteriores à importada também já ocorreram
+          // (previsto=false), as posteriores ainda são previsão.
+          for (let i = 0; i < total; i++) {
+            const numeroParcela = i + 1;
+            await tx.lancamento.create({
+              data: {
+                ...dadosLancamentoBase,
+                data: dataDaParcela(dataPrimeiraParcela, i),
+                valorCentavos: valoresParcelas[i],
+                numeroParcela,
+                previsto: numeroParcela > atual,
+                parcelamentoId: header.id,
+              },
+            });
+          }
+        }
+      });
+      parcelamentosCriados++;
+    }
+  }
 
   return {
     ok: true,
     criados: resultado.count,
     duplicadosIgnorados: dados.length - resultado.count,
+    parcelamentosCriados,
+    parcelasAnexadas,
   };
 }

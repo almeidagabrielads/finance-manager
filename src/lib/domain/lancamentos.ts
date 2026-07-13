@@ -214,7 +214,25 @@ export async function removerLancamento(
   const existente = await buscarLancamento(prisma, householdId, id);
   if (!existente) return null;
 
-  return prisma.lancamento.delete({ where: { id } });
+  return prisma.$transaction(async (tx) => {
+    const removido = await tx.lancamento.delete({ where: { id } });
+
+    // Se essa era a última parcela ligada a um Parcelamento, o cabeçalho
+    // fica órfão (sem nenhum lançamento) e continuaria aparecendo como
+    // "em aberto" para sempre — remove-o junto.
+    if (removido.parcelamentoId) {
+      const restantes = await tx.lancamento.count({
+        where: { parcelamentoId: removido.parcelamentoId },
+      });
+      if (restantes === 0) {
+        await tx.parcelamento.delete({
+          where: { id: removido.parcelamentoId },
+        });
+      }
+    }
+
+    return removido;
+  });
 }
 
 export type SugestaoDescricao = {

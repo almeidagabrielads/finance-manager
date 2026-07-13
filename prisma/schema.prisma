@@ -8,27 +8,28 @@ datasource db {
 }
 
 model Household {
-  id                    String                 @id @default(cuid())
-  nome                  String                 @unique
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  acertos               AcertoContas[]
-  atividades            AtividadeLog[]
-  bancos                Banco[]
-  calculadoraAnotacao   CalculadoraAnotacao?
-  calculadoraHistorico  CalculadoraHistorico[]
-  categorias            Categoria[]
-  fechamentosAnuais     FechamentoAnual[]
-  integrantesGrupo      IntegranteGrupo[]
-  investimentos         Investimento[]
-  lancamentos           Lancamento[]
-  orcamentos            OrcamentoPlanejado[]
-  pessoas               Pessoa[]
-  posicoesInvestimento  PosicaoInvestimento[]
-  posicoesPatrimonio    PosicaoPatrimonio[]
-  preferencia           Preferencia?
-  receitas              Receita[]
-  users                 User[]
+  id                   String                 @id @default(cuid())
+  nome                 String                 @unique
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  acertos              AcertoContas[]
+  atividades           AtividadeLog[]
+  bancos               Banco[]
+  calculadoraAnotacao  CalculadoraAnotacao?
+  calculadoraHistorico CalculadoraHistorico[]
+  categorias           Categoria[]
+  fechamentosAnuais    FechamentoAnual[]
+  integrantesGrupo     IntegranteGrupo[]
+  investimentos        Investimento[]
+  lancamentos          Lancamento[]
+  orcamentos           OrcamentoPlanejado[]
+  parcelamentos        Parcelamento[]
+  pessoas              Pessoa[]
+  posicoesInvestimento PosicaoInvestimento[]
+  posicoesPatrimonio   PosicaoPatrimonio[]
+  preferencia          Preferencia?
+  receitas             Receita[]
+  users                User[]
 }
 
 // Histórico de cálculos feitos na calculadora lateral (ver
@@ -57,14 +58,15 @@ model CalculadoraAnotacao {
 }
 
 model Preferencia {
-  id          String    @id @default(cuid())
-  householdId String    @unique
-  moeda       String    @default("BRL")
-  idioma      String    @default("pt-BR")
-  tema        String    @default("CLARO")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  household   Household @relation(fields: [householdId], references: [id])
+  id                     String           @id @default(cuid())
+  householdId            String           @unique
+  moeda                  String           @default("BRL")
+  idioma                 String           @default("pt-BR")
+  tema                   String           @default("CLARO")
+  modoParcelamentoPadrao ModoParcelamento @default(GRADUAL)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  household              Household        @relation(fields: [householdId], references: [id])
 }
 
 model User {
@@ -110,6 +112,8 @@ model Pessoa {
   lancamentosPagou            Lancamento[]         @relation("LancamentoPagou")
   orcamentos                  OrcamentoPlanejado[] @relation("OrcamentoDono")
   orcamentosDivisao           OrcamentoPlanejado[] @relation("OrcamentoDivisao")
+  parcelamentosDivisao        Parcelamento[]       @relation("ParcelamentoDivisao")
+  parcelamentosPagou          Parcelamento[]       @relation("ParcelamentoPagou")
   household                   Household            @relation(fields: [householdId], references: [id])
   posicoesPatrimonio          PosicaoPatrimonio[]
   receitas                    Receita[]
@@ -166,6 +170,7 @@ model Categoria {
   household     Household            @relation(fields: [householdId], references: [id])
   lancamentos   Lancamento[]
   orcamentos    OrcamentoPlanejado[]
+  parcelamentos Parcelamento[]
   subcategorias Subcategoria[]
 
   @@unique([householdId, nome])
@@ -182,6 +187,7 @@ model Subcategoria {
   orcamentoCentavos Int?
   lancamentos       Lancamento[]
   orcamentos        OrcamentoPlanejado[]
+  parcelamentos     Parcelamento[]
   categoria         Categoria            @relation(fields: [categoriaId], references: [id])
 
   @@unique([categoriaId, nome])
@@ -199,6 +205,7 @@ model Banco {
   household          Household           @relation(fields: [householdId], references: [id])
   investimentos      Investimento[]
   lancamentos        Lancamento[]
+  parcelamentos      Parcelamento[]
   posicoesPatrimonio PosicaoPatrimonio[]
 
   @@unique([householdId, nome])
@@ -225,6 +232,14 @@ model Lancamento {
   pagoComResgateInvestimento Boolean       @default(false)
   investimentoResgateId      String?
   tipoGasto                  TipoGasto     @default(VARIAVEL)
+  // Preenchidos quando este lançamento é uma parcela de uma compra parcelada
+  // (ver Parcelamento). numeroParcela é null para o lançamento de quitação
+  // antecipada e para o modo AVISTA (valor total lançado de uma vez).
+  parcelamentoId             String?
+  numeroParcela              Int?
+  // true = parcela futura já criada no modo PREVISAO mas que ainda não
+  // ocorreu (ver src/lib/domain/parcelamentos.ts).
+  previsto                   Boolean       @default(false)
   banco                      Banco         @relation(fields: [bancoId], references: [id])
   categoria                  Categoria?    @relation(fields: [categoriaId], references: [id])
   household                  Household     @relation(fields: [householdId], references: [id])
@@ -232,13 +247,57 @@ model Lancamento {
   pessoaPagou                Pessoa        @relation("LancamentoPagou", fields: [pessoaPagouId], references: [id])
   subcategoria               Subcategoria? @relation(fields: [subcategoriaId], references: [id])
   investimentoResgate        Investimento? @relation(fields: [investimentoResgateId], references: [id])
+  parcelamento               Parcelamento? @relation(fields: [parcelamentoId], references: [id])
 
+  // NOTA: além dos índices abaixo, a migration adiciona manualmente um índice
+  // único parcial (parcelamentoId, numeroParcela) WHERE parcelamentoId IS NOT
+  // NULL — Prisma não suporta unique parcial nativamente. Ver migration.sql.
   @@unique([householdId, hashImportacao])
   @@index([householdId, data])
   @@index([householdId, categoriaId])
   @@index([householdId, pessoaDivisaoId])
   @@index([householdId, pessoaPagouId])
   @@index([householdId, investimentoResgateId])
+  @@index([householdId, parcelamentoId])
+}
+
+// Cabeçalho de uma compra parcelada (ver src/lib/domain/parcelamentos.ts). As
+// parcelas em si são Lancamento normais ligados via parcelamentoId — este
+// model guarda os dados da compra como um todo (valor total, quantidade,
+// modo de tratamento) para permitir recalcular/recriar as parcelas quando o
+// modo é trocado ou quando a compra é quitada antecipadamente.
+model Parcelamento {
+  id                       String           @id @default(cuid())
+  householdId              String
+  descricaoOrigem          String?
+  descricaoPropria         String?
+  valorTotalCentavos       Int
+  quantidadeParcelas       Int
+  dataPrimeiraParcela      DateTime         @db.Date
+  modo                     ModoParcelamento
+  categoriaId              String?
+  subcategoriaId           String?
+  bancoId                  String
+  pessoaDivisaoId          String
+  pessoaPagouId            String
+  tipoGasto                TipoGasto        @default(VARIAVEL)
+  quitadoEm                DateTime?
+  descontoQuitacaoCentavos Int?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  createdByUserId          String?
+  updatedByUserId          String?
+  household                Household        @relation(fields: [householdId], references: [id])
+  banco                    Banco            @relation(fields: [bancoId], references: [id])
+  categoria                Categoria?       @relation(fields: [categoriaId], references: [id])
+  subcategoria             Subcategoria?    @relation(fields: [subcategoriaId], references: [id])
+  pessoaDivisao            Pessoa           @relation("ParcelamentoDivisao", fields: [pessoaDivisaoId], references: [id])
+  pessoaPagou              Pessoa           @relation("ParcelamentoPagou", fields: [pessoaPagouId], references: [id])
+  lancamentos              Lancamento[]
+
+  @@index([householdId])
+  @@index([householdId, quitadoEm])
+  @@index([householdId, bancoId])
 }
 
 model Receita {
@@ -342,22 +401,22 @@ model PosicaoInvestimento {
 }
 
 model PosicaoPatrimonio {
-  id            String    @id @default(cuid())
-  bancoId       String
-  mes           DateTime  @db.Date
-  valorCentavos Int
-  householdId   String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  pessoaId      String?
+  id                     String    @id @default(cuid())
+  bancoId                String
+  mes                    DateTime  @db.Date
+  valorCentavos          Int
+  householdId            String
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  pessoaId               String?
   // Fluxo de caixa do mês não relacionado a rendimento: positivo = aporte,
   // negativo = retirada. Descontado da variação bruta ao calcular rendimento
   // real (ver src/lib/domain/rendimento.ts) para que aportes/retiradas não
   // sejam contabilizados como ganho/perda de mercado.
   aporteRetiradaCentavos Int       @default(0)
-  banco         Banco     @relation(fields: [bancoId], references: [id])
-  household     Household @relation(fields: [householdId], references: [id])
-  pessoa        Pessoa?   @relation(fields: [pessoaId], references: [id])
+  banco                  Banco     @relation(fields: [bancoId], references: [id])
+  household              Household @relation(fields: [householdId], references: [id])
+  pessoa                 Pessoa?   @relation(fields: [pessoaId], references: [id])
 
   @@unique([householdId, bancoId, pessoaId, mes])
   @@index([householdId, mes])
@@ -423,6 +482,12 @@ enum TipoGasto {
   FIXO
   VARIAVEL
   INVESTIMENTO
+}
+
+enum ModoParcelamento {
+  GRADUAL
+  AVISTA
+  PREVISAO
 }
 
 enum PapelUsuario {

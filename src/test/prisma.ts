@@ -25,6 +25,7 @@ export async function limparBanco() {
     prismaTest.calculadoraHistorico.deleteMany(),
     prismaTest.calculadoraAnotacao.deleteMany(),
     prismaTest.lancamento.deleteMany(),
+    prismaTest.parcelamento.deleteMany(),
     prismaTest.receita.deleteMany(),
     prismaTest.orcamentoPlanejado.deleteMany(),
     prismaTest.posicaoPatrimonio.deleteMany(),

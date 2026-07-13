@@ -367,6 +367,96 @@ describe("removerLancamento", () => {
     });
     expect(buscado).toBeNull();
   });
+
+  it("remove o Parcelamento junto quando era o último lançamento ligado a ele", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+    const parcelamento = await prismaTest.parcelamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        valorTotalCentavos: 10000,
+        quantidadeParcelas: 5,
+        dataPrimeiraParcela: new Date("2026-06-10"),
+        modo: "GRADUAL",
+      },
+    });
+    const lancamento = await prismaTest.lancamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        data: new Date("2026-06-10"),
+        valorCentavos: 2000,
+        numeroParcela: 1,
+        previsto: false,
+        parcelamentoId: parcelamento.id,
+        tipoGasto: "VARIAVEL",
+      },
+    });
+
+    await removerLancamento(prismaTest, h.id, lancamento.id);
+
+    const parcelamentoRestante = await prismaTest.parcelamento.findUnique({
+      where: { id: parcelamento.id },
+    });
+    expect(parcelamentoRestante).toBeNull();
+  });
+
+  it("mantém o Parcelamento quando ainda restam outros lançamentos ligados a ele", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+    const parcelamento = await prismaTest.parcelamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        valorTotalCentavos: 10000,
+        quantidadeParcelas: 5,
+        dataPrimeiraParcela: new Date("2026-06-10"),
+        modo: "GRADUAL",
+      },
+    });
+    const parcela1 = await prismaTest.lancamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        data: new Date("2026-06-10"),
+        valorCentavos: 2000,
+        numeroParcela: 1,
+        previsto: false,
+        parcelamentoId: parcelamento.id,
+        tipoGasto: "VARIAVEL",
+      },
+    });
+    await prismaTest.lancamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        data: new Date("2026-07-10"),
+        valorCentavos: 2000,
+        numeroParcela: 2,
+        previsto: false,
+        parcelamentoId: parcelamento.id,
+        tipoGasto: "VARIAVEL",
+      },
+    });
+
+    await removerLancamento(prismaTest, h.id, parcela1.id);
+
+    const parcelamentoRestante = await prismaTest.parcelamento.findUnique({
+      where: { id: parcelamento.id },
+    });
+    expect(parcelamentoRestante).not.toBeNull();
+  });
 });
 
 describe("buscarLancamento", () => {

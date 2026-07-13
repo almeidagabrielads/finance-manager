@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { unicosPorChave, unicosPorId } from "@/lib/dedupe";
 import { gerarInsightMensal } from "@/lib/domain/insightsOrcamento";
+import {
+  calcularSaldoComprometido,
+  gerarInsightComprometido,
+  type ParcelamentoParaComprometido,
+} from "@/lib/domain/comprometido";
 import { Select } from "../components/Select";
 
 const MESES = [
@@ -213,6 +218,7 @@ export function OrcamentoClient() {
       cancelado = true;
     };
   }, []);
+
 
   if (naoAutenticado) {
     return (
@@ -450,10 +456,48 @@ function VisaoMesAtual({
   );
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const [reloadToken, setReloadToken] = useState(0);
+  const [parcelamentosGradual, setParcelamentosGradual] = useState<
+    ParcelamentoParaComprometido[]
+  >([]);
 
   function recarregar() {
     setReloadToken((t) => t + 1);
   }
+
+  useEffect(() => {
+    let cancelado = false;
+    type ParcelamentoApi = {
+      modo: "GRADUAL" | "AVISTA" | "PREVISAO";
+      quitadoEm: string | null;
+      valorTotalCentavos: number;
+      quantidadeParcelas: number;
+      dataPrimeiraParcela: string;
+      lancamentos: { numeroParcela: number | null }[];
+    };
+    fetch("/api/parcelamentos")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((lista: ParcelamentoApi[] | null) => {
+        if (cancelado || !lista) return;
+        setParcelamentosGradual(
+          lista
+            .filter((p) => p.modo === "GRADUAL")
+            .map((p) => ({
+              modo: p.modo,
+              quitadoEm: p.quitadoEm ? new Date(p.quitadoEm) : null,
+              valorTotalCentavos: p.valorTotalCentavos,
+              quantidadeParcelas: p.quantidadeParcelas,
+              dataPrimeiraParcela: new Date(p.dataPrimeiraParcela),
+              numerosParcelaLancados: p.lancamentos.map(
+                (l) => l.numeroParcela,
+              ),
+            })),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [reloadToken]);
 
   useEffect(() => {
     let cancelado = false;
@@ -688,6 +732,11 @@ function VisaoMesAtual({
       planejadoCentavos: l.indicador.planejadoCentavos,
       realCentavos: l.indicador.realCentavos,
     })),
+  );
+
+  const saldoComprometido = calcularSaldoComprometido(parcelamentosGradual);
+  const insightComprometido = gerarInsightComprometido(
+    saldoComprometido.totalComprometidoCentavos,
   );
 
   function alternar(categoriaId: string) {
@@ -956,6 +1005,17 @@ function VisaoMesAtual({
             cor={dentroDoPlanejado ? "success" : "danger"}
           />
         </div>
+
+        {insightComprometido && (
+          <div className={cardClass}>
+            <h2 className="text-on-surface flex items-center gap-2 text-base font-semibold">
+              📌 Saldo comprometido
+            </h2>
+            <p className="text-on-surface-variant text-sm">
+              {insightComprometido}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

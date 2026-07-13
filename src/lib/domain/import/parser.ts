@@ -1,5 +1,6 @@
 import { linhasParaObjetos, parseCsv } from "./csv";
 import type { ImportTemplate } from "./templates";
+import { detectarParcela, type ParcelaDetectada } from "./parcelaDetector";
 
 export type LinhaImportada = {
   numeroLinha: number;
@@ -17,6 +18,9 @@ export type LinhaImportada = {
   subcategoriaOrigem: string | null;
   divisaoOrigem: string | null;
   pagouOrigem: string | null;
+  // "parcela X de Y" detectada no texto da descrição (ex.: "PARCELA 3/12") —
+  // null quando nada bate com um padrão plausível (ver parcelaDetector.ts).
+  parcelaDetectada: ParcelaDetectada | null;
 };
 
 export type ErroImportacao = {
@@ -207,6 +211,7 @@ export function parseImportacao(
       ),
       divisaoOrigem: extrairCampoOpcional(campos, template.colunaDivisao),
       pagouOrigem: extrairCampoOpcional(campos, template.colunaPagou),
+      parcelaDetectada: detectarParcela(descricaoOrigem),
     });
   });
 
