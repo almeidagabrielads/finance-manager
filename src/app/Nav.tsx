@@ -64,7 +64,7 @@ export function Nav() {
         const dados: Pessoa[] = await response.json();
         setPessoas(unicosPorId(dados).filter((p) => p.tipo === "INDIVIDUAL"));
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelado = true;
     };
@@ -113,12 +113,6 @@ export function Nav() {
         <div className="gap-md flex items-center text-sm">
           {usuario === undefined ? null : usuario ? (
             <>
-              <Link
-                href="/lancamentos"
-                className="bg-primary px-md text-on-primary hidden items-center gap-1.5 rounded-full py-1.5 text-xs font-semibold hover:opacity-90 sm:flex"
-              >
-                <span className="text-base leading-none">+</span> Transação
-              </Link>
               <CalculadoraLateral />
               <Link
                 href="/configuracoes"

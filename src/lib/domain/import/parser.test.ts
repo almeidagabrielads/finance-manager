@@ -92,16 +92,43 @@ describe("parseImportacao — Banco do Brasil (valor + indicador)", () => {
 describe("parseImportacao — genérico", () => {
   it("reporta erro para data e valor inválidos sem interromper as demais linhas", () => {
     const csv = [
-      "data,descricao,valor",
-      "2026-06-10,Compra válida,100.00",
-      "data-invalida,Compra com data ruim,50.00",
-      "2026-06-12,,30.00",
-      "2026-06-13,Sem valor,",
+      "Data,Ano,Mês,Descrição Cartão,Valor",
+      '10/06/2026,2026,6,Compra válida,"100,00"',
+      'data-invalida,2026,6,Compra com data ruim,"50,00"',
+      '12/06/2026,2026,6,,"30,00"',
+      "13/06/2026,2026,6,Sem valor,",
     ].join("\n");
 
     const { linhas, erros } = parseImportacao(csv, IMPORT_TEMPLATES.generico);
     expect(linhas).toHaveLength(1);
     expect(linhas[0].descricaoOrigem).toBe("Compra válida");
     expect(erros).toHaveLength(3);
+  });
+
+  it("identifica o formato da data pelo próprio texto, mesmo quando diverge do formatoData do template (BR)", () => {
+    const csv = [
+      "Data,Descrição Cartão,Valor",
+      '2026-01-02,Compra data ISO,"10,00"',
+      '02/01/2026,Compra data BR,"20,00"',
+    ].join("\n");
+
+    const { linhas, erros } = parseImportacao(csv, IMPORT_TEMPLATES.generico);
+    expect(erros).toHaveLength(0);
+    expect(linhas).toHaveLength(2);
+    expect(linhas[0].data.toISOString().slice(0, 10)).toBe("2026-01-02");
+    expect(linhas[1].data.toISOString().slice(0, 10)).toBe("2026-01-02");
+  });
+
+  it("identifica o formato da data pelo próprio texto, mesmo quando diverge do formatoData do template (ISO)", () => {
+    const csv = ["date,title,amount", "10/06/2026,Compra data BR,150.00"].join(
+      "\n",
+    );
+
+    const { linhas, erros } = parseImportacao(
+      csv,
+      IMPORT_TEMPLATES.nubank_cartao,
+    );
+    expect(erros).toHaveLength(0);
+    expect(linhas[0].data.toISOString().slice(0, 10)).toBe("2026-06-10");
   });
 });

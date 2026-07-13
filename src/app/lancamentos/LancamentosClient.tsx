@@ -11,6 +11,7 @@ import {
 } from "../components/DescricaoAutocomplete";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import type { FiltroColuna } from "@/lib/domain/tabela";
+import { buscarTemplate, gerarExemploCsv } from "@/lib/domain/import/templates";
 
 type Subcategoria = { id: string; nome: string; categoriaId: string };
 type Categoria = { id: string; nome: string; subcategorias: Subcategoria[] };
@@ -41,10 +42,20 @@ type LinhaPreview = {
   data: string;
   descricaoOrigem: string;
   valorCentavos: number;
+  descontoCentavos: number;
+  descricaoPropria: string | null;
   hash: string;
   duplicado: boolean;
   categoriaSugeridaId: string | null;
   subcategoriaSugeridaId: string | null;
+  bancoOrigem: string | null;
+  categoriaOrigem: string | null;
+  subcategoriaOrigem: string | null;
+  divisaoOrigem: string | null;
+  pagouOrigem: string | null;
+  bancoSugeridoId: string | null;
+  pessoaDivisaoSugeridaId: string | null;
+  pessoaPagouSugeridaId: string | null;
 };
 
 type ErroImportacao = { numeroLinha: number; motivo: string };
@@ -53,7 +64,9 @@ type LinhaRevisao = LinhaPreview & {
   selecionada: boolean;
   categoriaId: string;
   subcategoriaId: string;
+  bancoId: string;
   pessoaDivisaoId: string;
+  pessoaPagouId: string;
 };
 
 async function parseErro(response: Response): Promise<string> {
@@ -206,9 +219,18 @@ export function LancamentosClient() {
   const [importPessoaDivisaoId, setImportPessoaDivisaoId] = useState("");
   const [importPessoaPagouId, setImportPessoaPagouId] = useState("");
   const [arrastandoArquivo, setArrastandoArquivo] = useState(false);
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(
+    null,
+  );
   const [analisando, setAnalisando] = useState(false);
   const [linhasRevisao, setLinhasRevisao] = useState<LinhaRevisao[]>([]);
-  const [errosImportacao, setErrosImportacao] = useState<ErroImportacao[]>([]);
+  const [resumoImportacao, setResumoImportacao] = useState<{
+    novas: number;
+    duplicadas: number;
+    erros: ErroImportacao[];
+  } | null>(null);
+  const [errosDetalheAberto, setErrosDetalheAberto] = useState(false);
+  const [errosVisiveis, setErrosVisiveis] = useState(5);
   const [paginaRevisao, setPaginaRevisao] = useState(0);
   const [acoesEmMassaAberto, setAcoesEmMassaAberto] = useState(false);
   const [categoriaEmMassa, setCategoriaEmMassa] = useState("");
@@ -216,10 +238,57 @@ export function LancamentosClient() {
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [modalNovoAberto, setModalNovoAberto] = useState(false);
   const [modalImportarAberto, setModalImportarAberto] = useState(false);
+  // A importação é um fluxo de duas etapas dentro de uma tela cheia (a
+  // revisão tem colunas/paginação/ações em massa demais para um modal
+  // pequeno): "configurar" cuida de banco/modelo/upload, "revisar" mostra a
+  // tabela de revisão usando a largura toda.
+  const [etapaImportacao, setEtapaImportacao] = useState<
+    "configurar" | "revisar"
+  >("configurar");
   const inputArquivoRef = useRef<HTMLInputElement>(null);
 
   function carregar() {
     setReloadToken((t) => t + 1);
+  }
+
+  function abrirModalNovo() {
+    setErro(null);
+    setModalNovoAberto(true);
+  }
+
+  function fecharModalNovo() {
+    setErro(null);
+    setModalNovoAberto(false);
+  }
+
+  function abrirModalImportar() {
+    setErro(null);
+    // Se já existem linhas pendentes de uma sessão anterior, vai direto
+    // para a revisão em vez de reiniciar a configuração.
+    setEtapaImportacao(linhasRevisao.length > 0 ? "revisar" : "configurar");
+    setModalImportarAberto(true);
+  }
+
+  function fecharModalImportar() {
+    setErro(null);
+    setArquivoSelecionado(null);
+    setResumoImportacao(null);
+    setErrosDetalheAberto(false);
+    setErrosVisiveis(5);
+    setModalImportarAberto(false);
+  }
+
+  async function abandonarImportacao() {
+    if (linhasRevisao.length > 0) {
+      const confirmado = await confirmar(
+        `Cancelar a importação? ${linhasRevisao.length} linha(s) pendente(s) de revisão serão descartadas e não poderão ser recuperadas.`,
+        { confirmLabel: "Descartar" },
+      );
+      if (!confirmado) return;
+    }
+    setLinhasRevisao([]);
+    setPaginaRevisao(0);
+    fecharModalImportar();
   }
 
   useEffect(() => {
@@ -420,8 +489,27 @@ export function LancamentosClient() {
     );
   }, [categorias, form.categoriaId]);
 
+  function validarFormLancamento(f: FormLancamento): string | null {
+    if (!f.data) return "Informe a data do lançamento.";
+    if (!f.bancoId) return "Selecione o banco/cartão.";
+    if (!f.pessoaPagouId) return "Selecione quem pagou.";
+    if (!f.pessoaDivisaoId) return "Selecione a divisão.";
+    if (f.valor.trim() === "" || reaisParaCentavos(f.valor) === 0) {
+      return "Informe um valor diferente de zero.";
+    }
+    if (f.desconto.trim() !== "" && reaisParaCentavos(f.desconto) < 0) {
+      return "Desconto não pode ser negativo.";
+    }
+    return null;
+  }
+
   async function criarLancamento(e: React.FormEvent) {
     e.preventDefault();
+    const erroValidacao = validarFormLancamento(form);
+    if (erroValidacao) {
+      setErro(erroValidacao);
+      return;
+    }
     setErro(null);
     const response = await fetch("/api/lancamentos", {
       method: "POST",
@@ -500,22 +588,91 @@ export function LancamentosClient() {
 
   // ── Importação ────────────────────────────────────────────────────────
 
-  async function processarArquivo(arquivo: File) {
+  // Banco, divisão e pagador padrão são opcionais aqui: dependendo do
+  // modelo do arquivo, essas informações já podem vir por linha (banco) ou
+  // ser definidas na revisão — só o modelo é indispensável para ler o
+  // arquivo.
+  function validarConfiguracaoImportacao(): string | null {
+    if (!importTemplateId) return "Selecione o modelo do arquivo.";
+    return null;
+  }
+
+  function baixarExemploModelo() {
+    const template = buscarTemplate(importTemplateId);
+    if (!template) return;
+    const bancoNome =
+      bancos.find((b) => b.id === importBancoId)?.nome ?? bancos[0]?.nome;
+    const categoriaExemplo = categorias[0];
+    const divisaoNome =
+      pessoas.find((p) => p.id === importPessoaDivisaoId)?.nome ??
+      pessoas[0]?.nome;
+    const pagouNome =
+      pessoas.find((p) => p.id === importPessoaPagouId)?.nome ??
+      pessoas[0]?.nome;
+    const csv = gerarExemploCsv(template, {
+      bancoNome,
+      categoriaNome: categoriaExemplo?.nome,
+      subcategoriaNome: categoriaExemplo?.subcategorias[0]?.nome,
+      divisaoNome,
+      pagouNome,
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `exemplo-${template.id}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function selecionarArquivo(arquivo: File) {
     setErro(null);
-    if (!importBancoId || !importTemplateId) {
-      setErro(
-        "Selecione o banco e o modelo de importação antes de enviar o arquivo.",
-      );
+    setResumoImportacao(null);
+    setErrosDetalheAberto(false);
+    setErrosVisiveis(5);
+    if (!arquivo.name.toLowerCase().endsWith(".csv")) {
+      setErro("Formato não suportado — envie um arquivo .csv.");
       return;
     }
+    setArquivoSelecionado(arquivo);
+  }
+
+  function resumoImportacaoTexto(r: {
+    novas: number;
+    duplicadas: number;
+    erros: ErroImportacao[];
+  }): string {
+    const partes = [`${r.novas} pronto(s) para revisão`];
+    if (r.duplicadas > 0) partes.push(`${r.duplicadas} duplicado(s)`);
+    if (r.erros.length > 0)
+      partes.push(`${r.erros.length} com erro de leitura`);
+    return partes.join(", ") + ".";
+  }
+
+  async function validarEImportarArquivo() {
+    if (!arquivoSelecionado) {
+      setErro("Selecione um arquivo antes de validar.");
+      return;
+    }
+    const erroConfig = validarConfiguracaoImportacao();
+    if (erroConfig) {
+      setErro(erroConfig);
+      return;
+    }
+    setErro(null);
+    setResumoImportacao(null);
+    setErrosDetalheAberto(false);
+    setErrosVisiveis(5);
     setAnalisando(true);
     try {
-      const csv = await arquivo.text();
+      const csv = await arquivoSelecionado.text();
       const response = await fetch("/api/importacao/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bancoId: importBancoId,
+          bancoId: importBancoId || null,
           templateId: importTemplateId,
           csv,
         }),
@@ -525,22 +682,28 @@ export function LancamentosClient() {
         return;
       }
       const body = await response.json();
-      setErrosImportacao(body.erros ?? []);
-      const novas: LinhaRevisao[] = (body.linhas as LinhaPreview[]).map(
-        (linha) => ({
-          ...linha,
-          selecionada: !linha.duplicado,
-          categoriaId: linha.categoriaSugeridaId ?? "",
-          subcategoriaId: linha.subcategoriaSugeridaId ?? "",
-          pessoaDivisaoId: importPessoaDivisaoId,
-        }),
-      );
+      const erros: ErroImportacao[] = body.erros ?? [];
+      const linhasPreview = body.linhas as LinhaPreview[];
+      const novas: LinhaRevisao[] = linhasPreview.map((linha) => ({
+        ...linha,
+        selecionada: !linha.duplicado,
+        categoriaId: linha.categoriaSugeridaId ?? "",
+        subcategoriaId: linha.subcategoriaSugeridaId ?? "",
+        bancoId: linha.bancoSugeridoId ?? importBancoId,
+        pessoaDivisaoId: linha.pessoaDivisaoSugeridaId ?? importPessoaDivisaoId,
+        pessoaPagouId: linha.pessoaPagouSugeridaId ?? importPessoaPagouId,
+      }));
       setLinhasRevisao((atual) => {
         const hashesAtuais = new Set(atual.map((l) => l.hash));
         return [...atual, ...novas.filter((l) => !hashesAtuais.has(l.hash))];
       });
       setPaginaRevisao(0);
-      setModalImportarAberto(false);
+      setResumoImportacao({
+        novas: linhasPreview.filter((l) => !l.duplicado).length,
+        duplicadas: linhasPreview.filter((l) => l.duplicado).length,
+        erros,
+      });
+      setArquivoSelecionado(null);
     } finally {
       setAnalisando(false);
     }
@@ -550,7 +713,7 @@ export function LancamentosClient() {
     e.preventDefault();
     setArrastandoArquivo(false);
     const arquivo = e.dataTransfer.files?.[0];
-    if (arquivo) processarArquivo(arquivo);
+    if (arquivo) selecionarArquivo(arquivo);
   }
 
   function atualizarLinhaRevisao(hash: string, patch: Partial<LinhaRevisao>) {
@@ -562,21 +725,37 @@ export function LancamentosClient() {
 
   async function confirmarLinhas(linhas: LinhaRevisao[]) {
     if (linhas.length === 0) return;
+    const semDadosObrigatorios = linhas.filter(
+      (l) =>
+        !(l.bancoId || importBancoId) ||
+        !(l.pessoaDivisaoId || importPessoaDivisaoId) ||
+        !(l.pessoaPagouId || importPessoaPagouId),
+    );
+    if (semDadosObrigatorios.length > 0) {
+      setErro(
+        `Defina banco, divisão e quem pagou para ${semDadosObrigatorios.length} linha(s) antes de aprovar.`,
+      );
+      return;
+    }
     setErro(null);
     const response = await fetch("/api/importacao/confirmar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        bancoId: importBancoId,
-        pessoaDivisaoId: importPessoaDivisaoId,
-        pessoaPagouId: importPessoaPagouId,
+        bancoId: importBancoId || null,
+        pessoaDivisaoId: importPessoaDivisaoId || null,
+        pessoaPagouId: importPessoaPagouId || null,
         linhas: linhas.map((l) => ({
           data: l.data,
           descricaoOrigem: l.descricaoOrigem,
+          descricaoPropria: l.descricaoPropria || null,
           valorCentavos: l.valorCentavos,
+          descontoCentavos: l.descontoCentavos,
           categoriaId: l.categoriaId || null,
           subcategoriaId: l.subcategoriaId || null,
+          bancoId: l.bancoId || null,
           pessoaDivisaoId: l.pessoaDivisaoId || null,
+          pessoaPagouId: l.pessoaPagouId || null,
         })),
       }),
     });
@@ -611,6 +790,8 @@ export function LancamentosClient() {
     setCategoriaEmMassa("");
   }
 
+  const camposImportacaoPreenchidos = Boolean(importTemplateId);
+
   const linhasNaoDuplicadas = linhasRevisao.filter((l) => !l.duplicado);
   const totalPaginasRevisao = Math.max(
     1,
@@ -637,21 +818,53 @@ export function LancamentosClient() {
       {dialogConfirmacao}
 
       <div className="gap-sm flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-on-surface">Lançamentos</h1>
+        <h1 className="text-on-surface text-2xl font-bold">Lançamentos</h1>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setModalNovoAberto(true)}
-            className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90"
+            onClick={abrirModalNovo}
+            className="bg-primary px-lg text-on-primary flex items-center gap-1.5 rounded-full py-2 text-sm font-semibold hover:opacity-90"
           >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
             Novo Lançamento
           </button>
           <button
             type="button"
-            onClick={() => setModalImportarAberto(true)}
-            className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-sm font-semibold"
+            onClick={abrirModalImportar}
+            className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low flex items-center gap-1.5 rounded-full border py-2 text-sm font-semibold"
           >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 3v12" />
+              <path d="m7 8 5-5 5 5" />
+              <path d="M5 21h14" />
+            </svg>
             Importar
+            {linhasRevisao.length > 0 && (
+              <span className="bg-primary text-on-primary flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold">
+                {linhasRevisao.length}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -662,7 +875,7 @@ export function LancamentosClient() {
         </div>
       )}
 
-      {erro && (
+      {erro && !modalNovoAberto && !modalImportarAberto && (
         <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
           {erro}
         </p>
@@ -671,20 +884,20 @@ export function LancamentosClient() {
       {modalNovoAberto && (
         <div
           className="bg-on-surface/40 p-lg fixed inset-0 z-[100] flex items-center justify-center"
-          onClick={() => setModalNovoAberto(false)}
+          onClick={fecharModalNovo}
         >
           <form
             onSubmit={criarLancamento}
             onClick={(e) => e.stopPropagation()}
-            className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex max-h-[90vh] w-full max-w-[36rem] flex-col overflow-y-auto rounded-2xl border shadow-lg"
+            className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex max-h-[85vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl border shadow-lg"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-on-surface flex items-center gap-1.5 text-lg font-bold">
-                <span aria-hidden>⚡</span> Novo Lançamento
+                Novo Lançamento
               </h2>
               <button
                 type="button"
-                onClick={() => setModalNovoAberto(false)}
+                onClick={fecharModalNovo}
                 title="Fechar"
                 aria-label="Fechar"
                 className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5"
@@ -704,661 +917,946 @@ export function LancamentosClient() {
               </button>
             </div>
 
+            {erro && (
+              <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+                {erro}
+              </p>
+            )}
+
             <div className="gap-sm grid grid-cols-2 sm:grid-cols-4">
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-data"
-              >
-                Data
-              </label>
-              <input
-                id="l-data"
-                type="date"
-                className={inputClass}
-                value={form.data}
-                onChange={(e) => setForm({ ...form, data: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-categoria"
-              >
-                Categoria
-              </label>
-              <Select
-                id="l-categoria"
-                value={form.categoriaId}
-                onChange={(v) =>
-                  setForm({
-                    ...form,
-                    categoriaId: v,
-                    subcategoriaId: SEM_CATEGORIA,
-                  })
-                }
-                options={[
-                  { value: SEM_CATEGORIA, label: "Nenhuma" },
-                  ...categorias.map((c) => ({ value: c.id, label: c.nome })),
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-subcategoria"
-              >
-                Subcategoria
-              </label>
-              <Select
-                id="l-subcategoria"
-                value={form.subcategoriaId}
-                onChange={(v) => setForm({ ...form, subcategoriaId: v })}
-                disabled={!form.categoriaId}
-                options={[
-                  { value: SEM_CATEGORIA, label: "Nenhuma" },
-                  ...subcategoriasDaCategoriaSelecionada.map((s) => ({
-                    value: s.id,
-                    label: s.nome,
-                  })),
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-banco"
-              >
-                Banco / Cartão
-              </label>
-              <Select
-                id="l-banco"
-                value={form.bancoId}
-                onChange={(v) => setForm({ ...form, bancoId: v })}
-                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="l-descricao"
-            >
-              Descrição
-            </label>
-            <DescricaoAutocomplete
-              id="l-descricao"
-              className={inputClass}
-              placeholder="Ex: Supermercado"
-              value={form.descricaoPropria}
-              onChange={(v) => setForm({ ...form, descricaoPropria: v })}
-              onSelecionar={aoSelecionarSugestaoDescricao}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-on-surface-variant text-xs font-semibold">
-              Quem Pagou?
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {pessoas.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setForm({ ...form, pessoaPagouId: p.id })}
-                  className={
-                    form.pessoaPagouId === p.id
-                      ? "bg-primary px-md text-on-primary rounded-lg py-1.5 text-sm font-semibold"
-                      : "border-outline-variant bg-surface-container-lowest px-md text-on-surface hover:bg-surface-container-low rounded-lg border py-1.5 text-sm"
-                  }
-                >
-                  {p.nome}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="gap-sm grid grid-cols-1 sm:grid-cols-4">
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-divisao"
-              >
-                Divisão
-              </label>
-              <Select
-                id="l-divisao"
-                value={form.pessoaDivisaoId}
-                onChange={(v) => setForm({ ...form, pessoaDivisaoId: v })}
-                options={pessoas.map((p) => ({
-                  value: p.id,
-                  label: `${p.nome}${p.tipo === "CASAL" ? " (50/50)" : ""}`,
-                }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-tipo-gasto"
-              >
-                Tipo de gasto
-              </label>
-              <Select
-                id="l-tipo-gasto"
-                value={form.tipoGasto}
-                onChange={(v) => setForm({ ...form, tipoGasto: v })}
-                options={TIPOS_GASTO.map((t) => ({
-                  value: t.value,
-                  label: t.label,
-                }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-valor"
-              >
-                Valor (R$)
-              </label>
-              <input
-                id="l-valor"
-                type="number"
-                step="0.01"
-                title="Use valor negativo para estornos"
-                className={inputClass}
-                value={form.valor}
-                onChange={(e) => setForm({ ...form, valor: e.target.value })}
-                placeholder="0,00"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="l-desconto"
-              >
-                Desconto / Estorno
-              </label>
-              <input
-                id="l-desconto"
-                type="number"
-                step="0.01"
-                min={0}
-                className={inputClass}
-                value={form.desconto}
-                onChange={(e) => setForm({ ...form, desconto: e.target.value })}
-                placeholder="0,00"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-on-surface flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.pagoComResgateInvestimento}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    pagoComResgateInvestimento: e.target.checked,
-                    investimentoResgateId: e.target.checked
-                      ? form.investimentoResgateId
-                      : "",
-                  })
-                }
-              />
-              Pago com resgate de investimento
-            </label>
-            {form.pagoComResgateInvestimento && (
               <div className="flex flex-col gap-1">
                 <label
                   className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="l-investimento"
+                  htmlFor="l-data"
                 >
-                  Investimento (opcional)
+                  Data <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="l-data"
+                  type="date"
+                  className={inputClass}
+                  value={form.data}
+                  onChange={(e) => setForm({ ...form, data: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-categoria"
+                >
+                  Categoria
                 </label>
                 <Select
-                  id="l-investimento"
-                  value={form.investimentoResgateId}
+                  id="l-categoria"
+                  value={form.categoriaId}
                   onChange={(v) =>
-                    setForm({ ...form, investimentoResgateId: v })
+                    setForm({
+                      ...form,
+                      categoriaId: v,
+                      subcategoriaId: SEM_CATEGORIA,
+                    })
                   }
                   options={[
-                    { value: "", label: "Não informado" },
-                    ...investimentos.map((i) => ({
-                      value: i.id,
-                      label: i.produto,
+                    { value: SEM_CATEGORIA, label: "Nenhuma" },
+                    ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+                  ]}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-subcategoria"
+                >
+                  Subcategoria
+                </label>
+                <Select
+                  id="l-subcategoria"
+                  value={form.subcategoriaId}
+                  onChange={(v) => setForm({ ...form, subcategoriaId: v })}
+                  disabled={!form.categoriaId}
+                  options={[
+                    { value: SEM_CATEGORIA, label: "Nenhuma" },
+                    ...subcategoriasDaCategoriaSelecionada.map((s) => ({
+                      value: s.id,
+                      label: s.nome,
                     })),
                   ]}
                 />
               </div>
-            )}
-          </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-banco"
+                >
+                  Banco / Cartão <span className="text-danger">*</span>
+                </label>
+                <Select
+                  id="l-banco"
+                  value={form.bancoId}
+                  onChange={(v) => setForm({ ...form, bancoId: v })}
+                  options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+                />
+              </div>
+            </div>
 
-            <button
-              type="submit"
-              className="bg-primary px-lg text-on-primary mt-1 w-fit rounded-full py-2 text-sm font-semibold hover:opacity-90"
-            >
-              Salvar Lançamento
-            </button>
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="l-descricao"
+              >
+                Descrição
+              </label>
+              <DescricaoAutocomplete
+                id="l-descricao"
+                className={inputClass}
+                placeholder="Ex: Supermercado"
+                value={form.descricaoPropria}
+                onChange={(v) => setForm({ ...form, descricaoPropria: v })}
+                onSelecionar={aoSelecionarSugestaoDescricao}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-on-surface-variant text-xs font-semibold">
+                Quem Pagou? <span className="text-danger">*</span>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {pessoas.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, pessoaPagouId: p.id })}
+                    className={
+                      form.pessoaPagouId === p.id
+                        ? "bg-primary px-md text-on-primary rounded-lg py-1.5 text-sm font-semibold"
+                        : "border-outline-variant bg-surface-container-lowest px-md text-on-surface hover:bg-surface-container-low rounded-lg border py-1.5 text-sm"
+                    }
+                  >
+                    {p.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="gap-sm grid grid-cols-1 sm:grid-cols-4">
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-divisao"
+                >
+                  Divisão <span className="text-danger">*</span>
+                </label>
+                <Select
+                  id="l-divisao"
+                  value={form.pessoaDivisaoId}
+                  onChange={(v) => setForm({ ...form, pessoaDivisaoId: v })}
+                  options={pessoas.map((p) => ({
+                    value: p.id,
+                    label: `${p.nome}${p.tipo === "CASAL" ? " (50/50)" : ""}`,
+                  }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-tipo-gasto"
+                >
+                  Tipo de gasto
+                </label>
+                <Select
+                  id="l-tipo-gasto"
+                  value={form.tipoGasto}
+                  onChange={(v) => setForm({ ...form, tipoGasto: v })}
+                  options={TIPOS_GASTO.map((t) => ({
+                    value: t.value,
+                    label: t.label,
+                  }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-valor"
+                >
+                  Valor (R$) <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="l-valor"
+                  type="number"
+                  step="0.01"
+                  title="Use valor negativo para estornos"
+                  className={inputClass}
+                  value={form.valor}
+                  onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="l-desconto"
+                >
+                  Desconto / Estorno
+                </label>
+                <input
+                  id="l-desconto"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  className={inputClass}
+                  value={form.desconto}
+                  onChange={(e) =>
+                    setForm({ ...form, desconto: e.target.value })
+                  }
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-on-surface flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.pagoComResgateInvestimento}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      pagoComResgateInvestimento: e.target.checked,
+                      investimentoResgateId: e.target.checked
+                        ? form.investimentoResgateId
+                        : "",
+                    })
+                  }
+                />
+                Pago com resgate de investimento
+              </label>
+              {form.pagoComResgateInvestimento && (
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="l-investimento"
+                  >
+                    Investimento (opcional)
+                  </label>
+                  <Select
+                    id="l-investimento"
+                    value={form.investimentoResgateId}
+                    onChange={(v) =>
+                      setForm({ ...form, investimentoResgateId: v })
+                    }
+                    options={[
+                      { value: "", label: "Não informado" },
+                      ...investimentos.map((i) => ({
+                        value: i.id,
+                        label: i.produto,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="border-outline-variant mt-1 flex items-center justify-end gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={fecharModalNovo}
+                className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-sm font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90"
+              >
+                Salvar Lançamento
+              </button>
+            </div>
           </form>
         </div>
       )}
 
       {modalImportarAberto && (
-        <div
-          className="bg-on-surface/40 p-lg fixed inset-0 z-[100] flex items-center justify-center"
-          onClick={() => setModalImportarAberto(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex max-h-[90vh] w-full max-w-[36rem] flex-col overflow-y-auto rounded-2xl border shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-on-surface flex items-center gap-1.5 text-lg font-bold">
-                <span aria-hidden>⬆</span> Importar Extrato
-              </h2>
-              <button
-                type="button"
-                onClick={() => setModalImportarAberto(false)}
-                title="Fechar"
-                aria-label="Fechar"
-                className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5"
-              >
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="gap-sm grid grid-cols-1">
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="i-banco"
-              >
-                Banco / Cartão
-              </label>
-              <Select
-                id="i-banco"
-                value={importBancoId}
-                onChange={setImportBancoId}
-                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="i-template"
-              >
-                Modelo do arquivo
-              </label>
-              <Select
-                id="i-template"
-                value={importTemplateId}
-                onChange={setImportTemplateId}
-                options={templates.map((t) => ({
-                  value: t.id,
-                  label: t.nomeExibicao,
-                }))}
-              />
-            </div>
-            <div className="gap-sm grid grid-cols-2">
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="i-divisão"
-                >
-                  Divisão padrão
-                </label>
-                <Select
-                  id="i-divisão"
-                  value={importPessoaDivisaoId}
-                  onChange={setImportPessoaDivisaoId}
-                  options={pessoas.map((p) => ({
-                    value: p.id,
-                    label: p.nome,
-                  }))}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="i-pagou"
-                >
-                  Pagou
-                </label>
-                <Select
-                  id="i-pagou"
-                  value={importPessoaPagouId}
-                  onChange={setImportPessoaPagouId}
-                  options={pessoas.map((p) => ({
-                    value: p.id,
-                    label: p.nome,
-                  }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setArrastandoArquivo(true);
-            }}
-            onDragLeave={() => setArrastandoArquivo(false)}
-            onDrop={onSoltarArquivo}
-            onClick={() => inputArquivoRef.current?.click()}
-            className={`p-lg flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${arrastandoArquivo
-                ? "border-primary bg-primary/5"
-                : "border-outline-variant"
-              }`}
-          >
-            <span
-              className="bg-primary-container/20 flex h-10 w-10 items-center justify-center rounded-full text-lg"
-              aria-hidden
+        <div className="bg-surface-container-lowest fixed inset-0 z-[100] flex flex-col">
+          <div className="border-outline-variant p-lg flex items-center justify-between border-b">
+            <h2 className="text-on-surface flex items-center gap-1.5 text-lg font-bold">
+              {etapaImportacao === "revisar"
+                ? "Revisão de Importações"
+                : "Importar Extrato"}
+            </h2>
+            <button
+              type="button"
+              onClick={fecharModalImportar}
+              title="Fechar"
+              aria-label="Fechar"
+              className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5"
             >
-              ⬆
-            </span>
-            <p className="text-on-surface font-bold">
-              {analisando ? "Analisando arquivo…" : "Importar OFX/CSV"}
-            </p>
-            <p className="text-on-surface-variant text-xs">
-              Arraste seu extrato bancário aqui para conciliação inteligente.
-            </p>
-            <span className="text-primary text-xs font-semibold underline">
-              Procurar arquivos
-            </span>
-            <input
-              ref={inputArquivoRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                const arquivo = e.target.files?.[0];
-                if (arquivo) processarArquivo(arquivo);
-                e.target.value = "";
-              }}
-            />
-          </div>
-        </div>
-      </div>
-      )}
-
-      {errosImportacao.length > 0 && (
-        <div className="border-tertiary-container/30 bg-tertiary-container/10 p-sm text-tertiary-container rounded-xl border text-sm">
-          <p className="font-medium">
-            {errosImportacao.length} linha(s) não puderam ser lidas:
-          </p>
-          <ul className="list-inside list-disc">
-            {errosImportacao.map((e) => (
-              <li key={e.numeroLinha}>
-                Linha {e.numeroLinha}: {e.motivo}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {linhasRevisao.length > 0 && (
-        <div className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
-          <div className="gap-sm flex flex-wrap items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-on-surface text-lg font-bold">
-                Revisão de Importações
-              </h2>
-              <span className="bg-secondary-container px-sm text-on-secondary-container rounded-full py-0.5 text-xs font-bold">
-                {linhasNaoDuplicadas.length} Pendentes
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAcoesEmMassaAberto((v) => !v)}
-                className="border-outline-variant bg-surface-container-lowest px-md text-on-surface hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                Ações em Massa
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  confirmarLinhas(
-                    linhasNaoDuplicadas.filter((l) => l.selecionada),
-                  )
-                }
-                className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
-              >
-                Aprovar Tudo
-              </button>
-            </div>
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
           </div>
 
-          {acoesEmMassaAberto && (
-            <div className="bg-surface-container-low p-sm flex flex-wrap items-end gap-2 rounded-lg">
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="massa-categoria"
-                >
-                  Aplicar categoria às linhas selecionadas
-                </label>
-                <Select
-                  id="massa-categoria"
-                  value={categoriaEmMassa}
-                  onChange={setCategoriaEmMassa}
-                  options={categorias.map((c) => ({
-                    value: c.id,
-                    label: c.nome,
-                  }))}
-                />
-              </div>
-              <button
-                type="button"
-                disabled={!categoriaEmMassa}
-                onClick={aplicarCategoriaEmMassa}
-                className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                Aplicar
-              </button>
-              <button
-                type="button"
-                onClick={() => setAcoesEmMassaAberto(false)}
-                className="text-on-surface-variant text-xs"
-              >
-                Cancelar
-              </button>
-            </div>
-          )}
+          <div className="p-lg flex-1 overflow-y-auto">
+            {etapaImportacao === "configurar" ? (
+              <div className="gap-sm mx-auto flex w-full max-w-2xl flex-col">
+                {erro && (
+                  <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+                    {erro}
+                  </p>
+                )}
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-outline-variant text-on-surface-variant border-b text-left text-xs font-semibold tracking-wide uppercase">
-                  <th className="p-2"></th>
-                  <th className="p-2">Data</th>
-                  <th className="p-2">Descrição</th>
-                  <th className="p-2">Sugestão / Categoria</th>
-                  <th className="p-2">Divisão</th>
-                  <th className="p-2">Tipo</th>
-                  <th className="p-2 text-right">Valor</th>
-                  <th className="p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhasRevisaoPagina.map((linha) => {
-                  const categoriaAtual = categorias.find(
-                    (c) => c.id === linha.categoriaId,
-                  );
-                  const divisaoPessoa = pessoasPorId.get(linha.pessoaDivisaoId);
-                  const ehAjuste = linha.valorCentavos < 0;
-                  const tipo = ehAjuste
-                    ? {
-                      label: "Ajuste",
-                      classe: "bg-surface-container text-on-surface-variant",
-                    }
-                    : divisaoPessoa?.tipo === "INDIVIDUAL"
-                      ? {
-                        label: "Individual",
-                        classe: "bg-secondary/10 text-secondary",
-                      }
-                      : {
-                        label: "Dividido",
-                        classe: "bg-primary/10 text-primary",
-                      };
-                  return (
-                    <tr
-                      key={linha.hash}
-                      className={`border-outline-variant/60 border-b ${linha.duplicado ? "opacity-50" : ""}`}
+                <div className="gap-sm grid grid-cols-1 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-on-surface-variant text-xs font-semibold"
+                      htmlFor="i-banco"
                     >
-                      <td className="p-2">
-                        <input
-                          type="checkbox"
-                          checked={linha.selecionada}
-                          disabled={linha.duplicado}
-                          onChange={(e) =>
-                            atualizarLinhaRevisao(linha.hash, {
-                              selecionada: e.target.checked,
-                            })
-                          }
-                        />
-                      </td>
-                      <td className="p-2 whitespace-nowrap">{linha.data}</td>
-                      <td className="p-2">
-                        <p className="text-on-surface font-semibold">
-                          {linha.descricaoOrigem}
-                        </p>
-                        {linha.duplicado && (
-                          <span className="bg-surface-container text-on-surface-variant rounded-full px-1.5 py-0.5 text-xs">
-                            já importado
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-2">
-                        <Select
-                          placeholder="—"
-                          value={linha.categoriaId}
-                          onChange={(v) =>
-                            atualizarLinhaRevisao(linha.hash, {
-                              categoriaId: v,
-                              subcategoriaId: "",
-                            })
-                          }
-                          options={categorias.map((c) => ({
-                            value: c.id,
-                            label: c.nome,
-                          }))}
-                        />
-                        {categoriaAtual && (
-                          <Select
-                            className="mt-1"
-                            placeholder="—"
-                            value={linha.subcategoriaId}
-                            onChange={(v) =>
-                              atualizarLinhaRevisao(linha.hash, {
-                                subcategoriaId: v,
-                              })
-                            }
-                            options={categoriaAtual.subcategorias.map((s) => ({
-                              value: s.id,
-                              label: s.nome,
-                            }))}
-                          />
-                        )}
-                      </td>
-                      <td className="p-2">
-                        <Select
-                          value={linha.pessoaDivisaoId}
-                          onChange={(v) =>
-                            atualizarLinhaRevisao(linha.hash, {
-                              pessoaDivisaoId: v,
-                            })
-                          }
-                          options={pessoas.map((p) => ({
-                            value: p.id,
-                            label: p.nome,
-                          }))}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <span
-                          className={`px-sm rounded-full py-0.5 text-xs font-semibold ${tipo.classe}`}
-                        >
-                          {tipo.label}
-                        </span>
-                      </td>
-                      <td
-                        className={`data-tabular p-2 text-right ${ehAjuste ? "text-success" : "text-on-surface"}`}
+                      Banco / Cartão{" "}
+                      <span className="text-on-surface-variant font-normal">
+                        (opcional)
+                      </span>
+                    </label>
+                    <Select
+                      id="i-banco"
+                      placeholder="Definir por linha na revisão"
+                      value={importBancoId}
+                      onChange={setImportBancoId}
+                      options={[
+                        { value: "", label: "Definir por linha na revisão" },
+                        ...bancos.map((b) => ({ value: b.id, label: b.nome })),
+                      ]}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-on-surface-variant text-xs font-semibold"
+                      htmlFor="i-template"
+                    >
+                      Modelo do arquivo <span className="text-danger">*</span>
+                    </label>
+                    <Select
+                      id="i-template"
+                      value={importTemplateId}
+                      onChange={setImportTemplateId}
+                      options={templates.map((t) => ({
+                        value: t.id,
+                        label: t.nomeExibicao,
+                      }))}
+                    />
+                    {importTemplateId && (
+                      <button
+                        type="button"
+                        onClick={baixarExemploModelo}
+                        className="text-primary self-start text-xs font-semibold underline"
                       >
-                        {ehAjuste ? "+ " : ""}
-                        {formatarMoeda(linha.valorCentavos)}
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-2">
-                          {!linha.duplicado && (
-                            <button
-                              type="button"
-                              title="Aprovar esta linha"
-                              onClick={() => confirmarLinhas([linha])}
-                              className="text-success text-sm font-semibold"
-                            >
-                              ✓
-                            </button>
-                          )}
+                        Baixar exemplo deste modelo
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-on-surface-variant text-xs font-semibold"
+                      htmlFor="i-divisão"
+                    >
+                      Divisão padrão{" "}
+                      <span className="text-on-surface-variant font-normal">
+                        (opcional)
+                      </span>
+                    </label>
+                    <Select
+                      id="i-divisão"
+                      placeholder="Definir por linha na revisão"
+                      value={importPessoaDivisaoId}
+                      onChange={setImportPessoaDivisaoId}
+                      options={[
+                        { value: "", label: "Definir por linha na revisão" },
+                        ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
+                      ]}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-on-surface-variant text-xs font-semibold"
+                      htmlFor="i-pagou"
+                    >
+                      Pagou{" "}
+                      <span className="text-on-surface-variant font-normal">
+                        (opcional)
+                      </span>
+                    </label>
+                    <Select
+                      id="i-pagou"
+                      placeholder="Definir por linha na revisão"
+                      value={importPessoaPagouId}
+                      onChange={setImportPessoaPagouId}
+                      options={[
+                        { value: "", label: "Definir por linha na revisão" },
+                        ...pessoas.map((p) => ({ value: p.id, label: p.nome })),
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                {resumoImportacao ? (
+                  <div
+                    className={`p-lg flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border text-center ${
+                      resumoImportacao.erros.length > 0
+                        ? "border-tertiary-container/30 bg-tertiary-container/10"
+                        : "border-outline-variant bg-surface-container-low"
+                    }`}
+                  >
+                    <span
+                      className="bg-primary-container/20 flex h-10 w-10 items-center justify-center rounded-full text-lg"
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                    <p className="text-on-surface font-bold">
+                      Arquivo processado
+                    </p>
+                    <p className="text-on-surface-variant text-sm">
+                      {resumoImportacaoTexto(resumoImportacao)}
+                    </p>
+                    {resumoImportacao.erros.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setErrosDetalheAberto((v) => !v)}
+                        className="text-primary text-xs font-semibold underline"
+                      >
+                        {errosDetalheAberto
+                          ? "Ocultar erros"
+                          : `Ver ${resumoImportacao.erros.length} erro(s)`}
+                      </button>
+                    )}
+                    {errosDetalheAberto && (
+                      <div className="w-full text-left">
+                        <ul className="border-outline-variant bg-surface-container-lowest max-h-40 list-inside list-disc overflow-y-auto rounded-lg border p-2 text-xs">
+                          {resumoImportacao.erros
+                            .slice(0, errosVisiveis)
+                            .map((e) => (
+                              <li key={e.numeroLinha}>
+                                Linha {e.numeroLinha}: {e.motivo}
+                              </li>
+                            ))}
+                        </ul>
+                        {errosVisiveis < resumoImportacao.erros.length && (
                           <button
                             type="button"
-                            title="Remover da lista"
-                            onClick={() => removerLinhaRevisao(linha.hash)}
-                            className="text-danger text-sm font-semibold"
+                            onClick={() => setErrosVisiveis((v) => v + 5)}
+                            className="text-primary mt-1 text-xs font-semibold underline"
                           >
-                            ✕
+                            Ver mais (
+                            {resumoImportacao.erros.length - errosVisiveis}{" "}
+                            restante
+                            {resumoImportacao.erros.length - errosVisiveis > 1
+                              ? "s"
+                              : ""}
+                            )
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResumoImportacao(null);
+                        setErrosDetalheAberto(false);
+                        setErrosVisiveis(5);
+                      }}
+                      className="text-primary text-xs font-semibold underline"
+                    >
+                      Importar outro arquivo
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (!camposImportacaoPreenchidos) return;
+                      setArrastandoArquivo(true);
+                    }}
+                    onDragLeave={() => setArrastandoArquivo(false)}
+                    onDrop={
+                      camposImportacaoPreenchidos ? onSoltarArquivo : undefined
+                    }
+                    onClick={() =>
+                      camposImportacaoPreenchidos &&
+                      inputArquivoRef.current?.click()
+                    }
+                    className={`p-lg flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${
+                      !camposImportacaoPreenchidos
+                        ? "border-outline-variant cursor-not-allowed opacity-50"
+                        : arrastandoArquivo
+                          ? "border-primary bg-primary/5 cursor-pointer"
+                          : "border-outline-variant cursor-pointer"
+                    }`}
+                  >
+                    <span
+                      className="bg-primary-container/20 flex h-10 w-10 items-center justify-center rounded-full text-lg"
+                      aria-hidden
+                    >
+                      ⬆
+                    </span>
+                    {arquivoSelecionado ? (
+                      <p className="text-on-surface font-bold">
+                        {arquivoSelecionado.name}
+                      </p>
+                    ) : (
+                      <p className="text-on-surface font-bold">Importar CSV</p>
+                    )}
+                    <p className="text-on-surface-variant text-xs">
+                      {camposImportacaoPreenchidos
+                        ? "Arraste seu extrato bancário aqui para conciliação inteligente."
+                        : "Preencha os campos acima para habilitar o upload."}
+                    </p>
+                    {camposImportacaoPreenchidos && (
+                      <span className="text-primary text-xs font-semibold underline">
+                        {arquivoSelecionado
+                          ? "Trocar arquivo"
+                          : "Procurar arquivos"}
+                      </span>
+                    )}
+                    <input
+                      ref={inputArquivoRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      disabled={!camposImportacaoPreenchidos}
+                      onChange={(e) => {
+                        const arquivo = e.target.files?.[0];
+                        if (arquivo) selecionarArquivo(arquivo);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : linhasRevisao.length === 0 ? (
+              <div className="gap-sm flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-on-surface font-bold">
+                  Nenhuma linha pendente de revisão.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEtapaImportacao("configurar")}
+                  className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90"
+                >
+                  Importar um arquivo
+                </button>
+              </div>
+            ) : (
+              <div className="gap-sm flex flex-col">
+                {erro && (
+                  <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+                    {erro}
+                  </p>
+                )}
+
+                <div className="gap-sm flex flex-wrap items-center justify-between">
+                  <span className="bg-secondary-container px-sm text-on-secondary-container rounded-full py-0.5 text-xs font-bold">
+                    {linhasNaoDuplicadas.length} Pendentes
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAcoesEmMassaAberto((v) => !v)}
+                      className="border-outline-variant bg-surface-container-lowest px-md text-on-surface hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
+                    >
+                      Ações em Massa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        confirmarLinhas(
+                          linhasNaoDuplicadas.filter((l) => l.selecionada),
+                        )
+                      }
+                      className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
+                    >
+                      Aprovar Tudo
+                    </button>
+                  </div>
+                </div>
+
+                {acoesEmMassaAberto && (
+                  <div className="bg-surface-container-low p-sm flex flex-wrap items-end gap-2 rounded-lg">
+                    <div className="flex flex-col gap-1">
+                      <label
+                        className="text-on-surface-variant text-xs font-semibold"
+                        htmlFor="massa-categoria"
+                      >
+                        Aplicar categoria às linhas selecionadas
+                      </label>
+                      <Select
+                        id="massa-categoria"
+                        value={categoriaEmMassa}
+                        onChange={setCategoriaEmMassa}
+                        options={categorias.map((c) => ({
+                          value: c.id,
+                          label: c.nome,
+                        }))}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!categoriaEmMassa}
+                      onClick={aplicarCategoriaEmMassa}
+                      className="bg-primary px-md text-on-primary rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                      Aplicar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAcoesEmMassaAberto(false)}
+                      className="text-on-surface-variant text-xs"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-outline-variant text-on-surface-variant border-b text-left text-xs font-semibold tracking-wide uppercase">
+                        <th className="p-2"></th>
+                        <th className="p-2">Data</th>
+                        <th className="p-2">Descrição</th>
+                        <th className="p-2">Sugestão / Categoria</th>
+                        <th className="p-2">Banco</th>
+                        <th className="p-2">Divisão</th>
+                        <th className="p-2">Pagou</th>
+                        <th className="p-2">Tipo</th>
+                        <th className="p-2 text-right">Valor</th>
+                        <th className="p-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linhasRevisaoPagina.map((linha) => {
+                        const categoriaAtual = categorias.find(
+                          (c) => c.id === linha.categoriaId,
+                        );
+                        const divisaoPessoa = pessoasPorId.get(
+                          linha.pessoaDivisaoId,
+                        );
+                        const ehAjuste = linha.valorCentavos < 0;
+                        const tipo = ehAjuste
+                          ? {
+                              label: "Ajuste",
+                              classe:
+                                "bg-surface-container text-on-surface-variant",
+                            }
+                          : !linha.pessoaDivisaoId
+                            ? {
+                                label: "Indefinido",
+                                classe:
+                                  "bg-tertiary-container/20 text-tertiary-container",
+                              }
+                            : divisaoPessoa?.tipo === "INDIVIDUAL"
+                              ? {
+                                  label: "Individual",
+                                  classe: "bg-secondary/10 text-secondary",
+                                }
+                              : {
+                                  label: "Dividido",
+                                  classe: "bg-primary/10 text-primary",
+                                };
+                        return (
+                          <tr
+                            key={linha.hash}
+                            className={`border-outline-variant/60 border-b ${linha.duplicado ? "opacity-50" : ""}`}
+                          >
+                            <td className="p-2">
+                              <input
+                                type="checkbox"
+                                checked={linha.selecionada}
+                                disabled={linha.duplicado}
+                                onChange={(e) =>
+                                  atualizarLinhaRevisao(linha.hash, {
+                                    selecionada: e.target.checked,
+                                  })
+                                }
+                              />
+                            </td>
+                            <td className="p-2 whitespace-nowrap">
+                              {linha.data}
+                            </td>
+                            <td className="p-2">
+                              <p className="text-on-surface font-semibold">
+                                {linha.descricaoOrigem}
+                              </p>
+                              {linha.duplicado && (
+                                <span className="bg-surface-container text-on-surface-variant rounded-full px-1.5 py-0.5 text-xs">
+                                  já importado
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <Select
+                                placeholder="—"
+                                value={linha.categoriaId}
+                                onChange={(v) =>
+                                  atualizarLinhaRevisao(linha.hash, {
+                                    categoriaId: v,
+                                    subcategoriaId: "",
+                                  })
+                                }
+                                options={categorias.map((c) => ({
+                                  value: c.id,
+                                  label: c.nome,
+                                }))}
+                              />
+                              {categoriaAtual && (
+                                <Select
+                                  className="mt-1"
+                                  placeholder="—"
+                                  value={linha.subcategoriaId}
+                                  onChange={(v) =>
+                                    atualizarLinhaRevisao(linha.hash, {
+                                      subcategoriaId: v,
+                                    })
+                                  }
+                                  options={categoriaAtual.subcategorias.map(
+                                    (s) => ({
+                                      value: s.id,
+                                      label: s.nome,
+                                    }),
+                                  )}
+                                />
+                              )}
+                              {linha.categoriaOrigem &&
+                                !linha.categoriaSugeridaId && (
+                                  <p
+                                    className="text-tertiary-container mt-1 text-xs"
+                                    title="Texto do arquivo não corresponde a nenhuma categoria cadastrada"
+                                  >
+                                    &quot;{linha.categoriaOrigem}&quot; não
+                                    encontrado
+                                  </p>
+                                )}
+                            </td>
+                            <td className="p-2">
+                              <Select
+                                placeholder="—"
+                                value={linha.bancoId}
+                                onChange={(v) =>
+                                  atualizarLinhaRevisao(linha.hash, {
+                                    bancoId: v,
+                                  })
+                                }
+                                options={bancos.map((b) => ({
+                                  value: b.id,
+                                  label: b.nome,
+                                }))}
+                              />
+                              {linha.bancoOrigem && !linha.bancoSugeridoId && (
+                                <p
+                                  className="text-tertiary-container mt-1 text-xs"
+                                  title="Texto do arquivo não corresponde a nenhum banco cadastrado"
+                                >
+                                  &quot;{linha.bancoOrigem}&quot; não encontrado
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <Select
+                                placeholder="—"
+                                value={linha.pessoaDivisaoId}
+                                onChange={(v) =>
+                                  atualizarLinhaRevisao(linha.hash, {
+                                    pessoaDivisaoId: v,
+                                  })
+                                }
+                                options={pessoas.map((p) => ({
+                                  value: p.id,
+                                  label: p.nome,
+                                }))}
+                              />
+                              {linha.divisaoOrigem &&
+                                !linha.pessoaDivisaoSugeridaId && (
+                                  <p
+                                    className="text-tertiary-container mt-1 text-xs"
+                                    title="Texto do arquivo não corresponde a nenhuma pessoa cadastrada"
+                                  >
+                                    &quot;{linha.divisaoOrigem}&quot; não
+                                    encontrado
+                                  </p>
+                                )}
+                            </td>
+                            <td className="p-2">
+                              <Select
+                                placeholder="—"
+                                value={linha.pessoaPagouId}
+                                onChange={(v) =>
+                                  atualizarLinhaRevisao(linha.hash, {
+                                    pessoaPagouId: v,
+                                  })
+                                }
+                                options={pessoas.map((p) => ({
+                                  value: p.id,
+                                  label: p.nome,
+                                }))}
+                              />
+                              {linha.pagouOrigem &&
+                                !linha.pessoaPagouSugeridaId && (
+                                  <p
+                                    className="text-tertiary-container mt-1 text-xs"
+                                    title="Texto do arquivo não corresponde a nenhuma pessoa cadastrada"
+                                  >
+                                    &quot;{linha.pagouOrigem}&quot; não
+                                    encontrado
+                                  </p>
+                                )}
+                            </td>
+                            <td className="p-2">
+                              <span
+                                className={`px-sm rounded-full py-0.5 text-xs font-semibold ${tipo.classe}`}
+                              >
+                                {tipo.label}
+                              </span>
+                            </td>
+                            <td
+                              className={`data-tabular p-2 text-right ${ehAjuste ? "text-success" : "text-on-surface"}`}
+                            >
+                              {ehAjuste ? "+ " : ""}
+                              {formatarMoeda(linha.valorCentavos)}
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                {!linha.duplicado && (
+                                  <button
+                                    type="button"
+                                    title="Aprovar esta linha"
+                                    onClick={() => confirmarLinhas([linha])}
+                                    className="text-success text-sm font-semibold"
+                                  >
+                                    ✓
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  title="Remover da lista"
+                                  onClick={() =>
+                                    removerLinhaRevisao(linha.hash)
+                                  }
+                                  className="text-danger text-sm font-semibold"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="text-on-surface-variant flex items-center justify-between text-xs">
+                  <span>
+                    Mostrando {linhasRevisaoPagina.length} de{" "}
+                    {linhasRevisao.length} pendentes
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={paginaRevisao === 0}
+                      onClick={() =>
+                        setPaginaRevisao((p) => Math.max(0, p - 1))
+                      }
+                      className="border-outline-variant px-sm rounded-full border py-1 disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="button"
+                      disabled={paginaRevisao >= totalPaginasRevisao - 1}
+                      onClick={() =>
+                        setPaginaRevisao((p) =>
+                          Math.min(totalPaginasRevisao - 1, p + 1),
+                        )
+                      }
+                      className="border-outline-variant px-sm rounded-full border py-1 disabled:opacity-40"
+                    >
+                      Próximo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="text-on-surface-variant flex items-center justify-between text-xs">
-            <span>
-              Mostrando {linhasRevisaoPagina.length} de {linhasRevisao.length}{" "}
-              pendentes
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={paginaRevisao === 0}
-                onClick={() => setPaginaRevisao((p) => Math.max(0, p - 1))}
-                className="border-outline-variant px-sm rounded-full border py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={paginaRevisao >= totalPaginasRevisao - 1}
-                onClick={() =>
-                  setPaginaRevisao((p) =>
-                    Math.min(totalPaginasRevisao - 1, p + 1),
-                  )
-                }
-                className="border-outline-variant px-sm rounded-full border py-1 disabled:opacity-40"
-              >
-                Próximo
-              </button>
-            </div>
+          <div className="border-outline-variant p-lg flex items-center justify-end gap-2 border-t">
+            {etapaImportacao === "configurar" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={fecharModalImportar}
+                  className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-sm font-semibold"
+                >
+                  {resumoImportacao ? "Fechar" : "Cancelar"}
+                </button>
+                {resumoImportacao ? (
+                  <button
+                    type="button"
+                    onClick={() => setEtapaImportacao("revisar")}
+                    className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90"
+                  >
+                    Ir para revisão
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={validarEImportarArquivo}
+                    disabled={
+                      !camposImportacaoPreenchidos ||
+                      !arquivoSelecionado ||
+                      analisando
+                    }
+                    className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {analisando ? "Validando…" : "Validar e Importar"}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {linhasRevisao.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={abandonarImportacao}
+                    className="text-danger px-lg mr-auto py-2 text-sm font-semibold hover:underline"
+                  >
+                    Cancelar importação
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEtapaImportacao("configurar")}
+                  className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-sm font-semibold"
+                >
+                  + Adicionar mais arquivos
+                </button>
+                <button
+                  type="button"
+                  onClick={fecharModalImportar}
+                  className="bg-primary px-lg text-on-primary rounded-full py-2 text-sm font-semibold hover:opacity-90"
+                >
+                  Fechar
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1503,7 +2001,7 @@ export function LancamentosClient() {
               .slice(
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
                 paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS +
-                TAMANHO_PAGINA_LANCAMENTOS,
+                  TAMANHO_PAGINA_LANCAMENTOS,
               )
               .map((lancamento) => (
                 <LinhaLancamento
@@ -1535,7 +2033,7 @@ export function LancamentosClient() {
             {Math.min(
               TAMANHO_PAGINA_LANCAMENTOS,
               lancamentosProcessados.length -
-              paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
+                paginaLancamentos * TAMANHO_PAGINA_LANCAMENTOS,
             )}{" "}
             de {lancamentosProcessados.length} lançamentos
           </span>
@@ -1606,10 +2104,11 @@ function LinhaLancamento({
 
   return (
     <tr
-      className={`hover:bg-surface-container-low cursor-pointer border-l-4 ${selecionada
+      className={`hover:bg-surface-container-low cursor-pointer border-l-4 ${
+        selecionada
           ? "border-l-primary bg-primary/5"
           : "border-outline-variant/60 border-b border-l-transparent"
-        }`}
+      }`}
       onClick={onAbrirDetalhe}
     >
       <td className="p-2 whitespace-nowrap">

@@ -8,6 +8,15 @@ export type LinhaImportada = {
   // Positivo = despesa; negativo = estorno/crédito (RF05) — já normalizado
   // conforme a convenção de sinal do template.
   valorCentavos: number;
+  descontoCentavos: number;
+  descricaoPropria: string | null;
+  // Textos brutos lidos do arquivo (quando o template declara a coluna
+  // correspondente), ainda não casados com os cadastros do household.
+  bancoOrigem: string | null;
+  categoriaOrigem: string | null;
+  subcategoriaOrigem: string | null;
+  divisaoOrigem: string | null;
+  pagouOrigem: string | null;
 };
 
 export type ErroImportacao = {
@@ -20,21 +29,29 @@ export type ResultadoParse = {
   erros: ErroImportacao[];
 };
 
-function parseData(
-  valor: string,
-  formato: ImportTemplate["formatoData"],
-): Date | null {
-  if (formato === "ISO") {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor.trim());
-    if (!match) return null;
-    const [, ano, mes, dia] = match;
+// Identifica o formato da data pelo próprio texto (em vez de confiar cegamente
+// no formatoData do template) e converte para o formato usado no banco —
+// arquivos reais às vezes fogem do que o modelo declara (ex.: planilha
+// exportada em ISO mesmo com o modelo "genérico completo" esperando BR).
+// Ano com 4 dígitos primeiro = ISO (AAAA-MM-DD ou AAAA/MM/DD); dia primeiro
+// = BR (DD/MM/AAAA ou DD-MM-AAAA) — a posição do grupo de 4 dígitos
+// desambigua os dois formatos independentemente do separador usado.
+function parseData(valor: string): Date | null {
+  const bruto = valor.trim();
+
+  const iso = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(bruto);
+  if (iso) {
+    const [, ano, mes, dia] = iso;
     return new Date(Date.UTC(Number(ano), Number(mes) - 1, Number(dia)));
   }
 
-  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(valor.trim());
-  if (!match) return null;
-  const [, dia, mes, ano] = match;
-  return new Date(Date.UTC(Number(ano), Number(mes) - 1, Number(dia)));
+  const br = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/.exec(bruto);
+  if (br) {
+    const [, dia, mes, ano] = br;
+    return new Date(Date.UTC(Number(ano), Number(mes) - 1, Number(dia)));
+  }
+
+  return null;
 }
 
 function parseValorCentavos(
@@ -105,6 +122,32 @@ function extrairValorCentavos(
   return ehDespesa ? Math.abs(centavos) : -Math.abs(centavos);
 }
 
+// Lê uma coluna opcional do template (texto bruto, ainda não casado com
+// nenhum cadastro do household) — null quando a coluna não está configurada
+// no template ou a célula está vazia.
+function extrairCampoOpcional(
+  campos: Record<string, string>,
+  coluna: string | undefined,
+): string | null {
+  if (!coluna) return null;
+  const valor = (campos[coluna] ?? "").trim();
+  return valor || null;
+}
+
+// Desconto é opcional e, ao contrário do valor principal, não tem sinal —
+// null indica erro de parsing (célula preenchida com algo não numérico), 0
+// é o padrão quando a coluna não está configurada ou a célula está vazia.
+function extrairDescontoCentavos(
+  campos: Record<string, string>,
+  template: ImportTemplate,
+): number | null {
+  if (!template.colunaDesconto) return 0;
+  const bruto = (campos[template.colunaDesconto] ?? "").trim();
+  if (bruto === "") return 0;
+  const centavos = parseValorCentavos(bruto, template.separadorDecimalVirgula);
+  return centavos === null ? null : Math.abs(centavos);
+}
+
 // Faz o parsing de um CSV bruto de acordo com o template selecionado.
 // Linhas com data/valor inválidos ou vazias são reportadas em `erros` em vez
 // de interromper a importação inteira.
@@ -123,7 +166,7 @@ export function parseImportacao(
     const descricaoOrigem = (campos[template.colunaDescricao] ?? "").trim();
     const dataRaw = campos[template.colunaData] ?? "";
 
-    const data = parseData(dataRaw, template.formatoData);
+    const data = parseData(dataRaw);
     if (!data) {
       erros.push({ numeroLinha, motivo: `Data inválida: "${dataRaw}"` });
       return;
@@ -140,7 +183,31 @@ export function parseImportacao(
       return;
     }
 
-    linhas.push({ numeroLinha, data, descricaoOrigem, valorCentavos });
+    const descontoCentavos = extrairDescontoCentavos(campos, template);
+    if (descontoCentavos === null) {
+      erros.push({ numeroLinha, motivo: "Desconto inválido." });
+      return;
+    }
+
+    linhas.push({
+      numeroLinha,
+      data,
+      descricaoOrigem,
+      valorCentavos,
+      descontoCentavos,
+      descricaoPropria: extrairCampoOpcional(
+        campos,
+        template.colunaDescricaoPropria,
+      ),
+      bancoOrigem: extrairCampoOpcional(campos, template.colunaBanco),
+      categoriaOrigem: extrairCampoOpcional(campos, template.colunaCategoria),
+      subcategoriaOrigem: extrairCampoOpcional(
+        campos,
+        template.colunaSubcategoria,
+      ),
+      divisaoOrigem: extrairCampoOpcional(campos, template.colunaDivisao),
+      pagouOrigem: extrairCampoOpcional(campos, template.colunaPagou),
+    });
   });
 
   return { linhas, erros };

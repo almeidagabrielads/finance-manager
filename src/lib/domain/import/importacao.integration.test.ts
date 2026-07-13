@@ -172,8 +172,8 @@ describe("gerarPreviewImportacao + confirmarImportacao — detecção de duplica
       bancoId: banco.id,
       templateId: "generico",
       csvTexto: [
-        "data,descricao,valor",
-        "2026-06-10,Supermercado XYZ 045,151.00",
+        "Data,Descrição Cartão,Valor",
+        '10/06/2026,Supermercado XYZ 045,"151,00"',
       ].join("\n"),
     });
 

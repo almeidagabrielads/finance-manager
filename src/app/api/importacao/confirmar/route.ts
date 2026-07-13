@@ -7,17 +7,22 @@ import { confirmarImportacao } from "@/lib/domain/import/importacao";
 const LinhaSchema = z.object({
   data: z.string().trim().min(1),
   descricaoOrigem: z.string().trim().min(1),
+  descricaoPropria: z.string().trim().min(1).nullish(),
   valorCentavos: z.number().int(),
+  descontoCentavos: z.number().int().min(0).optional(),
   categoriaId: z.string().trim().min(1).nullish(),
   subcategoriaId: z.string().trim().min(1).nullish(),
+  bancoId: z.string().trim().min(1).nullish(),
   pessoaDivisaoId: z.string().trim().min(1).nullish(),
   pessoaPagouId: z.string().trim().min(1).nullish(),
 });
 
 const ConfirmarSchema = z.object({
-  bancoId: z.string().trim().min(1, "Banco é obrigatório."),
-  pessoaDivisaoId: z.string().trim().min(1, "Divisão é obrigatória."),
-  pessoaPagouId: z.string().trim().min(1, "Quem pagou é obrigatório."),
+  // Opcionais: dependendo do modelo do arquivo, cada linha pode já trazer
+  // (ou o usuário pode definir na revisão) seu próprio banco/dono/pagador.
+  bancoId: z.string().trim().min(1).nullish(),
+  pessoaDivisaoId: z.string().trim().min(1).nullish(),
+  pessoaPagouId: z.string().trim().min(1).nullish(),
   linhas: z.array(LinhaSchema).min(1, "Selecione ao menos uma linha."),
 });
 

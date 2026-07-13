@@ -33,24 +33,24 @@ export function useConfirmDialog() {
   }
 
   const dialog = pendente ? (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/40 p-lg">
-      <div className="flex w-full max-w-[24rem] flex-col gap-md rounded-2xl border border-outline-variant bg-surface-container-lowest p-lg shadow-lg">
-        <h2 className="text-base font-bold text-on-surface">
+    <div className="bg-on-surface/40 p-lg fixed inset-0 z-[110] flex items-center justify-center">
+      <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex w-full max-w-[24rem] flex-col rounded-2xl border shadow-lg">
+        <h2 className="text-on-surface text-base font-bold">
           {pendente.title ?? "Confirmar ação"}
         </h2>
-        <p className="text-sm text-on-surface-variant">{pendente.message}</p>
+        <p className="text-on-surface-variant text-sm">{pendente.message}</p>
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={() => responder(false)}
-            className="rounded-full border border-outline-variant px-md py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+            className="border-outline-variant px-md text-on-surface hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
           >
             {pendente.cancelLabel ?? "Cancelar"}
           </button>
           <button
             type="button"
             onClick={() => responder(true)}
-            className="rounded-full bg-danger px-md py-1.5 text-xs font-semibold text-on-danger hover:opacity-90"
+            className="bg-danger px-md text-on-danger rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
           >
             {pendente.confirmLabel ?? "Remover"}
           </button>

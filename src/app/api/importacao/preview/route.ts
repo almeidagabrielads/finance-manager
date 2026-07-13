@@ -5,7 +5,10 @@ import { verifySession } from "@/lib/auth/dal";
 import { gerarPreviewImportacao } from "@/lib/domain/import/importacao";
 
 const PreviewSchema = z.object({
-  bancoId: z.string().trim().min(1, "Banco é obrigatório."),
+  // Opcional: alguns modelos de arquivo já trazem o banco por linha — nesse
+  // caso o usuário só precisa de um banco padrão para as linhas sem esse
+  // dado (validado por linha ao confirmar).
+  bancoId: z.string().trim().min(1).nullish(),
   templateId: z.string().trim().min(1, "Modelo de importação é obrigatório."),
   csv: z.string().min(1, "Arquivo CSV vazio."),
 });
