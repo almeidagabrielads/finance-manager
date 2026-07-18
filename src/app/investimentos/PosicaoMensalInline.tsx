@@ -54,11 +54,11 @@ async function parseErro(response: Response): Promise<string> {
 
 function CampoValorMensal({
   valorCentavos,
-  disabled,
+  salvando,
   onSalvar,
 }: {
   valorCentavos: number | undefined;
-  disabled: boolean;
+  salvando: boolean;
   onSalvar: (novosCentavos: number | null) => void;
 }) {
   const [editando, setEditando] = useState(false);
@@ -116,17 +116,24 @@ function CampoValorMensal({
       : "";
 
   return (
-    <input
-      type="text"
-      inputMode="decimal"
-      placeholder="—"
-      value={valorExibido}
-      onFocus={aoFocar}
-      onChange={(e) => aoMudar(e.target.value)}
-      onBlur={aoDesfocar}
-      disabled={disabled}
-      className="border-outline-variant bg-surface-container-lowest px-sm focus:border-primary w-full rounded-lg border py-1.5 text-right text-sm focus:outline-none disabled:opacity-50"
-    />
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="decimal"
+        placeholder="—"
+        value={valorExibido}
+        onFocus={aoFocar}
+        onChange={(e) => aoMudar(e.target.value)}
+        onBlur={aoDesfocar}
+        className="border-outline-variant bg-surface-container-lowest px-sm focus:border-primary w-full rounded-lg border py-1.5 text-right text-sm focus:outline-none"
+      />
+      {salvando && (
+        <span
+          aria-label="Salvando"
+          className="bg-primary absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 animate-pulse rounded-full"
+        />
+      )}
+    </div>
   );
 }
 
@@ -202,7 +209,7 @@ export function PosicaoMensalInline({
               </span>
               <CampoValorMensal
                 valorCentavos={valorCentavos}
-                disabled={mesSalvando === mesIdx}
+                salvando={mesSalvando === mesIdx}
                 onSalvar={(novosCentavos) => salvar(mesIdx, novosCentavos)}
               />
             </label>
