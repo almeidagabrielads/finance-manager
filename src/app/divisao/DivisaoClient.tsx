@@ -338,7 +338,7 @@ export function DivisaoClient() {
       {resumo && (
         <>
           <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
-            <div className="gap-lg border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border lg:col-span-2">
+            <div className="gap-lg border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
               <div className="gap-lg flex flex-col">
                 {resumo.participantes.map((id) => {
                   const pago =
@@ -391,39 +391,6 @@ export function DivisaoClient() {
               )}
             </div>
 
-            <div className="bg-primary p-lg text-on-primary flex flex-col justify-center gap-2 rounded-xl lg:col-span-1">
-              <h3 className="text-on-primary/70 text-center text-xs font-semibold tracking-wide uppercase">
-                Resultado do período
-              </h3>
-              {resumo.transferenciasSugeridas.length === 0 ? (
-                <p className="text-center text-lg font-semibold">
-                  Contas quitadas
-                </p>
-              ) : (
-                <div className="mt-5 flex flex-col gap-1 text-center">
-                  {resumo.transferenciasSugeridas.map((t, i) => (
-                    <p key={i} className="mb-5 text-lg font-bold">
-                      {nome(t.deId)} deve {centavosParaReais(t.valorCentavos)}{" "}
-                      para {nome(t.paraId)}
-                    </p>
-                  ))}
-                  <p className="text-on-primary/70 text-sm">
-                    Baseado nos gastos compartilhados do período
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <ControlePagamentoCard
-              dataInicio={dataInicio}
-              dataFim={dataFim}
-              reloadToken={reloadToken}
-            />
-          </div>
-
-          <div className="gap-md flex flex-col">
             <div className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border">
               <div className="flex items-center justify-between">
                 <h3 className="text-on-surface text-base font-semibold">
@@ -476,7 +443,36 @@ export function DivisaoClient() {
                 </button>
               )}
             </div>
+
+            <div className="bg-primary p-lg text-on-primary flex flex-col justify-center gap-2 rounded-xl">
+              <h3 className="text-on-primary/70 text-center text-xs font-semibold tracking-wide uppercase">
+                Resultado do período
+              </h3>
+              {resumo.transferenciasSugeridas.length === 0 ? (
+                <p className="text-center text-lg font-semibold">
+                  Contas quitadas
+                </p>
+              ) : (
+                <div className="mt-5 flex flex-col gap-1 text-center">
+                  {resumo.transferenciasSugeridas.map((t, i) => (
+                    <p key={i} className="mb-5 text-lg font-bold">
+                      {nome(t.deId)} deve {centavosParaReais(t.valorCentavos)}{" "}
+                      para {nome(t.paraId)}
+                    </p>
+                  ))}
+                  <p className="text-on-primary/70 text-sm">
+                    Baseado nos gastos compartilhados do período
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+
+          <ControlePagamentoCard
+            dataInicio={dataInicio}
+            dataFim={dataFim}
+            reloadToken={reloadToken}
+          />
         </>
       )}
     </div>
