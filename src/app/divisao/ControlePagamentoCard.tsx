@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Select } from "../components/Select";
 
 type PessoaResumo = { id: string; nome: string };
 type LinhaControlePagamento = {
@@ -24,6 +25,12 @@ type ControlePagamento = {
   linhas: LinhaControlePagamento[];
   pagouPor: LinhaPagouPor[];
   gastoTotal: LinhaGastoTotal[];
+};
+type LinhaResumo = {
+  label: string;
+  porMes: Record<string, number>;
+  destaque?: boolean;
+  diferenca?: boolean;
 };
 
 const MESES_ABREVIADOS = [
@@ -53,16 +60,28 @@ function centavosParaReais(valor: number): string {
   });
 }
 
+function mesAtual(): string {
+  const agora = new Date();
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}`;
+}
+
 type Props = {
   reloadToken: number;
 };
 
+const ANO_ATUAL = new Date().getFullYear();
+const OPCOES_ANO = Array.from({ length: 6 }, (_, i) => {
+  const ano = ANO_ATUAL - i;
+  return { value: String(ano), label: String(ano) };
+});
+
 export function ControlePagamentoCard({ reloadToken }: Props) {
+  const [ano, setAno] = useState(ANO_ATUAL);
   const [controle, setControle] = useState<ControlePagamento | null>(null);
 
   useEffect(() => {
     let cancelado = false;
-    fetch("/api/relatorios/controle-pagamento")
+    fetch(`/api/relatorios/controle-pagamento?ano=${ano}`)
       .then(async (response) => {
         if (cancelado || !response.ok) return;
         setControle(await response.json());
@@ -71,17 +90,24 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
     return () => {
       cancelado = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, ano]);
 
   if (!controle) return null;
 
-  const nomeDivisao = new Map(controle.pessoasDivisao.map((p) => [p.id, p.nome]));
+  const mesAtualCalculado = mesAtual();
+  const nomeDivisao = new Map(
+    controle.pessoasDivisao.map((p) => [p.id, p.nome]),
+  );
   const nomePagador = new Map(controle.pagadores.map((p) => [p.id, p.nome]));
 
   // Inclui a fatia de cada pessoa nos gastos de grupos (Casal/Família) de que
   // participa, além dos gastos individuais pagos pela outra — ver pagouPor no
   // domínio (controlePagamento.ts).
-  function valorPagoPor(pessoaId: string, pagadorId: string, mes: string): number {
+  function valorPagoPor(
+    pessoaId: string,
+    pagadorId: string,
+    mes: string,
+  ): number {
     return (
       controle!.pagouPor.find(
         (l) => l.pessoaId === pessoaId && l.pagadorId === pagadorId,
@@ -111,7 +137,7 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
     }
   }
 
-  const linhasCruzadas = pares.flatMap(({ a, b }) => {
+  const linhasCruzadas: LinhaResumo[] = pares.flatMap(({ a, b }) => {
     const aPorB = Object.fromEntries(
       controle!.meses.map((mes) => [mes, valorPagoPor(b.id, a.id, mes)]),
     );
@@ -125,23 +151,41 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
       { label: `Quanto ${a.nome} pagou pela ${b.nome}`, porMes: aPorB },
       { label: `Quanto ${b.nome} pagou pela ${a.nome}`, porMes: bPorA },
       {
-        label: pares.length > 1 ? `Diferença (${a.nome} vs ${b.nome})` : "Diferença",
+        label:
+          pares.length > 1 ? `Diferença (${a.nome} vs ${b.nome})` : "Diferença",
         porMes: diferenca,
-        destaque: true,
+        diferenca: true,
       },
     ];
   });
 
-  const linhasResumo = [
+  const linhasResumo: LinhaResumo[] = [
     ...gastosTotais.map((l) => ({ ...l, destaque: true })),
     ...linhasCruzadas,
   ];
 
   return (
     <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
-      <h3 className="text-on-surface text-base font-semibold">
-        Controle de pagamento
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-on-surface text-base font-semibold">
+          Controle de pagamento
+        </h3>
+        <div className="flex items-center gap-1.5">
+          <label
+            htmlFor="controle-pagamento-ano"
+            className="text-on-surface-variant text-xs font-semibold"
+          >
+            Ano
+          </label>
+          <Select
+            id="controle-pagamento-ano"
+            value={String(ano)}
+            onChange={(valor) => setAno(Number(valor))}
+            options={OPCOES_ANO}
+            className="w-28"
+          />
+        </div>
+      </div>
       {controle.linhas.length === 0 ? (
         <p className="text-on-surface-variant text-sm">
           Cadastre pelo menos uma pessoa Individual para ver o controle de
@@ -152,10 +196,18 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-surface-container-low text-on-surface-variant text-left text-xs font-semibold">
               <tr>
-                <th className="p-sm">Divisão</th>
-                <th className="p-sm">Quem pagou</th>
+                <th className="p-sm bg-surface-container-low sticky left-0 z-20 whitespace-nowrap">
+                  Divisão · Quem pagou
+                </th>
                 {controle.meses.map((mes) => (
-                  <th key={mes} className="p-sm text-right whitespace-nowrap">
+                  <th
+                    key={mes}
+                    className={`p-sm text-right whitespace-nowrap ${
+                      mes === mesAtualCalculado
+                        ? "bg-primary-container text-on-primary-container"
+                        : ""
+                    }`}
+                  >
                     {formatarMesAno(mes)}
                   </th>
                 ))}
@@ -167,16 +219,18 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
                   key={`${linha.divisaoId}::${linha.pagadorId}`}
                   className="border-outline-variant border-t"
                 >
-                  <td className="p-sm font-medium">
-                    {nomeDivisao.get(linha.divisaoId) ?? linha.divisaoId}
-                  </td>
-                  <td className="p-sm text-on-surface-variant">
+                  <td className="p-sm bg-surface-container-lowest sticky left-0 z-10 font-medium whitespace-nowrap">
+                    {nomeDivisao.get(linha.divisaoId) ?? linha.divisaoId} ·{" "}
                     {nomePagador.get(linha.pagadorId) ?? linha.pagadorId}
                   </td>
                   {controle.meses.map((mes) => (
                     <td
                       key={mes}
-                      className="p-sm text-right whitespace-nowrap tabular-nums"
+                      className={`p-sm text-right whitespace-nowrap tabular-nums ${
+                        mes === mesAtualCalculado
+                          ? "bg-primary-container/25"
+                          : ""
+                      }`}
                     >
                       {linha.porMes[mes] === 0 ? (
                         <span className="text-on-surface-variant">
@@ -191,26 +245,49 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
               ))}
             </tbody>
             <tbody>
-              {linhasResumo.map((linha, indice) => (
-                <tr
-                  key={linha.label}
-                  className={`border-outline-variant ${
-                    indice === 0 ? "border-t-2" : "border-t"
-                  } ${linha.destaque ? "bg-surface-container-low font-semibold" : ""}`}
-                >
-                  <td className="p-sm" colSpan={2}>
-                    {linha.label}
-                  </td>
-                  {controle.meses.map((mes) => (
+              {linhasResumo.map((linha, indice) => {
+                const corLinha = linha.diferenca
+                  ? "bg-secondary-container text-on-secondary-container"
+                  : linha.destaque
+                    ? "bg-surface-container-low"
+                    : "";
+                return (
+                  <tr
+                    key={linha.label}
+                    className={`border-outline-variant ${
+                      indice === 0 ? "border-t-2" : "border-t"
+                    } ${corLinha} ${linha.destaque || linha.diferenca ? "font-semibold" : ""}`}
+                  >
                     <td
-                      key={mes}
-                      className="p-sm text-right whitespace-nowrap tabular-nums"
+                      className={`p-sm sticky left-0 z-10 whitespace-nowrap ${
+                        corLinha || "bg-surface-container-lowest"
+                      }`}
                     >
-                      {centavosParaReais(linha.porMes[mes])}
+                      {linha.label}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {controle.meses.map((mes) => (
+                      <td
+                        key={mes}
+                        className={`p-sm text-right whitespace-nowrap tabular-nums ${
+                          !linha.destaque &&
+                          !linha.diferenca &&
+                          mes === mesAtualCalculado
+                            ? "bg-primary-container/25"
+                            : ""
+                        }`}
+                      >
+                        {linha.porMes[mes] === 0 ? (
+                          <span className="text-on-surface-variant">
+                            {centavosParaReais(0)}
+                          </span>
+                        ) : (
+                          centavosParaReais(linha.porMes[mes])
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

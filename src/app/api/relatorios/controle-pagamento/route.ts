@@ -16,8 +16,15 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
-  const dataInicio = parseData(params.get("dataInicio")) ?? undefined;
-  const dataFim = parseData(params.get("dataFim")) ?? undefined;
+  const ano = Number(params.get("ano"));
+  const dataInicio =
+    parseData(params.get("dataInicio")) ??
+    (Number.isInteger(ano) ? new Date(Date.UTC(ano, 0, 1)) : undefined);
+  const dataFim =
+    parseData(params.get("dataFim")) ??
+    (Number.isInteger(ano)
+      ? new Date(Date.UTC(ano, 11, 31, 23, 59, 59, 999))
+      : undefined);
 
   const controle = await buscarControlePagamento(prisma, session.householdId, {
     dataInicio,
