@@ -9,10 +9,10 @@
   --font-display: var(--font-outfit);
 
   /* Primária — Azul profundo (navy) */
-  --color-primary: #2e5090;
+  --color-primary: #1b3568;
   --color-on-primary: #ffffff;
   --color-primary-container: #d8e2f3;
-  --color-on-primary-container: #1b3568;
+  --color-on-primary-container: #12233f;
 
   /* Secundária — Dourado (só acentos pontuais: badges, ícones, destaques — nunca áreas grandes) */
   --color-secondary: #ca8a04;
@@ -81,8 +81,8 @@ h2 {
 button.bg-primary,
 a.bg-primary,
 input[type="submit"].bg-primary {
-  background-image: linear-gradient(135deg, #355aa0 0%, #2e5090 100%);
-  box-shadow: 0 4px 12px rgba(46, 80, 144, 0.25);
+  background-image: linear-gradient(135deg, #24437d 0%, #1b3568 100%);
+  box-shadow: 0 4px 12px rgba(27, 53, 104, 0.25);
 }
 
 /* Financial values: monospaced numeral alignment (RF — data-tabular role) */
