@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Caveat, Poppins } from "next/font/google";
+import { Playfair_Display, Poppins } from "next/font/google";
 import "./globals.css";
 import { Nav } from "./Nav";
 
@@ -9,8 +9,8 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-const caveat = Caveat({
-  variable: "--font-caveat",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
 });
 
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${poppins.variable} ${caveat.variable} h-full antialiased`}
+      className={`${poppins.variable} ${playfair.variable} h-full antialiased`}
     >
       <body
         className="bg-background text-on-surface flex min-h-full flex-col font-sans"

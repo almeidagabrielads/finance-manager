@@ -8,7 +8,7 @@ export default function PessoasPage() {
       <div className="gap-xl flex flex-col">
         <div className="gap-lg flex flex-col">
           <div>
-            <h2 className="text-on-surface text-2xl font-semibold">
+            <h2 className="text-on-surface text-lg font-semibold">
               Acesso ao sistema
             </h2>
             <p className="text-on-surface-variant text-sm">
@@ -20,7 +20,7 @@ export default function PessoasPage() {
 
         <div className="gap-lg border-outline-variant pt-xl flex flex-col border-t">
           <div>
-            <h2 className="text-on-surface text-2xl font-semibold">
+            <h2 className="text-on-surface text-lg font-semibold">
               Pessoas para divisão
             </h2>
             <p className="text-on-surface-variant text-sm">

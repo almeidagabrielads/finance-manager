@@ -6,7 +6,7 @@ export default function PreferenciasPage() {
     <SettingsShell>
       <div className="gap-lg flex flex-col">
         <div>
-          <h2 className="text-on-surface text-2xl font-semibold">
+          <h2 className="text-on-surface text-lg font-semibold">
             Preferências
           </h2>
           <p className="text-on-surface-variant text-sm">

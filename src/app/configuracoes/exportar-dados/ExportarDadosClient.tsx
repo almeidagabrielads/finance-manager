@@ -154,7 +154,7 @@ export function ExportarDadosClient() {
 
       <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
         <div>
-          <h2 className="text-on-surface text-xl font-semibold">
+          <h2 className="text-on-surface text-base font-semibold">
             Exportar transações
           </h2>
           <p className="text-on-surface-variant text-sm">

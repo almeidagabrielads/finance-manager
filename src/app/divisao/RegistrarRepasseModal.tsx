@@ -64,7 +64,7 @@ export function RegistrarRepasseModal({
   return (
     <div className="bg-on-surface/40 p-lg fixed inset-0 z-[100] flex items-center justify-center">
       <div className="gap-md p-lg border-outline-variant bg-surface-container-lowest flex w-full max-w-[32rem] flex-col rounded-2xl border shadow-lg">
-        <h2 className="text-on-surface text-xl font-bold">Registrar repasse</h2>
+        <h2 className="text-on-surface text-base font-bold">Registrar repasse</h2>
         <p className="text-on-surface-variant text-sm">
           Registre um Pix ou transferência já feito entre duas pessoas. Ele não
           vira um lançamento, mas abate ou soma no saldo do acerto de contas.

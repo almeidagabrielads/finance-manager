@@ -86,7 +86,7 @@ export function Nav() {
       <div className="px-lg mx-auto flex h-16 max-w-[1400px] items-center justify-between">
         <div className="gap-xl flex items-center">
           <Link href="/" className="flex items-baseline gap-1.5">
-            <span className="font-display text-primary text-3xl font-bold">
+            <span className="font-display text-primary text-2xl font-bold">
               Revanto
             </span>
           </Link>

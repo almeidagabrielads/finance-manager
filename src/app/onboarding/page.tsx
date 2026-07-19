@@ -25,7 +25,7 @@ export default function OnboardingPage() {
   return (
     <main className="gap-xl p-lg mx-auto flex w-full max-w-2xl flex-col">
       <div className="flex flex-col gap-1">
-        <h1 className="text-on-surface text-4xl font-bold">
+        <h1 className="text-on-surface text-2xl font-bold">
           Bem-vindos ao Revanto! Vamos começar?
         </h1>
         <p className="text-on-surface-variant text-sm">

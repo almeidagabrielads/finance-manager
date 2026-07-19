@@ -247,7 +247,7 @@ export function OrcamentoClient() {
       )}
 
       {aba !== "mes" && (
-        <h1 className="text-on-surface text-4xl font-bold">Orçamento</h1>
+        <h1 className="text-on-surface text-2xl font-bold">Orçamento</h1>
       )}
 
       <div className="border-outline-variant flex gap-1 border-b">
@@ -752,7 +752,7 @@ function VisaoMesAtual({
     <div className="gap-lg flex flex-col">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-on-surface text-4xl font-bold">
+          <h1 className="text-on-surface text-2xl font-bold">
             Planejamento vs. Real
           </h1>
           <p className="text-on-surface-variant text-sm">
@@ -977,7 +977,7 @@ function VisaoMesAtual({
 
       <div className="gap-lg grid grid-cols-1 lg:grid-cols-2">
         <div className={cardClass}>
-          <h2 className="text-on-surface flex items-center gap-2 text-xl font-semibold">
+          <h2 className="text-on-surface flex items-center gap-2 text-base font-semibold">
             ✨ Insights do mês
           </h2>
           <p className="text-on-surface-variant text-sm">
@@ -1005,7 +1005,7 @@ function VisaoMesAtual({
 
         {insightComprometido && (
           <div className={cardClass}>
-            <h2 className="text-on-surface flex items-center gap-2 text-xl font-semibold">
+            <h2 className="text-on-surface flex items-center gap-2 text-base font-semibold">
               📌 Saldo comprometido
             </h2>
             <p className="text-on-surface-variant text-sm">

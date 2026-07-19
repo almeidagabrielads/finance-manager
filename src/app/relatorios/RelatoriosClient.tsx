@@ -479,7 +479,7 @@ export function RelatoriosClient() {
 
       {filtrosAbertos && (
         <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border">
-          <h2 className="text-on-surface text-xl font-semibold">
+          <h2 className="text-on-surface text-base font-semibold">
             Relatório personalizado
           </h2>
           <div className="gap-lg flex flex-wrap">

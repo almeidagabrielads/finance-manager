@@ -939,7 +939,7 @@ export function LancamentosClient() {
       {dialogConfirmacao}
 
       <div className="gap-sm flex items-center justify-between">
-        <h1 className="text-on-surface text-4xl font-bold">Lançamentos</h1>
+        <h1 className="text-on-surface text-2xl font-bold">Lançamentos</h1>
         <div className="flex gap-2">
           <ParcelamentosPanel
             onAlterado={carregar}
@@ -1017,7 +1017,7 @@ export function LancamentosClient() {
             className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex max-h-[85vh] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl border shadow-lg"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-on-surface flex items-center gap-1.5 text-2xl font-bold">
+              <h2 className="text-on-surface flex items-center gap-1.5 text-lg font-bold">
                 Novo Lançamento
               </h2>
               <button
@@ -1377,7 +1377,7 @@ export function LancamentosClient() {
       {modalImportarAberto && (
         <div className="bg-surface-container-lowest fixed inset-0 z-[100] flex flex-col">
           <div className="border-outline-variant p-lg flex items-center justify-between border-b">
-            <h2 className="text-on-surface flex items-center gap-1.5 text-2xl font-bold">
+            <h2 className="text-on-surface flex items-center gap-1.5 text-lg font-bold">
               {etapaImportacao === "revisar"
                 ? "Revisão de Importações"
                 : "Importar Extrato"}
@@ -2541,7 +2541,7 @@ function DetalheLancamentoDrawer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-on-surface text-2xl font-bold">
+          <h2 className="text-on-surface text-lg font-bold">
             Detalhes do lançamento
           </h2>
           <button

@@ -196,7 +196,7 @@ function AlocacaoCard({
 }) {
   return (
     <section className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border shadow-sm">
-      <h2 className="text-on-surface text-xl font-bold">{titulo}</h2>
+      <h2 className="text-on-surface text-base font-bold">{titulo}</h2>
       {grupos.length > 0 ? (
         <>
           <div className="flex justify-center">
@@ -760,7 +760,7 @@ export function RelatorioInvestimentos({
 
         <section className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="text-on-surface text-xl font-bold">
+            <h2 className="text-on-surface text-base font-bold">
               Performance: Rendimento vs. CDI
             </h2>
             <div className="gap-md text-on-surface-variant flex items-center text-xs">
@@ -812,7 +812,7 @@ export function RelatorioInvestimentos({
       </div>
 
       <section className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border shadow-sm">
-        <h2 className="text-on-surface text-xl font-bold">
+        <h2 className="text-on-surface text-base font-bold">
           Detalhamento por Classe
         </h2>
         <table className="min-w-full border-collapse text-sm">
