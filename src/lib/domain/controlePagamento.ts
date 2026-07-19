@@ -47,7 +47,7 @@ function mesesEntre(inicio: Date, fim: Date): string[] {
 export async function buscarControlePagamento(
   prisma: PrismaClient,
   householdId: string,
-  opts: { dataInicio: Date; dataFim: Date },
+  opts: { dataInicio?: Date; dataFim?: Date } = {},
 ): Promise<ControlePagamento> {
   const [pessoas, individuais, lancamentos, repasses] = await Promise.all([
     prisma.pessoa.findMany({
@@ -63,7 +63,14 @@ export async function buscarControlePagamento(
     prisma.lancamento.findMany({
       where: {
         householdId,
-        data: { gte: opts.dataInicio, lte: opts.dataFim },
+        ...(opts.dataInicio || opts.dataFim
+          ? {
+            data: {
+              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+            },
+          }
+          : {}),
       },
       select: {
         data: true,
@@ -76,7 +83,14 @@ export async function buscarControlePagamento(
     prisma.acertoContas.findMany({
       where: {
         householdId,
-        dataInicio: { gte: opts.dataInicio, lte: opts.dataFim },
+        ...(opts.dataInicio || opts.dataFim
+          ? {
+            dataInicio: {
+              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+            },
+          }
+          : {}),
       },
       select: { dataInicio: true, valorCentavos: true, deId: true, paraId: true },
     }),
@@ -97,7 +111,25 @@ export async function buscarControlePagamento(
     somar(r.paraId, r.deId, mesDe(r.dataInicio), r.valorCentavos);
   }
 
-  const meses = mesesEntre(opts.dataInicio, opts.dataFim);
+  // Sem dataInicio/dataFim explícitos: acumulado de tudo — o intervalo de
+  // meses exibido cobre do lançamento/repasse mais antigo ao mais recente
+  // (mês atual, se não houver nenhum registro ainda).
+  const todasAsDatas = [
+    ...lancamentos.map((l) => l.data),
+    ...repasses.map((r) => r.dataInicio),
+  ];
+  const dataMin =
+    opts.dataInicio ??
+    (todasAsDatas.length > 0
+      ? new Date(Math.min(...todasAsDatas.map((d) => d.getTime())))
+      : new Date());
+  const dataMax =
+    opts.dataFim ??
+    (todasAsDatas.length > 0
+      ? new Date(Math.max(...todasAsDatas.map((d) => d.getTime())))
+      : new Date());
+
+  const meses = mesesEntre(dataMin, dataMax);
   const linhas: LinhaControlePagamento[] = [];
   for (const divisao of pessoas) {
     for (const pagador of individuais) {

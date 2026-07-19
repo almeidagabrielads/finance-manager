@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { corPessoa } from "../components/PessoaBadge";
-import { Select } from "../components/Select";
 import { RegistrarRepasseModal } from "./RegistrarRepasseModal";
 import { ControlePagamentoCard } from "./ControlePagamentoCard";
 
@@ -59,18 +58,6 @@ function hashSimples(texto: string): number {
 
 function corBarra(pessoaId: string): string {
   return BARRAS[hashSimples(pessoaId) % BARRAS.length];
-}
-
-function formatarDataISO(data: Date): string {
-  return data.toISOString().slice(0, 10);
-}
-
-function primeiroDiaDoAno(ano: number): string {
-  return formatarDataISO(new Date(Date.UTC(ano, 0, 1)));
-}
-
-function ultimoDiaDoAno(ano: number): string {
-  return formatarDataISO(new Date(Date.UTC(ano, 11, 31)));
 }
 
 function centavosParaReais(valor: number): string {
@@ -142,12 +129,7 @@ function IconeChecklist() {
   );
 }
 
-const ANO_ATUAL = new Date().getUTCFullYear();
-
 export function DivisaoClient() {
-  const [ano, setAno] = useState(ANO_ATUAL);
-  const dataInicio = primeiroDiaDoAno(ano);
-  const dataFim = ultimoDiaDoAno(ano);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [historico, setHistorico] = useState<Acerto[]>([]);
@@ -181,7 +163,7 @@ export function DivisaoClient() {
 
   useEffect(() => {
     let cancelado = false;
-    fetch(`/api/relatorios/divisao?dataInicio=${dataInicio}&dataFim=${dataFim}`)
+    fetch("/api/relatorios/divisao")
       .then(async (response) => {
         if (cancelado) return;
         if (response.status === 401) {
@@ -205,7 +187,7 @@ export function DivisaoClient() {
     return () => {
       cancelado = true;
     };
-  }, [dataInicio, dataFim, reloadToken]);
+  }, [reloadToken]);
 
   useEffect(() => {
     let cancelado = false;
@@ -259,25 +241,7 @@ export function DivisaoClient() {
         </p>
       )}
 
-      <div className="gap-md flex flex-wrap items-end justify-between">
-        <div className="gap-sm flex items-center">
-          <label
-            className="text-on-surface-variant text-xs font-semibold"
-            htmlFor="ano-divisao"
-          >
-            Ano
-          </label>
-          <Select
-            id="ano-divisao"
-            value={String(ano)}
-            onChange={(v) => setAno(Number(v))}
-            options={[ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2].map((a) => ({
-              value: String(a),
-              label: String(a),
-            }))}
-          />
-        </div>
-
+      <div className="gap-md flex flex-wrap items-end justify-end">
         {resumo && resumo.participantes.length > 0 && (
           <div className="flex flex-col items-end gap-1">
             <button
@@ -327,7 +291,7 @@ export function DivisaoClient() {
           {resumo.gruposSemComposicao.length === 1
             ? "esse grupo"
             : "esses grupos"}{" "}
-          neste período ficaram de fora do acerto. Configure a composição em{" "}
+          ficaram de fora do acerto. Configure a composição em{" "}
           <Link href="/pessoas" className="font-medium underline">
             Pessoas
           </Link>
@@ -385,7 +349,7 @@ export function DivisaoClient() {
               </div>
               {resumo.insight && (
                 <p className="bg-surface-container-low p-sm text-on-surface-variant rounded-lg text-xs">
-                  Este período {nome(resumo.insight.pessoaId)} cobriu a maior
+                  No acumulado, {nome(resumo.insight.pessoaId)} cobriu a maior
                   parte das despesas em {resumo.insight.categoriaNome}.
                 </p>
               )}
@@ -446,7 +410,7 @@ export function DivisaoClient() {
 
             <div className="bg-primary p-lg text-on-primary flex flex-col justify-center gap-2 rounded-xl">
               <h3 className="text-on-primary/70 text-center text-xs font-semibold tracking-wide uppercase">
-                Resultado do período
+                Saldo acumulado
               </h3>
               {resumo.transferenciasSugeridas.length === 0 ? (
                 <p className="text-center text-lg font-semibold">
@@ -461,18 +425,14 @@ export function DivisaoClient() {
                     </p>
                   ))}
                   <p className="text-on-primary/70 text-sm">
-                    Baseado nos gastos compartilhados do período
+                    Baseado em todo o histórico de gastos compartilhados
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          <ControlePagamentoCard
-            dataInicio={dataInicio}
-            dataFim={dataFim}
-            reloadToken={reloadToken}
-          />
+          <ControlePagamentoCard reloadToken={reloadToken} />
         </>
       )}
     </div>

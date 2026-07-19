@@ -43,19 +43,15 @@ function centavosParaReais(valor: number): string {
 }
 
 type Props = {
-  dataInicio: string;
-  dataFim: string;
   reloadToken: number;
 };
 
-export function ControlePagamentoCard({ dataInicio, dataFim, reloadToken }: Props) {
+export function ControlePagamentoCard({ reloadToken }: Props) {
   const [controle, setControle] = useState<ControlePagamento | null>(null);
 
   useEffect(() => {
     let cancelado = false;
-    fetch(
-      `/api/relatorios/controle-pagamento?dataInicio=${dataInicio}&dataFim=${dataFim}`,
-    )
+    fetch("/api/relatorios/controle-pagamento")
       .then(async (response) => {
         if (cancelado || !response.ok) return;
         setControle(await response.json());
@@ -64,7 +60,7 @@ export function ControlePagamentoCard({ dataInicio, dataFim, reloadToken }: Prop
     return () => {
       cancelado = true;
     };
-  }, [dataInicio, dataFim, reloadToken]);
+  }, [reloadToken]);
 
   if (!controle) return null;
 

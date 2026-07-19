@@ -16,14 +16,8 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
-  const dataInicio = parseData(params.get("dataInicio"));
-  const dataFim = parseData(params.get("dataFim"));
-  if (!dataInicio || !dataFim) {
-    return NextResponse.json(
-      { error: "dataInicio e dataFim são obrigatórios." },
-      { status: 400 },
-    );
-  }
+  const dataInicio = parseData(params.get("dataInicio")) ?? undefined;
+  const dataFim = parseData(params.get("dataFim")) ?? undefined;
 
   const controle = await buscarControlePagamento(prisma, session.householdId, {
     dataInicio,

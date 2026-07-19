@@ -48,12 +48,15 @@ describe("GET /api/relatorios/controle-pagamento", () => {
     expect(response.status).toBe(401);
   });
 
-  it("retorna 400 quando dataInicio/dataFim estão ausentes", async () => {
+  it("retorna o acumulado de todos os tempos quando dataInicio/dataFim estão ausentes", async () => {
     const { cookie } = await criarHouseholdComSessao();
     const response = await GET(
       getRequest("http://localhost/api/relatorios/controle-pagamento", cookie),
     );
-    expect(response.status).toBe(400);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.meses.length).toBeGreaterThan(0);
   });
 
   it("retorna a matriz escopada ao household da sessão", async () => {

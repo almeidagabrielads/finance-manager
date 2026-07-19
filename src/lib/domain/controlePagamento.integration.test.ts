@@ -151,4 +151,45 @@ describe("buscarControlePagamento", () => {
     );
     expect(isaPorGabi?.porMes["2026-01"]).toBe(0);
   });
+
+  it("acumula todos os tempos quando dataInicio/dataFim não são informados, cobrindo do registro mais antigo ao mais recente", async () => {
+    const { household, isa, gabi, categoria, banco } = await montarBase();
+
+    await prismaTest.lancamento.create({
+      data: {
+        data: new Date(Date.UTC(2024, 5, 1)),
+        valorCentavos: 3_000,
+        householdId: household.id,
+        categoriaId: categoria.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: gabi.id,
+      },
+    });
+    await prismaTest.acertoContas.create({
+      data: {
+        householdId: household.id,
+        dataInicio: new Date(Date.UTC(2026, 2, 10)),
+        dataFim: new Date(Date.UTC(2026, 2, 10)),
+        deId: isa.id,
+        paraId: gabi.id,
+        valorCentavos: 7_000,
+      },
+    });
+
+    const resultado = await buscarControlePagamento(prismaTest, household.id);
+
+    expect(resultado.meses[0]).toBe("2024-06");
+    expect(resultado.meses.at(-1)).toBe("2026-03");
+
+    const isaPorGabi = resultado.linhas.find(
+      (l) => l.divisaoId === isa.id && l.pagadorId === gabi.id,
+    );
+    expect(isaPorGabi?.porMes["2024-06"]).toBe(3_000);
+
+    const gabiPorIsa = resultado.linhas.find(
+      (l) => l.divisaoId === gabi.id && l.pagadorId === isa.id,
+    );
+    expect(gabiPorIsa?.porMes["2026-03"]).toBe(7_000);
+  });
 });
