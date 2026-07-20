@@ -35,12 +35,13 @@ export function OrcamentoMesCard({
       {categorias.length > 0 ? (
         <div className="gap-md flex flex-col">
           {categorias.map((c) => {
-            const estourou =
-              c.realCentavos > c.planejadoCentavos && c.planejadoCentavos > 0;
+            const estourou = c.realCentavos > c.planejadoCentavos;
             const percentual =
               c.planejadoCentavos > 0
                 ? Math.min((c.realCentavos / c.planejadoCentavos) * 100, 100)
-                : 100;
+                : c.realCentavos > 0
+                  ? 100
+                  : 0;
             return (
               <div key={c.categoriaId} className="flex flex-col gap-1">
                 <div className="flex items-baseline justify-between text-sm">
@@ -58,7 +59,13 @@ export function OrcamentoMesCard({
                 </div>
                 <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
                   <div
-                    className={`h-full rounded-full ${estourou ? "bg-danger" : "bg-primary"}`}
+                    className={`h-full rounded-full ${
+                      estourou
+                        ? "bg-danger"
+                        : percentual >= 50
+                          ? "bg-secondary"
+                          : "bg-primary"
+                    }`}
                     style={{ width: `${percentual}%` }}
                   />
                 </div>
