@@ -2,435 +2,39 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useConfirmDialog } from "../components/ConfirmDialog";
-import { corPessoa, corPessoaSvg } from "../components/PessoaBadge";
-import { ColumnHeader } from "../components/ColumnHeader";
-import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
-
-const SUBTIPOS_RECEITA = [
-  { value: "SALARIO", label: "Salário", Icone: IconeSalario },
-  { value: "VOUCHER", label: "Voucher", Icone: IconeVoucher },
-  { value: "INVESTIMENTO", label: "Investimento", Icone: IconeInvestimento },
-  { value: "OUTROS", label: "Outros", Icone: IconeOutros },
-] as const;
-
-type SubtipoReceita = (typeof SUBTIPOS_RECEITA)[number]["value"];
-
-function infoSubtipo(subtipo: string) {
-  return (
-    SUBTIPOS_RECEITA.find((s) => s.value === subtipo) ?? SUBTIPOS_RECEITA[3]
-  );
-}
-
-type Pessoa = { id: string; nome: string };
-
-type Receita = {
-  id: string;
-  pessoaId: string;
-  subtipo: SubtipoReceita;
-  descricao: string | null;
-  valorCentavos: number;
-  mes: string;
-};
+import { GraficoTotalPorPessoaEMes } from "./components/GraficoTotalPorPessoaEMes";
+import { infoSubtipo } from "./components/Icones";
+import { NovoReceitaModal } from "./components/NovoReceitaModal";
+import { ReceitasFiltros } from "./components/ReceitasFiltros";
+import { ReceitasPeriodoBar } from "./components/ReceitasPeriodoBar";
+import { ReceitasTable } from "./components/ReceitasTable";
+import { ReceitasTotaisCards } from "./components/ReceitasTotaisCards";
+import {
+  MESES_INICIAIS,
+  cardClass,
+  type ModoVisualizacao,
+  type Pessoa,
+  type Receita,
+  type ReceitaInput,
+  type SubtipoReceita,
+} from "./components/types";
+import { reaisParaCentavos } from "@/lib/domain/formatacao";
+import {
+  dadosGraficoAnual,
+  filtrarReceitas,
+  formatarMesAno,
+  mesParaInputMonth,
+  mesesDistintosOrdenados,
+  ordenarReceitasPorMesDesc,
+  totalPorAno,
+  totalPorMes,
+} from "@/lib/domain/receitas";
 
 async function parseErro(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
   if (typeof body?.error === "string") return body.error;
   return "Não foi possível completar a operação.";
-}
-
-function centavosParaReais(valor: number): string {
-  return (valor / 100).toFixed(2);
-}
-
-function reaisParaCentavos(valor: string): number {
-  const n = Number(valor.replace(",", "."));
-  return Math.round(n * 100);
-}
-
-function formatarMoeda(valorCentavos: number): string {
-  return (valorCentavos / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatarMoedaCompacta(valorCentavos: number): string {
-  return (valorCentavos / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
-}
-
-// "2026-07-01T00:00:00.000Z" -> "2026-07"
-function mesParaInputMonth(mes: string): string {
-  return mes.slice(0, 7);
-}
-
-// "2026-07" -> "Julho 2026"
-function formatarMesAno(mesInput: string): string {
-  const [ano, mesNum] = mesInput.split("-").map(Number);
-  const data = new Date(Date.UTC(ano, mesNum - 1, 1));
-  const nome = data.toLocaleDateString("pt-BR", {
-    month: "long",
-    timeZone: "UTC",
-  });
-  return `${nome.charAt(0).toUpperCase()}${nome.slice(1)} ${ano}`;
-}
-
-const MESES_INICIAIS = 2;
-
-const NOMES_MES = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
-
-const NOMES_MES_ABREV = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-];
-
-type ModoVisualizacao = "mensal" | "anual";
-
-function GraficoTotalPorPessoaEMes({
-  dados,
-  pessoas,
-  nomePessoa,
-}: {
-  dados: { mes: number; porPessoa: Record<string, number> }[];
-  pessoas: Pessoa[];
-  nomePessoa: (id: string) => string;
-}) {
-  const largura = 760;
-  const alturaBarras = 200;
-  const margemLabel = 24;
-  const margemTopo = 34;
-  const altura = margemTopo + alturaBarras + margemLabel;
-  const padding = 8;
-  const maxValor = Math.max(
-    1,
-    ...dados.flatMap((d) => pessoas.map((p) => d.porPessoa[p.id] ?? 0)),
-  );
-
-  const larguraCluster = (largura - 2 * padding) / dados.length;
-  const larguraBarra =
-    pessoas.length > 0
-      ? (larguraCluster * 0.7) / pessoas.length
-      : larguraCluster * 0.7;
-  const gapCluster = larguraCluster * 0.3;
-  const baseline = margemTopo + alturaBarras - padding;
-
-  return (
-    <div className="gap-sm flex flex-col">
-      <svg
-        viewBox={`0 0 ${largura} ${altura}`}
-        className="w-full"
-        preserveAspectRatio="none"
-      >
-        <line
-          x1={padding}
-          y1={baseline}
-          x2={largura - padding}
-          y2={baseline}
-          stroke="var(--color-outline-variant)"
-          strokeWidth={1}
-        />
-        {dados.map((d, iMes) => {
-          const xCluster = padding + iMes * larguraCluster + gapCluster / 2;
-          return (
-            <g key={d.mes}>
-              {pessoas.map((p, iPessoa) => {
-                const valor = d.porPessoa[p.id] ?? 0;
-                const alturaBarra =
-                  (valor / maxValor) * (alturaBarras - 2 * padding - 16);
-                const x = xCluster + iPessoa * larguraBarra;
-                const y = baseline - alturaBarra;
-                return (
-                  <g key={p.id}>
-                    <rect
-                      x={x}
-                      y={y}
-                      width={Math.max(larguraBarra - 2, 1)}
-                      height={alturaBarra}
-                      fill={corPessoaSvg(p.id)}
-                      rx={2}
-                    >
-                      <title>
-                        {`${nomePessoa(p.id)} — ${NOMES_MES_ABREV[d.mes - 1]}: ${formatarMoeda(valor)}`}
-                      </title>
-                    </rect>
-                    {valor > 0 && (
-                      <text
-                        x={x + Math.max(larguraBarra - 2, 1) / 2}
-                        y={y - 3}
-                        textAnchor="start"
-                        fontSize={8}
-                        fill="var(--color-on-surface)"
-                        fontWeight={600}
-                        transform={`rotate(-55, ${x + Math.max(larguraBarra - 2, 1) / 2}, ${y - 3})`}
-                      >
-                        {formatarMoedaCompacta(valor)}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-              <text
-                x={xCluster + (larguraCluster - gapCluster) / 2}
-                y={baseline + 16}
-                textAnchor="middle"
-                fontSize={11}
-                fill="var(--color-on-surface-variant)"
-              >
-                {NOMES_MES_ABREV[d.mes - 1]}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="gap-md flex flex-wrap">
-        {pessoas.map((p) => (
-          <div key={p.id} className="flex items-center gap-1.5 text-xs">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: corPessoaSvg(p.id) }}
-            />
-            <span className="text-on-surface-variant">{p.nome}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function IconeSalario({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <path d="M2 10h20" />
-    </svg>
-  );
-}
-
-function IconeVoucher({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 2v20" />
-      <path d="M11 2v20" />
-      <path d="M7 5c0 1.5-2 1.5-2 3s2 1.5 2 3-2 1.5-2 3 2 1.5 2 3" />
-    </svg>
-  );
-}
-
-function IconeInvestimento({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 17l6-6 4 4 7-7" />
-      <path d="M14 8h7v7" />
-    </svg>
-  );
-}
-
-function IconeOutros({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2.5 12.5V2.5h10l8.09 8.08a2 2 0 0 1 0 2.83Z" />
-      <circle cx="7" cy="7" r="1" />
-    </svg>
-  );
-}
-
-function IconePlusCirculo() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v8" />
-      <path d="M8 12h8" />
-    </svg>
-  );
-}
-
-function IconeSalvar() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-      <path d="M17 21v-8H7v8" />
-      <path d="M7 3v5h8" />
-    </svg>
-  );
-}
-
-function IconeBusca() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
-function IconeFiltro() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3Z" />
-    </svg>
-  );
-}
-
-function IconeLapis() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-}
-
-function IconeCheck() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function IconeX() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  );
-}
-
-function IconeLixeira() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
-  );
 }
 
 export function ReceitasClient() {
@@ -538,74 +142,43 @@ export function ReceitasClient() {
 
   const mesSelecionadoStr = `${ano}-${String(mes).padStart(2, "0")}`;
 
-  const totalDoMes = useMemo(() => {
-    if (!receitas) return 0;
-    return receitas
-      .filter((r) => mesParaInputMonth(r.mes) === mesSelecionadoStr)
-      .reduce((soma, r) => soma + r.valorCentavos, 0);
-  }, [receitas, mesSelecionadoStr]);
+  const totalDoMes = useMemo(
+    () => (receitas ? totalPorMes(receitas, mesSelecionadoStr) : 0),
+    [receitas, mesSelecionadoStr],
+  );
 
-  const totalDoAno = useMemo(() => {
-    if (!receitas) return 0;
-    return receitas
-      .filter((r) => r.mes.slice(0, 4) === String(ano))
-      .reduce((soma, r) => soma + r.valorCentavos, 0);
-  }, [receitas, ano]);
+  const totalDoAno = useMemo(
+    () => (receitas ? totalPorAno(receitas, ano) : 0),
+    [receitas, ano],
+  );
 
-  const dadosGraficoAnual = useMemo(() => {
-    if (!receitas) return [];
-    const porMes: Record<number, Record<string, number>> = {};
-    for (let m = 1; m <= 12; m++) porMes[m] = {};
-    for (const r of receitas) {
-      if (r.mes.slice(0, 4) !== String(ano)) continue;
-      const mesNum = Number(r.mes.slice(5, 7));
-      porMes[mesNum][r.pessoaId] =
-        (porMes[mesNum][r.pessoaId] ?? 0) + r.valorCentavos;
-    }
-    return Array.from({ length: 12 }, (_, i) => ({
-      mes: i + 1,
-      porPessoa: porMes[i + 1],
-    }));
-  }, [receitas, ano]);
+  const dadosGrafico = useMemo(
+    () => (receitas ? dadosGraficoAnual(receitas, ano) : []),
+    [receitas, ano],
+  );
 
   const receitasFiltradas = useMemo(() => {
     if (!receitas) return [];
-    const buscaLower = busca.trim().toLowerCase();
-    return receitas.filter((r) => {
-      if (modo === "mensal") {
-        if (mesParaInputMonth(r.mes) !== mesSelecionadoStr) return false;
-      } else if (r.mes.slice(0, 4) !== String(ano)) {
-        return false;
-      }
-      if (pessoaFiltro && r.pessoaId !== pessoaFiltro) return false;
-      if (!buscaLower) return true;
-      const campos = [
+    return filtrarReceitas(
+      receitas,
+      { modo, ano, mesSelecionadoStr, pessoaFiltro, busca },
+      (r) => [
         r.descricao ?? "",
         infoSubtipo(r.subtipo).label,
         nomePessoa(r.pessoaId),
-      ];
-      return campos.some((campo) => campo.toLowerCase().includes(buscaLower));
-    });
+      ],
+    );
   }, [receitas, modo, ano, mesSelecionadoStr, pessoaFiltro, busca, nomePessoa]);
 
-  const receitasOrdenadas = useMemo(() => {
-    const copia = [...receitasFiltradas];
-    copia.sort((a, b) => -a.mes.localeCompare(b.mes));
-    return copia;
-  }, [receitasFiltradas]);
+  const receitasOrdenadas = useMemo(
+    () => ordenarReceitasPorMesDesc(receitasFiltradas),
+    [receitasFiltradas],
+  );
 
-  const mesesDistintos = useMemo(() => {
-    const vistos = new Set<string>();
-    const ordem: string[] = [];
-    for (const r of receitasOrdenadas) {
-      const chave = mesParaInputMonth(r.mes);
-      if (!vistos.has(chave)) {
-        vistos.add(chave);
-        ordem.push(chave);
-      }
-    }
-    return ordem;
-  }, [receitasOrdenadas]);
+  const mesesDistintos = useMemo(
+    () => mesesDistintosOrdenados(receitasOrdenadas),
+    [receitasOrdenadas],
+  );
 
   const mesesExibidos = new Set(mesesDistintos.slice(0, mesesVisiveis));
   const receitasExibidas = receitasOrdenadas.filter((r) =>
@@ -684,16 +257,7 @@ export function ReceitasClient() {
     carregar();
   }
 
-  async function atualizarReceita(
-    id: string,
-    input: Partial<{
-      pessoaId: string;
-      subtipo: SubtipoReceita;
-      descricao: string | null;
-      valorCentavos: number;
-      mes: string;
-    }>,
-  ) {
+  async function atualizarReceita(id: string, input: ReceitaInput) {
     setErro(null);
     const response = await fetch(`/api/receitas/${id}`, {
       method: "PATCH",
@@ -735,19 +299,6 @@ export function ReceitasClient() {
     );
   }
 
-  const cardClass =
-    "rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm";
-  const inputClass =
-    "rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-1.5 text-sm focus:border-primary focus:outline-none";
-  const botaoSetaClass =
-    "flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary";
-  const botaoToggleClass = (ativo: boolean) =>
-    `rounded-full px-md py-1.5 text-sm font-semibold transition-colors ${
-      ativo
-        ? "bg-primary text-on-primary"
-        : "text-on-surface-variant hover:text-on-surface"
-    }`;
-
   return (
     <div className="gap-lg flex flex-col">
       {dialogConfirmacao}
@@ -772,24 +323,12 @@ export function ReceitasClient() {
             colaborativa para o nosso lar.
           </p>
         </div>
-        <div className="gap-sm flex">
-          <div className="bg-primary px-lg text-on-primary flex flex-col gap-1 rounded-xl py-3">
-            <span className="text-xs font-semibold tracking-wide uppercase opacity-80">
-              Total do Mês ({NOMES_MES[mes - 1]})
-            </span>
-            <span className="data-tabular text-2xl font-bold">
-              {formatarMoeda(totalDoMes)}
-            </span>
-          </div>
-          <div className="bg-surface-container-high px-lg flex flex-col gap-1 rounded-xl py-3">
-            <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-              Total do Ano ({ano})
-            </span>
-            <span className="data-tabular text-on-tertiary-container text-2xl font-bold">
-              {formatarMoeda(totalDoAno)}
-            </span>
-          </div>
-        </div>
+        <ReceitasTotaisCards
+          mes={mes}
+          ano={ano}
+          totalDoMes={totalDoMes}
+          totalDoAno={totalDoAno}
+        />
       </div>
 
       <div className={`${cardClass} p-lg`}>
@@ -798,7 +337,7 @@ export function ReceitasClient() {
         </h2>
         {pessoas.length > 0 && receitas ? (
           <GraficoTotalPorPessoaEMes
-            dados={dadosGraficoAnual}
+            dados={dadosGrafico}
             pessoas={pessoas}
             nomePessoa={nomePessoa}
           />
@@ -809,329 +348,59 @@ export function ReceitasClient() {
         )}
       </div>
 
-      <div className="gap-md flex flex-wrap items-center justify-between">
-        <div className="gap-md flex items-center">
-          <h2 className="text-on-surface text-lg font-bold">
-            {modo === "mensal"
-              ? `${NOMES_MES[mes - 1]} ${ano}`
-              : `Ano de ${ano}`}
-          </h2>
-          {modo === "mensal" ? (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={irParaMesAnterior}
-                aria-label="Mês anterior"
-                className={botaoSetaClass}
-              >
-                ‹
-              </button>
-              <button
-                onClick={irParaProximoMes}
-                aria-label="Próximo mês"
-                className={botaoSetaClass}
-              >
-                ›
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setAno((a) => a - 1)}
-                aria-label="Ano anterior"
-                className={botaoSetaClass}
-              >
-                ‹
-              </button>
-              <button
-                onClick={() => setAno((a) => a + 1)}
-                aria-label="Próximo ano"
-                className={botaoSetaClass}
-              >
-                ›
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="gap-md flex items-center">
-          <div className="border-outline-variant bg-surface-container-lowest flex items-center gap-1 rounded-full border p-1">
-            <button
-              onClick={() => setModo("mensal")}
-              className={botaoToggleClass(modo === "mensal")}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setModo("anual")}
-              className={botaoToggleClass(modo === "anual")}
-            >
-              Anual
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setModalAberto(true)}
-            className="bg-primary px-lg text-on-primary flex items-center gap-2 rounded-full py-2.5 text-sm font-semibold hover:opacity-90"
-          >
-            <IconePlusCirculo /> Registrar Nova Entrada
-          </button>
-        </div>
-      </div>
+      <ReceitasPeriodoBar
+        modo={modo}
+        mes={mes}
+        ano={ano}
+        onModoChange={setModo}
+        onMesAnterior={irParaMesAnterior}
+        onProximoMes={irParaProximoMes}
+        onAnoAnterior={() => setAno((a) => a - 1)}
+        onProximoAno={() => setAno((a) => a + 1)}
+        onNovaEntrada={() => setModalAberto(true)}
+      />
 
       {modalAberto && (
-        <div className="p-lg bg-on-surface/40 fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex w-full max-w-[36rem] flex-col rounded-2xl border shadow-lg">
-            <div className="border-outline-variant pb-md text-on-surface flex items-center justify-between gap-2 border-b">
-              <div className="flex items-center gap-2">
-                <IconePlusCirculo />
-                <h2 className="text-base font-bold">Registrar Nova Entrada</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalAberto(false)}
-                aria-label="Fechar"
-                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
-              >
-                <IconeX />
-              </button>
-            </div>
-            <form onSubmit={criarReceita} className="gap-md flex flex-col">
-              <div className="gap-md grid grid-cols-2">
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="nova-pessoa"
-                  >
-                    Responsável
-                  </label>
-                  <Select
-                    id="nova-pessoa"
-                    value={novaPessoaId}
-                    onChange={setNovaPessoaId}
-                    options={pessoas.map((p) => ({
-                      value: p.id,
-                      label: p.nome,
-                    }))}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-mes"
-                  >
-                    Referência
-                  </label>
-                  <input
-                    id="novo-mes"
-                    type="month"
-                    className={inputClass}
-                    value={novoMes}
-                    onChange={(e) => setNovoMes(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-subtipo"
-                  >
-                    Tipo / Categoria
-                  </label>
-                  <Select
-                    id="novo-subtipo"
-                    value={novoSubtipo}
-                    onChange={(v) => setNovoSubtipo(v as SubtipoReceita)}
-                    options={SUBTIPOS_RECEITA.map((s) => ({
-                      value: s.value,
-                      label: s.label,
-                    }))}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-valor"
-                  >
-                    Valor (R$)
-                  </label>
-                  <input
-                    id="novo-valor"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    className={`text-right ${inputClass}`}
-                    value={novoValor}
-                    onChange={(e) => setNovoValor(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="col-span-2 flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="nova-descricao"
-                  >
-                    Descrição (Opcional)
-                  </label>
-                  <input
-                    id="nova-descricao"
-                    placeholder="Ex: Dividendos..."
-                    className={inputClass}
-                    value={novaDescricao}
-                    onChange={(e) => setNovaDescricao(e.target.value)}
-                    required={novoSubtipo === "OUTROS"}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setModalAberto(false)}
-                  className="border-outline-variant px-md text-on-surface hover:bg-surface-container-low rounded-full border py-2 text-xs font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-primary px-md text-on-primary flex items-center gap-2 rounded-full py-2 text-xs font-semibold hover:opacity-90"
-                >
-                  <IconeSalvar /> Salvar Entrada
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <NovoReceitaModal
+          pessoas={pessoas}
+          pessoaId={novaPessoaId}
+          onPessoaIdChange={setNovaPessoaId}
+          subtipo={novoSubtipo}
+          onSubtipoChange={setNovoSubtipo}
+          descricao={novaDescricao}
+          onDescricaoChange={setNovaDescricao}
+          valor={novoValor}
+          onValorChange={setNovoValor}
+          mes={novoMes}
+          onMesChange={setNovoMes}
+          onFechar={() => setModalAberto(false)}
+          onSubmit={criarReceita}
+        />
       )}
 
       <div className={cardClass}>
-        <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-on-surface text-base font-bold">
-              Extrato Detalhado
-            </h2>
-            <span className="bg-surface-container px-sm text-on-surface-variant rounded-full py-0.5 text-xs font-semibold">
-              {receitasFiltradas.length}{" "}
-              {receitasFiltradas.length === 1
-                ? "item encontrado"
-                : "itens encontrados"}
-            </span>
-          </div>
-          <div className="gap-sm flex flex-wrap items-center">
-            <div className="border-outline-variant flex rounded-full border p-0.5 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setPessoaFiltro(null)}
-                className={`px-sm rounded-full py-1 transition-colors ${
-                  pessoaFiltro === null
-                    ? "bg-surface-container-high text-on-surface"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                Todos
-              </button>
-              {pessoas.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPessoaFiltro(p.id)}
-                  className={`px-sm rounded-full py-1 transition-colors ${
-                    pessoaFiltro === p.id
-                      ? "bg-surface-container-high text-on-surface"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  {p.nome}
-                </button>
-              ))}
-            </div>
-            <div className="relative">
-              <span className="text-on-surface-variant pointer-events-none absolute top-1/2 left-2 -translate-y-1/2">
-                <IconeBusca />
-              </span>
-              <input
-                placeholder="Pesquisar descrição..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                className={`w-56 pl-8 ${inputClass}`}
-              />
-            </div>
-          </div>
-        </div>
+        <ReceitasFiltros
+          pessoas={pessoas}
+          pessoaFiltro={pessoaFiltro}
+          onPessoaFiltroChange={setPessoaFiltro}
+          busca={busca}
+          onBuscaChange={setBusca}
+          quantidadeEncontrada={receitasFiltradas.length}
+        />
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
-                <ColumnHeader
-                  label="Responsável"
-                  chave="responsavel"
-                  tipo="opcoes"
-                  opcoes={opcoesColunasReceitas.responsavel}
-                  ordenacao={ordenacao}
-                  onOrdenar={alternarOrdenacao}
-                  filtro={filtros.responsavel}
-                  onFiltrar={definirFiltro}
-                  onLimparFiltro={limparFiltro}
-                />
-                <ColumnHeader
-                  label="Categoria"
-                  chave="categoria"
-                  tipo="opcoes"
-                  opcoes={opcoesColunasReceitas.categoria}
-                  ordenacao={ordenacao}
-                  onOrdenar={alternarOrdenacao}
-                  filtro={filtros.categoria}
-                  onFiltrar={definirFiltro}
-                  onLimparFiltro={limparFiltro}
-                />
-                <ColumnHeader
-                  label="Descrição"
-                  chave="descricao"
-                  tipo="texto"
-                  ordenacao={ordenacao}
-                  onOrdenar={alternarOrdenacao}
-                  filtro={filtros.descricao}
-                  onFiltrar={definirFiltro}
-                  onLimparFiltro={limparFiltro}
-                />
-                <ColumnHeader
-                  label="Mês"
-                  chave="mes"
-                  tipo="opcoes"
-                  opcoes={opcoesColunasReceitas.mes}
-                  ordenacao={ordenacao}
-                  onOrdenar={alternarOrdenacao}
-                  filtro={filtros.mes}
-                  onFiltrar={definirFiltro}
-                  onLimparFiltro={limparFiltro}
-                />
-                <ColumnHeader
-                  label="Valor"
-                  chave="valor"
-                  tipo="numero"
-                  align="right"
-                  ordenacao={ordenacao}
-                  onOrdenar={alternarOrdenacao}
-                  filtro={filtros.valor}
-                  onFiltrar={definirFiltro}
-                  onLimparFiltro={limparFiltro}
-                />
-                <th className="p-md text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {receitasParaExibir.map((receita) => (
-                <LinhaReceita
-                  key={receita.id}
-                  receita={receita}
-                  pessoas={pessoas}
-                  nomePessoa={nomePessoa}
-                  onAtualizar={atualizarReceita}
-                  onRemover={removerReceita}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ReceitasTable
+          receitas={receitasParaExibir}
+          pessoas={pessoas}
+          nomePessoa={nomePessoa}
+          onAtualizar={atualizarReceita}
+          onRemover={removerReceita}
+          opcoesColunas={opcoesColunasReceitas}
+          ordenacao={ordenacao}
+          alternarOrdenacao={alternarOrdenacao}
+          filtros={filtros}
+          definirFiltro={definirFiltro}
+          limparFiltro={limparFiltro}
+        />
 
         {receitasParaExibir.length === 0 && (
           <p className="p-lg text-on-surface-variant text-sm">
@@ -1152,207 +421,5 @@ export function ReceitasClient() {
         )}
       </div>
     </div>
-  );
-}
-
-function LinhaReceita({
-  receita,
-  pessoas,
-  nomePessoa,
-  onAtualizar,
-  onRemover,
-}: {
-  receita: Receita;
-  pessoas: Pessoa[];
-  nomePessoa: (id: string) => string;
-  onAtualizar: (
-    id: string,
-    input: Partial<{
-      pessoaId: string;
-      subtipo: SubtipoReceita;
-      descricao: string | null;
-      valorCentavos: number;
-      mes: string;
-    }>,
-  ) => Promise<boolean | undefined>;
-  onRemover: (receita: Receita) => Promise<void>;
-}) {
-  const [editando, setEditando] = useState(false);
-  const [pessoaId, setPessoaId] = useState(receita.pessoaId);
-  const [subtipo, setSubtipo] = useState<SubtipoReceita>(receita.subtipo);
-  const [descricao, setDescricao] = useState(receita.descricao ?? "");
-  const [valor, setValor] = useState(centavosParaReais(receita.valorCentavos));
-  const [mes, setMes] = useState(mesParaInputMonth(receita.mes));
-  const [erroDescricao, setErroDescricao] = useState(false);
-
-  async function salvar() {
-    if (subtipo === "OUTROS" && descricao.trim() === "") {
-      setErroDescricao(true);
-      return;
-    }
-    setErroDescricao(false);
-    const sucesso = await onAtualizar(receita.id, {
-      pessoaId,
-      subtipo,
-      descricao: descricao.trim() === "" ? null : descricao,
-      valorCentavos: reaisParaCentavos(valor),
-      mes: `${mes}-01`,
-    });
-    if (sucesso) setEditando(false);
-  }
-
-  function cancelar() {
-    setPessoaId(receita.pessoaId);
-    setSubtipo(receita.subtipo);
-    setDescricao(receita.descricao ?? "");
-    setValor(centavosParaReais(receita.valorCentavos));
-    setMes(mesParaInputMonth(receita.mes));
-    setErroDescricao(false);
-    setEditando(false);
-  }
-
-  const inputClass =
-    "rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-1";
-
-  if (editando) {
-    return (
-      <tr className="border-outline-variant/60 bg-surface-container-low border-b">
-        <td colSpan={6} className="p-sm">
-          <div className="gap-sm flex flex-wrap items-end">
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Responsável
-              </label>
-              <Select
-                value={pessoaId}
-                onChange={setPessoaId}
-                options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Tipo / Categoria
-              </label>
-              <Select
-                value={subtipo}
-                onChange={(v) => setSubtipo(v as SubtipoReceita)}
-                options={SUBTIPOS_RECEITA.map((s) => ({
-                  value: s.value,
-                  label: s.label,
-                }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Descrição
-              </label>
-              <input
-                className={`${inputClass} ${erroDescricao ? "border-danger" : ""}`}
-                value={descricao}
-                onChange={(e) => {
-                  setDescricao(e.target.value);
-                  if (erroDescricao) setErroDescricao(false);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Mês
-              </label>
-              <input
-                type="month"
-                className={inputClass}
-                value={mes}
-                onChange={(e) => setMes(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-on-surface-variant text-xs font-semibold">
-                Valor
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className={`w-28 text-right ${inputClass}`}
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="text-success hover:bg-success/15 rounded-full p-1.5 transition-colors"
-                onClick={salvar}
-                title="Salvar"
-                aria-label="Salvar"
-              >
-                <IconeCheck />
-              </button>
-              <button
-                className="text-on-surface-variant hover:bg-surface-container-low rounded-full p-1.5 transition-colors"
-                onClick={cancelar}
-                title="Cancelar"
-                aria-label="Cancelar"
-              >
-                <IconeX />
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  const { label: labelCategoria, Icone: IconeCategoria } = infoSubtipo(
-    receita.subtipo,
-  );
-
-  return (
-    <tr className="border-outline-variant/60 hover:bg-surface-container-low border-b">
-      <td className="p-md">
-        <div className="text-on-surface flex items-center gap-2 font-medium">
-          <span
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${corPessoa(receita.pessoaId)}`}
-          >
-            {nomePessoa(receita.pessoaId).charAt(0).toUpperCase()}
-          </span>
-          {nomePessoa(receita.pessoaId)}
-        </div>
-      </td>
-      <td className="p-md">
-        <div className="text-on-surface-variant flex items-center gap-1.5">
-          <IconeCategoria className="text-on-surface h-4 w-4" />
-          <span className="text-on-surface">{labelCategoria}</span>
-        </div>
-      </td>
-      <td className="p-md text-on-surface-variant">
-        {receita.descricao ?? "—"}
-      </td>
-      <td className="p-md text-on-surface-variant whitespace-nowrap">
-        {formatarMesAno(mesParaInputMonth(receita.mes))}
-      </td>
-      <td className="data-tabular p-md text-right font-medium">
-        {formatarMoeda(receita.valorCentavos)}
-      </td>
-      <td className="p-md">
-        <div className="flex justify-end gap-2">
-          <button
-            className="text-primary hover:bg-primary/10 rounded-full p-1.5 transition-colors"
-            onClick={() => setEditando(true)}
-            title="Editar"
-            aria-label="Editar"
-          >
-            <IconeLapis />
-          </button>
-          <button
-            className="text-danger hover:bg-danger-container rounded-full p-1.5 transition-colors"
-            onClick={() => onRemover(receita)}
-            title="Remover"
-            aria-label="Remover"
-          >
-            <IconeLixeira />
-          </button>
-        </div>
-      </td>
-    </tr>
   );
 }

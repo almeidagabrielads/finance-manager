@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Select } from "../components/Select";
+import { Select } from "../../components/Select";
+import { formatarMoeda } from "@/lib/domain/formatacao";
 
 type PessoaResumo = { id: string; nome: string };
 type LinhaControlePagamento = {
@@ -55,13 +56,6 @@ function formatarMesAno(mesId: string): string {
   return `${MESES_ABREVIADOS[mes - 1]}/${String(ano).slice(2)}`;
 }
 
-function centavosParaReais(valor: number): string {
-  return (valor / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
 function textoDiferenca(
   valor: number,
   pessoaA: string,
@@ -69,8 +63,8 @@ function textoDiferenca(
 ): string {
   if (valor === 0) return "Quitado";
   return valor > 0
-    ? `${pessoaB} deve ${centavosParaReais(valor)}`
-    : `${pessoaA} deve ${centavosParaReais(-valor)}`;
+    ? `${pessoaB} deve ${formatarMoeda(valor)}`
+    : `${pessoaA} deve ${formatarMoeda(-valor)}`;
 }
 
 function mesAtual(): string {
@@ -249,10 +243,10 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
                     >
                       {linha.porMes[mes] === 0 ? (
                         <span className="text-on-surface-variant">
-                          {centavosParaReais(0)}
+                          {formatarMoeda(0)}
                         </span>
                       ) : (
-                        centavosParaReais(linha.porMes[mes])
+                        formatarMoeda(linha.porMes[mes])
                       )}
                     </td>
                   ))}
@@ -305,10 +299,10 @@ export function ControlePagamentoCard({ reloadToken }: Props) {
                           )
                         ) : linha.porMes[mes] === 0 ? (
                           <span className="text-on-surface-variant">
-                            {centavosParaReais(0)}
+                            {formatarMoeda(0)}
                           </span>
                         ) : (
-                          centavosParaReais(linha.porMes[mes])
+                          formatarMoeda(linha.porMes[mes])
                         )}
                       </td>
                     ))}

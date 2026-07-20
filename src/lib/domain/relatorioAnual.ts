@@ -147,6 +147,212 @@ async function buscarSecoesPlanejadoVsReal(
   }));
 }
 
+// ─── Agregações usadas pelo Dashboard Anual (puras, sem I/O) ───────────────────
+
+export type ItemConsolidadoAnual = {
+  categoriaId: string;
+  subcategoriaId: string | null;
+  meses: { planejadoCentavos: number; realCentavos: number }[];
+  planejadoAnoCentavos: number;
+  realAnoCentavos: number;
+};
+
+function chaveItem(categoriaId: string, subcategoriaId: string | null) {
+  return `${categoriaId}::${subcategoriaId ?? ""}`;
+}
+
+/**
+ * Consolida o planejado vs. real de todas as seções (pessoas) em um único
+ * total por categoria/subcategoria/mês. Quando há mais de uma seção (visão
+ * "Geral"), soma só as INDIVIDUAL: todo orçamento mora numa pessoa
+ * individual, e a fração de cada uma já fecha 100% do gasto real do
+ * household — somar as seções de grupo por cima duplicaria (o
+ * orçamento/gasto de um grupo já é a soma dos integrantes). Quando há uma
+ * única seção (visão filtrada por uma pessoa ou grupo específico), ela já é
+ * a resposta, seja indivíduo ou grupo.
+ */
+export function consolidarPlanejadoVsRealPorAno(
+  secoes: SecaoPlanejadoVsReal[],
+): ItemConsolidadoAnual[] {
+  const consolidado = new Map<string, ItemConsolidadoAnual>();
+
+  function entrada(item: PlanejadoVsRealCategoria): ItemConsolidadoAnual {
+    const k = chaveItem(item.categoriaId, item.subcategoriaId);
+    const atual = consolidado.get(k) ?? {
+      categoriaId: item.categoriaId,
+      subcategoriaId: item.subcategoriaId,
+      meses: Array.from({ length: 12 }, () => ({
+        planejadoCentavos: 0,
+        realCentavos: 0,
+      })),
+      planejadoAnoCentavos: 0,
+      realAnoCentavos: 0,
+    };
+    consolidado.set(k, atual);
+    return atual;
+  }
+
+  const secoesConsolidadas =
+    secoes.length === 1
+      ? secoes
+      : secoes.filter((s) => s.tipo === "INDIVIDUAL");
+
+  for (const secao of secoesConsolidadas) {
+    for (const item of secao.itens) {
+      const atual = entrada(item);
+      for (const mes of item.meses) {
+        atual.meses[mes.mes - 1].planejadoCentavos += mes.planejadoCentavos;
+        atual.meses[mes.mes - 1].realCentavos += mes.realCentavos;
+      }
+      atual.planejadoAnoCentavos += item.acumulado.planejadoCentavos;
+      atual.realAnoCentavos += item.acumulado.realCentavos;
+    }
+  }
+
+  return [...consolidado.values()];
+}
+
+export type DistribuicaoPessoa = {
+  pessoaId: string;
+  label: string;
+  totalCentavos: number;
+};
+
+/**
+ * Distribuição do gasto real do ano por pessoa INDIVIDUAL — somando as
+ * frações de cada uma já se chega a 100% do gasto real (cada uma inclui sua
+ * fração dos gastos de grupo), sem contar nada em dobro. Seções de grupo
+ * (CASAL/FAMILIA/OUTRO) ficam de fora pelo mesmo motivo que ficam de fora de
+ * consolidarPlanejadoVsRealPorAno.
+ */
+export function calcularDistribuicaoPorPessoa(
+  secoes: SecaoPlanejadoVsReal[],
+): DistribuicaoPessoa[] {
+  return secoes
+    .filter((s) => s.tipo === "INDIVIDUAL" && s.itens.length > 0)
+    .map((s) => ({
+      pessoaId: s.pessoaId,
+      label: s.label,
+      totalCentavos: s.itens.reduce(
+        (soma, i) => soma + i.acumulado.realCentavos,
+        0,
+      ),
+    }));
+}
+
+export function calcularTotalConsolidadoPorMes(
+  itens: ItemConsolidadoAnual[],
+): number[] {
+  return Array.from({ length: 12 }, (_, mesIdx) =>
+    itens.reduce((soma, i) => soma + i.meses[mesIdx].realCentavos, 0),
+  );
+}
+
+export type TotaisAno = {
+  totalPlanejadoAno: number;
+  totalRealAno: number;
+  economiaTotalAno: number;
+};
+
+export function calcularTotaisAno(itens: ItemConsolidadoAnual[]): TotaisAno {
+  const totalPlanejadoAno = itens.reduce(
+    (s, i) => s + i.planejadoAnoCentavos,
+    0,
+  );
+  const totalRealAno = itens.reduce((s, i) => s + i.realAnoCentavos, 0);
+  return {
+    totalPlanejadoAno,
+    totalRealAno,
+    economiaTotalAno: totalPlanejadoAno - totalRealAno,
+  };
+}
+
+/**
+ * Quantos meses do ano já se encerraram — 12 para anos passados, 0 para
+ * anos futuros, e o mês corrente (índice, não incluído) para o ano atual.
+ */
+export function calcularMesesConcluidos(ano: number, agora: Date): number {
+  const anoAtual = agora.getFullYear();
+  if (ano < anoAtual) return 12;
+  if (ano > anoAtual) return 0;
+  return agora.getMonth();
+}
+
+/** Média dos meses concluídos; null quando ainda não há nenhum mês concluído. */
+export function mediaMensesConcluidos(
+  valoresPorMes: number[],
+  mesesConcluidos: number,
+): number | null {
+  if (mesesConcluidos === 0) return null;
+  const soma = valoresPorMes
+    .slice(0, mesesConcluidos)
+    .reduce((total, valor) => total + valor, 0);
+  return soma / mesesConcluidos;
+}
+
+export function encontrarMesMaisCaro(totalPorMes: number[]): number {
+  return totalPorMes.reduce(
+    (maiorIdx, valor, idx) => (valor > totalPorMes[maiorIdx] ? idx : maiorIdx),
+    0,
+  );
+}
+
+export function encontrarMesMaisBarato(totalPorMes: number[]): number {
+  return totalPorMes.reduce(
+    (menorIdx, valor, idx) =>
+      valor > 0 &&
+      (totalPorMes[menorIdx] === 0 || valor < totalPorMes[menorIdx])
+        ? idx
+        : menorIdx,
+    0,
+  );
+}
+
+export function calcularMaioresGastos(
+  resumoPorCategoria: ResumoCategoria[],
+  limite = 5,
+): ResumoCategoria[] {
+  return [...resumoPorCategoria]
+    .sort((a, b) => b.totalCentavos - a.totalCentavos)
+    .slice(0, limite);
+}
+
+export type IndicadoresResumoAnual = {
+  taxaPoupancaPercentual: number;
+  despesaPercentualReceita: number;
+  variacaoReceitaPercentual: number | null;
+  saldoAcumuladoCentavos: number;
+};
+
+export function calcularIndicadoresResumoAnual(params: {
+  saldo: SaldoAnual;
+  receitaAnoAnterior: number | null;
+  saldoAnoAnteriorCentavos: number;
+}): IndicadoresResumoAnual {
+  const { saldo, receitaAnoAnterior, saldoAnoAnteriorCentavos } = params;
+  const taxaPoupancaPercentual =
+    saldo.receitaCentavos > 0
+      ? (saldo.saldoCentavos / saldo.receitaCentavos) * 100
+      : 0;
+  const despesaPercentualReceita =
+    saldo.receitaCentavos > 0
+      ? (saldo.despesaCentavos / saldo.receitaCentavos) * 100
+      : 0;
+  const variacaoReceitaPercentual =
+    receitaAnoAnterior && receitaAnoAnterior > 0
+      ? ((saldo.receitaCentavos - receitaAnoAnterior) / receitaAnoAnterior) *
+        100
+      : null;
+  const saldoAcumuladoCentavos = saldoAnoAnteriorCentavos + saldo.saldoCentavos;
+
+  return {
+    taxaPoupancaPercentual,
+    despesaPercentualReceita,
+    variacaoReceitaPercentual,
+    saldoAcumuladoCentavos,
+  };
+}
+
 export async function buscarRelatorioAnual(
   prisma: PrismaClient,
   householdId: string,

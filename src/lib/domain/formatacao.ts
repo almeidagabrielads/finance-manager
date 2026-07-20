@@ -17,3 +17,12 @@ export function formatarMoeda(valorCentavos: number): string {
     currency: "BRL",
   });
 }
+
+export function formatarMoedaCompacta(valorCentavos: number): string {
+  return (valorCentavos / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+}

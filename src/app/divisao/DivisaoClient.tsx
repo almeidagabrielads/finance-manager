@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Badge } from "../components/Badge";
-import { corPessoa } from "../components/PessoaBadge";
-import { RegistrarRepasseModal } from "./RegistrarRepasseModal";
-import { ControlePagamentoCard } from "./ControlePagamentoCard";
+import { totalPagoGeral } from "@/lib/domain/split";
+import { RegistrarRepasseModal } from "./components/RegistrarRepasseModal";
+import { ControlePagamentoCard } from "./components/ControlePagamentoCard";
+import { SaldoHeroCard } from "./components/SaldoHeroCard";
+import { PessoaProgressoCard } from "./components/PessoaProgressoCard";
+import { HistoricoAcertosList } from "./components/HistoricoAcertosList";
+import { GruposSemComposicaoWarning } from "./components/GruposSemComposicaoWarning";
 
 export type Pessoa = { id: string; nome: string; tipo: string };
 type SaldoPessoa = { pessoaId: string; saldoCentavos: number };
@@ -42,48 +45,6 @@ type Acerto = {
   para: { id: string; nome: string };
 };
 
-const BARRAS = [
-  "bg-secondary",
-  "bg-tertiary",
-  "bg-success",
-  "bg-danger",
-] as const;
-
-function hashSimples(texto: string): number {
-  let hash = 0;
-  for (let i = 0; i < texto.length; i++) {
-    hash = (hash * 31 + texto.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-}
-
-function corBarra(pessoaId: string): string {
-  return BARRAS[hashSimples(pessoaId) % BARRAS.length];
-}
-
-function centavosParaReais(valor: number): string {
-  return (valor / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
-function formatarDataCurta(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
-
-function nomeMes(iso: string): string {
-  const nome = new Date(iso).toLocaleDateString("pt-BR", {
-    month: "long",
-    timeZone: "UTC",
-  });
-  return nome.charAt(0).toUpperCase() + nome.slice(1);
-}
-
 export async function parseErro(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
   if (typeof body?.error === "string") return body.error;
@@ -93,24 +54,6 @@ export async function parseErro(response: Response): Promise<string> {
 export function reaisParaCentavos(valor: string): number {
   const normalizado = valor.replace(",", ".");
   return Math.round(Number(normalizado || "0") * 100);
-}
-
-function IconeHistorico() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v5h5" />
-      <path d="M3.05 13a9 9 0 1 0 .5-4.5L3 8" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  );
 }
 
 function IconeChecklist() {
@@ -227,12 +170,7 @@ export function DivisaoClient() {
     );
   }
 
-  const totalPagoGeral =
-    resumo?.totalPagoPorPessoa.reduce((s, t) => s + t.totalCentavos, 0) ?? 0;
-
-  const historicoVisivel = mostrarHistoricoCompleto
-    ? historico
-    : historico.slice(0, 3);
+  const totalPago = resumo ? totalPagoGeral(resumo.totalPagoPorPessoa) : 0;
 
   return (
     <div className="gap-lg flex flex-col">
@@ -284,101 +222,32 @@ export function DivisaoClient() {
         </p>
       )}
 
-      {resumo && resumo.gruposSemComposicao.length > 0 && (
-        <p className="border-danger/30 bg-danger-container p-lg text-on-danger-container rounded-xl border text-sm">
-          {resumo.gruposSemComposicao.map((g) => g.nome).join(", ")}{" "}
-          {resumo.gruposSemComposicao.length === 1 ? "não tem" : "não têm"}{" "}
-          integrantes cadastrados — os gastos atribuídos a{" "}
-          {resumo.gruposSemComposicao.length === 1
-            ? "esse grupo"
-            : "esses grupos"}{" "}
-          ficaram de fora do acerto. Configure a composição em{" "}
-          <Link href="/pessoas" className="font-medium underline">
-            Pessoas
-          </Link>
-          .
-        </p>
+      {resumo && (
+        <GruposSemComposicaoWarning grupos={resumo.gruposSemComposicao} />
       )}
 
       {resumo && (
         <>
-          <div className="bg-primary p-lg text-on-primary rounded-xl">
-            <div className="gap-md flex items-start justify-between">
-              <div>
-                <p className="text-on-primary/70 text-xs font-semibold tracking-wide uppercase">
-                  Saldo acumulado
-                </p>
-                {resumo.transferenciasSugeridas.length === 0 ? (
-                  <p className="mt-2 text-2xl font-bold">Contas quitadas</p>
-                ) : (
-                  resumo.transferenciasSugeridas.map((t, i) => (
-                    <p key={i} className="mt-2 text-2xl font-bold">
-                      {nome(t.deId)} deve {centavosParaReais(t.valorCentavos)}{" "}
-                      para {nome(t.paraId)}
-                    </p>
-                  ))
-                )}
-                <p className="text-on-primary/70 mt-2 text-sm">
-                  Baseado em todo o histórico de gastos compartilhados
-                </p>
-              </div>
-              <div className="flex -space-x-2">
-                {resumo.participantes.map((id) => (
-                  <span
-                    key={id}
-                    className={`border-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold ${corPessoa(id)}`}
-                  >
-                    {nome(id).charAt(0).toUpperCase()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+          <SaldoHeroCard
+            participantes={resumo.participantes}
+            transferenciasSugeridas={resumo.transferenciasSugeridas}
+            nome={nome}
+          />
 
           <div className="gap-md grid grid-cols-1 sm:grid-cols-2">
             {resumo.participantes.map((id) => {
               const pago =
                 resumo.totalPagoPorPessoa.find((t) => t.pessoaId === id)
                   ?.totalCentavos ?? 0;
-              const percentual =
-                totalPagoGeral > 0 ? (pago / totalPagoGeral) * 100 : 0;
+              const percentual = totalPago > 0 ? (pago / totalPago) * 100 : 0;
               return (
-                <div
+                <PessoaProgressoCard
                   key={id}
-                  className="gap-sm border-outline-variant bg-surface-container-lowest p-lg flex flex-col rounded-xl border"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${corPessoa(id)}`}
-                      >
-                        {nome(id).charAt(0).toUpperCase()}
-                      </span>
-                      <div>
-                        <p className="text-on-surface text-sm font-semibold">
-                          {nome(id)}
-                        </p>
-                        <p className="text-on-surface-variant text-xs">
-                          Pagou no total
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-on-surface text-lg font-bold">
-                        {centavosParaReais(pago)}
-                      </p>
-                      <p className="text-on-surface-variant text-xs">
-                        {percentual.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                  <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
-                    <div
-                      className={`h-full rounded-full ${corBarra(id)}`}
-                      style={{ width: `${percentual}%` }}
-                    />
-                  </div>
-                </div>
+                  pessoaId={id}
+                  nome={nome(id)}
+                  pagoCentavos={pago}
+                  percentual={percentual}
+                />
               );
             })}
           </div>
@@ -390,62 +259,13 @@ export function DivisaoClient() {
             </p>
           )}
 
-          <div className="border-outline-variant bg-surface-container-lowest p-lg flex flex-col gap-2 rounded-xl border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-on-surface text-base font-semibold">
-                Histórico de acertos
-              </h3>
-              <button
-                onClick={() => setReloadToken((t) => t + 1)}
-                className="text-on-surface-variant hover:text-on-surface"
-                aria-label="Atualizar histórico"
-              >
-                <IconeHistorico />
-              </button>
-            </div>
-            {historico.length === 0 ? (
-              <p className="text-on-surface-variant text-sm">
-                Nenhum acerto resolvido ainda.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {historicoVisivel.map((a) => (
-                  <li
-                    key={a.id}
-                    className="border-primary flex items-center justify-between gap-2 border-l-2 pl-2"
-                  >
-                    <div>
-                      <p className="text-on-surface text-sm font-medium">
-                        {nome(a.de.id)} → {nome(a.para.id)} ·{" "}
-                        {nomeMes(a.dataInicio)}
-                      </p>
-                      <p className="text-on-surface-variant text-xs">
-                        Resolvido em {formatarDataCurta(a.resolvidoEm)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-success text-sm font-semibold">
-                        {centavosParaReais(a.valorCentavos)}
-                      </span>
-                      <Badge variant="success" size="2xs">
-                        PAGO
-                      </Badge>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {historico.length > 3 && (
-              <button
-                onClick={() => setMostrarHistoricoCompleto((v) => !v)}
-                className="border-outline-variant text-on-surface-variant hover:bg-surface-container-low rounded-lg border py-1.5 text-sm font-medium"
-              >
-                {mostrarHistoricoCompleto
-                  ? "Mostrar menos"
-                  : "Ver histórico completo"}
-              </button>
-            )}
-          </div>
+          <HistoricoAcertosList
+            historico={historico}
+            mostrarCompleto={mostrarHistoricoCompleto}
+            onToggleCompleto={() => setMostrarHistoricoCompleto((v) => !v)}
+            onRecarregar={() => setReloadToken((t) => t + 1)}
+            nome={nome}
+          />
 
           <ControlePagamentoCard reloadToken={reloadToken} />
         </>

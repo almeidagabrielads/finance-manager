@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aplicarAcertosResolvidos,
   calcularSaldoDivisaoGrupo,
+  totalPagoGeral,
   type LancamentoParaDivisao,
   type ParticipanteDivisao,
 } from "./split";
@@ -639,5 +640,20 @@ describe("aplicarAcertosResolvidos", () => {
 
     expect(saldoDe(saldoLiquido, GABI)).toBe(-5_000);
     expect(saldoDe(saldoLiquido, ISA)).toBe(5_000);
+  });
+});
+
+describe("totalPagoGeral", () => {
+  it("soma o total pago por todas as pessoas", () => {
+    expect(
+      totalPagoGeral([
+        { pessoaId: ISA, totalCentavos: 10_000 },
+        { pessoaId: GABI, totalCentavos: 5_000 },
+      ]),
+    ).toBe(15_000);
+  });
+
+  it("retorna 0 para lista vazia", () => {
+    expect(totalPagoGeral([])).toBe(0);
   });
 });

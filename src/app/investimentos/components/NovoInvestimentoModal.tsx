@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "../components/Button";
-import { Modal } from "../components/Modal";
-import { Select } from "../components/Select";
+import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
+import { Select } from "../../components/Select";
 import {
   TIPOS_INVESTIMENTO,
   parseErro,
@@ -11,7 +11,7 @@ import {
   type Banco,
   type Pessoa,
   type TipoInvestimento,
-} from "./InvestimentosClient";
+} from "../InvestimentosClient";
 
 const inputClass =
   "rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-1.5 text-sm focus:border-primary focus:outline-none";

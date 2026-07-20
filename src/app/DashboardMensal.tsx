@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { unicosPorId } from "@/lib/dedupe";
-import { valorLiquidoCentavos } from "@/lib/domain/lancamentos";
-import { Badge } from "./components/Badge";
+import {
+  agregarCategoriasDoMes,
+  valorAtribuidoPorPessoa,
+  type PlanejadoVsRealCategoria,
+} from "@/lib/domain/dashboardMensal";
 import { Select } from "./components/Select";
+import { AcertoContasCard } from "./components/dashboard-mensal/AcertoContasCard";
+import { OrcamentoMesCard } from "./components/dashboard-mensal/OrcamentoMesCard";
+import { ResumoMesCard } from "./components/dashboard-mensal/ResumoMesCard";
+import { TransacoesRecentesCard } from "./components/dashboard-mensal/TransacoesRecentesCard";
 
 type SaldoMensal = {
   mes: number;
@@ -28,17 +35,6 @@ type SaldoDivisaoGrupo = {
   transferenciasSugeridas: Transferencia[];
 };
 
-type MesPlanejadoVsReal = {
-  mes: number;
-  planejadoCentavos: number;
-  realCentavos: number;
-};
-
-type PlanejadoVsRealCategoria = {
-  categoriaId: string;
-  meses: MesPlanejadoVsReal[];
-};
-
 type Lancamento = {
   id: string;
   data: string;
@@ -57,13 +53,6 @@ type Pessoa = {
   integrantesDoGrupo: { pessoaId: string; peso: number }[];
 };
 type Categoria = { id: string; nome: string };
-
-function centavosParaReais(valor: number): string {
-  return (valor / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
 
 function primeiroEUltimoDiaDoMes(
   ano: number,
@@ -170,76 +159,15 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
   const nomeCategoria = (id: string | null) =>
     categorias.find((c) => c.id === id)?.nome ?? "Sem categoria";
 
-  // Valor a exibir por lançamento na visão filtrada: sem filtro (Geral) ou
-  // filtrando por um grupo, mostra o valor integral. Filtrando por uma
-  // pessoa individual, um lançamento com divisão em um grupo do qual ela
-  // participa mostra só a fração dela — coerente com "Gastos totais", que já
-  // soma essa mesma fração (ver resolverFracaoPorGrupo no backend).
-  const valorAtribuido = (l: Lancamento): number => {
-    const liquido = valorLiquidoCentavos(l);
-    if (!pessoaFiltro || l.pessoaDivisaoId === pessoaFiltro) return liquido;
-
-    const grupo = pessoas.find((p) => p.id === l.pessoaDivisaoId);
-    const integrante = grupo?.integrantesDoGrupo.find(
-      (i) => i.pessoaId === pessoaFiltro,
-    );
-    if (!grupo || !integrante) return liquido;
-
-    const somaPesos = grupo.integrantesDoGrupo.reduce((s, i) => s + i.peso, 0);
-    return somaPesos > 0
-      ? Math.round(liquido * (integrante.peso / somaPesos))
-      : liquido;
-  };
-
   const saldoDoMes = saldo?.porMes.find((m) => m.mes === mes) ?? null;
 
-  const totaisPorCategoria = new Map<
-    string,
-    { categoriaId: string; planejadoCentavos: number; realCentavos: number }
-  >();
-  for (const c of orcamento ?? []) {
-    const doMes = c.meses.find((m) => m.mes === mes) ?? {
-      planejadoCentavos: 0,
-      realCentavos: 0,
-    };
-    const acumulado = totaisPorCategoria.get(c.categoriaId) ?? {
-      categoriaId: c.categoriaId,
-      planejadoCentavos: 0,
-      realCentavos: 0,
-    };
-    acumulado.planejadoCentavos += doMes.planejadoCentavos;
-    acumulado.realCentavos += doMes.realCentavos;
-    totaisPorCategoria.set(c.categoriaId, acumulado);
-  }
-  const categoriasOrcamento = Array.from(totaisPorCategoria.values())
-    .filter((c) => c.planejadoCentavos > 0 || c.realCentavos > 0)
-    .sort((a, b) => {
-      const percentualA =
-        a.planejadoCentavos > 0
-          ? a.realCentavos / a.planejadoCentavos
-          : Infinity;
-      const percentualB =
-        b.planejadoCentavos > 0
-          ? b.realCentavos / b.planejadoCentavos
-          : Infinity;
-      return percentualB - percentualA;
-    });
-  const totalPlanejadoCentavos = categoriasOrcamento.reduce(
-    (soma, c) => soma + c.planejadoCentavos,
-    0,
-  );
-  const totalRealCentavos = categoriasOrcamento.reduce(
-    (soma, c) => soma + c.realCentavos,
-    0,
-  );
+  const {
+    categorias: categoriasOrcamento,
+    totalPlanejadoCentavos,
+    totalRealCentavos,
+  } = agregarCategoriasDoMes(orcamento ?? [], mes);
 
   const transacoesRecentes = (lancamentos ?? []).slice(0, 5);
-
-  const cardClass =
-    "flex flex-col gap-md rounded-xl border border-outline-variant bg-surface-container-lowest p-lg shadow-sm";
-  const cardTitleClass =
-    "font-sans text-xs font-semibold uppercase tracking-wide text-on-surface-variant";
-  const linkClass = "mt-auto text-sm font-medium text-primary hover:underline";
 
   return (
     <div className="gap-lg flex flex-col">
@@ -268,223 +196,32 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
       )}
 
       <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
-        <div className={`${cardClass} lg:col-span-2`}>
-          <h2 className={cardTitleClass}>Resumo do mês</h2>
-          <div className="gap-sm grid grid-cols-1 sm:grid-cols-3">
-            <div>
-              <p className="text-on-surface-variant text-xs">Receita total</p>
-              <p className="data-tabular text-on-surface text-2xl font-semibold">
-                {saldoDoMes
-                  ? centavosParaReais(saldoDoMes.receitaCentavos)
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-on-surface-variant text-xs">Gastos totais</p>
-              <p className="data-tabular text-on-surface text-2xl font-semibold">
-                {saldoDoMes
-                  ? centavosParaReais(saldoDoMes.despesaCentavos)
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-on-surface-variant text-xs">Saldo do mês</p>
-              <p
-                className={`data-tabular text-2xl font-semibold ${
-                  saldoDoMes && saldoDoMes.saldoCentavos < 0
-                    ? "text-danger"
-                    : "text-on-surface"
-                }`}
-              >
-                {saldoDoMes ? centavosParaReais(saldoDoMes.saldoCentavos) : "—"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="gap-md bg-primary p-lg text-on-primary flex flex-col justify-between rounded-xl shadow-sm">
-          <h2 className="text-on-primary/70 text-center font-sans text-xs font-semibold tracking-wide uppercase">
-            Acerto de contas
-          </h2>
-          {!divisaoCarregada ? (
-            <p className="text-on-primary/80 text-center text-sm">
-              Carregando…
-            </p>
-          ) : !divisao ? (
-            <p className="text-on-primary/90 text-center text-sm">
-              Cadastre pelo menos duas pessoas do tipo Individual em{" "}
-              <Link href="/pessoas" className="font-semibold underline">
-                Pessoas
-              </Link>{" "}
-              para calcular o acerto de contas.
-            </p>
-          ) : divisao.transferenciasSugeridas.length === 0 ? (
-            <>
-              <div className="gap-md flex items-center justify-center">
-                {divisao.participantes.slice(0, 2).map((id, i) => (
-                  <span
-                    key={id}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${
-                      i === 0
-                        ? "bg-tertiary-container text-on-tertiary-container"
-                        : "bg-secondary text-on-secondary"
-                    }`}
-                  >
-                    {nomePessoa(id).charAt(0).toUpperCase()}
-                  </span>
-                ))}
-              </div>
-              <p className="text-on-primary/90 text-center text-sm">
-                Saldo zerado.
-              </p>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2 text-center">
-              {divisao.transferenciasSugeridas.slice(0, 2).map((t, i) => (
-                <p key={i} className="text-lg font-bold">
-                  {nomePessoa(t.deId)} deve {centavosParaReais(t.valorCentavos)}
-                </p>
-              ))}
-              {divisao.transferenciasSugeridas.length > 2 && (
-                <p className="text-on-primary/70 text-sm">
-                  +{divisao.transferenciasSugeridas.length - 2} outra(s)
-                  pendência(s)
-                </p>
-              )}
-              <p className="text-on-primary/70 text-sm">
-                Para equilibrar os gastos compartilhados
-              </p>
-            </div>
-          )}
-          <Link
-            href="/divisao"
-            className="bg-on-primary/10 px-md py-sm hover:bg-on-primary/20 rounded-xl text-center text-sm font-semibold"
-          >
-            Ver detalhes
-          </Link>
-        </div>
+        <ResumoMesCard
+          receitaCentavos={saldoDoMes?.receitaCentavos ?? null}
+          despesaCentavos={saldoDoMes?.despesaCentavos ?? null}
+          saldoCentavos={saldoDoMes?.saldoCentavos ?? null}
+        />
+        <AcertoContasCard
+          carregada={divisaoCarregada}
+          divisao={divisao}
+          nomePessoa={nomePessoa}
+        />
       </div>
 
       <div className="gap-md grid grid-cols-1 lg:grid-cols-3">
-        <div className={cardClass}>
-          <div className="flex items-center justify-between">
-            <h2 className={cardTitleClass}>Orçamento do mês</h2>
-            <Link
-              href="/orcamento"
-              className="text-primary text-xs font-medium hover:underline"
-            >
-              Ver tudo
-            </Link>
-          </div>
-          {categoriasOrcamento.length > 0 ? (
-            <div className="gap-md flex flex-col">
-              {categoriasOrcamento.map((c) => {
-                const estourou =
-                  c.realCentavos > c.planejadoCentavos &&
-                  c.planejadoCentavos > 0;
-                const percentual =
-                  c.planejadoCentavos > 0
-                    ? Math.min(
-                        (c.realCentavos / c.planejadoCentavos) * 100,
-                        100,
-                      )
-                    : 100;
-                return (
-                  <div key={c.categoriaId} className="flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between text-sm">
-                      <span className="text-on-surface">
-                        {nomeCategoria(c.categoriaId)}
-                      </span>
-                      <span
-                        className={`data-tabular text-xs font-medium ${
-                          estourou ? "text-danger" : "text-on-surface-variant"
-                        }`}
-                      >
-                        {centavosParaReais(c.realCentavos)} /{" "}
-                        {centavosParaReais(c.planejadoCentavos)}
-                      </span>
-                    </div>
-                    <div className="bg-surface-container h-1.5 w-full overflow-hidden rounded-full">
-                      <div
-                        className={`h-full rounded-full ${estourou ? "bg-danger" : "bg-primary"}`}
-                        style={{ width: `${percentual}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-on-surface-variant text-sm">
-              Nenhum orçamento planejado para este mês.
-            </p>
-          )}
-          <div className="bg-surface-container-low p-sm mt-auto flex items-center justify-between rounded-lg text-sm">
-            <span className="text-on-surface-variant">
-              Total planejado: {centavosParaReais(totalPlanejadoCentavos)}
-            </span>
-            <span
-              className={`data-tabular font-semibold ${
-                totalPlanejadoCentavos - totalRealCentavos < 0
-                  ? "text-danger"
-                  : "text-on-surface"
-              }`}
-            >
-              Saldo:{" "}
-              {centavosParaReais(totalPlanejadoCentavos - totalRealCentavos)}
-            </span>
-          </div>
-        </div>
-
-        <div className={`${cardClass} lg:col-span-2`}>
-          <div className="flex items-center justify-between">
-            <h2 className={cardTitleClass}>Transações recentes</h2>
-          </div>
-          {transacoesRecentes.length > 0 ? (
-            <div className="divide-outline-variant/60 flex flex-col divide-y">
-              <div className="gap-sm pb-sm text-on-surface-variant grid grid-cols-5 text-xs font-semibold tracking-wide uppercase">
-                <span>Data</span>
-                <span>Descrição</span>
-                <span>Pagador</span>
-                <span>Divisão</span>
-                <span className="justify-self-end">Valor</span>
-              </div>
-              {transacoesRecentes.map((l) => (
-                <div
-                  key={l.id}
-                  className="gap-sm py-sm grid grid-cols-5 items-center text-sm"
-                >
-                  <span className="text-on-surface-variant">
-                    {new Date(l.data).toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      timeZone: "UTC",
-                    })}
-                  </span>
-                  <span className="text-on-surface truncate">
-                    {l.descricaoPropria || l.descricaoOrigem || "—"}
-                  </span>
-                  <Badge className="justify-self-start">
-                    {nomePessoa(l.pessoaPagouId)}
-                  </Badge>
-                  <Badge className="justify-self-start">
-                    {nomePessoa(l.pessoaDivisaoId)}
-                  </Badge>
-                  <span className="data-tabular text-on-surface justify-self-end font-semibold">
-                    {centavosParaReais(valorAtribuido(l))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-on-surface-variant text-sm">
-              Nenhum lançamento neste mês.
-            </p>
-          )}
-          <Link href="/lancamentos" className={linkClass}>
-            Ver extrato completo →
-          </Link>
-        </div>
+        <OrcamentoMesCard
+          categorias={categoriasOrcamento}
+          totalPlanejadoCentavos={totalPlanejadoCentavos}
+          totalRealCentavos={totalRealCentavos}
+          nomeCategoria={nomeCategoria}
+        />
+        <TransacoesRecentesCard
+          lancamentos={transacoesRecentes}
+          nomePessoa={nomePessoa}
+          valorAtribuido={(l) =>
+            valorAtribuidoPorPessoa(l, pessoas, pessoaFiltro)
+          }
+        />
       </div>
     </div>
   );

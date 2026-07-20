@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "../components/Button";
-import { Modal } from "../components/Modal";
-import { Select } from "../components/Select";
-import { parseErro, reaisParaCentavos, type Pessoa } from "./DivisaoClient";
+import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
+import { Select } from "../../components/Select";
+import { parseErro, reaisParaCentavos, type Pessoa } from "../DivisaoClient";
 
 const inputClass =
   "rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-1.5 text-sm focus:border-primary focus:outline-none";

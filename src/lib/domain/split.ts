@@ -93,6 +93,11 @@ export type ResumoDivisaoGrupo = SaldoDivisaoGrupo & {
   gruposSemComposicao: GrupoSemComposicao[];
 };
 
+/** Soma o total pago por todas as pessoas — usado para calcular a fatia (%) de cada uma. */
+export function totalPagoGeral(totalPagoPorPessoa: TotalPagoPessoa[]): number {
+  return totalPagoPorPessoa.reduce((soma, t) => soma + t.totalCentavos, 0);
+}
+
 /**
  * Divide um valor em partes inteiras (centavos) proporcionais aos pesos
  * informados, somando exatamente o total. Usa o método dos maiores restos:

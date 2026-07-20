@@ -3,6 +3,7 @@ import {
   centavosParaReais,
   reaisParaCentavos,
   formatarMoeda,
+  formatarMoedaCompacta,
 } from "./formatacao";
 
 describe("centavosParaReais", () => {
@@ -44,5 +45,15 @@ describe("formatarMoeda", () => {
 
   it("usa valor absoluto (ignora sinal)", () => {
     expect(formatarMoeda(-12345)).toBe(formatarMoeda(12345));
+  });
+});
+
+describe("formatarMoedaCompacta", () => {
+  it("formata valores grandes em notação compacta", () => {
+    expect(formatarMoedaCompacta(150000000)).toMatch(/^R\$\s?1,5\s?mi$/);
+  });
+
+  it("formata valores pequenos normalmente", () => {
+    expect(formatarMoedaCompacta(500)).toMatch(/^R\$\s?5$/);
   });
 });

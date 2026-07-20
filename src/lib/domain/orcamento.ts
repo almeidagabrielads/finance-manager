@@ -2,6 +2,70 @@ import * as z from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { TipoGastoSchema } from "./tipoGasto";
 
+export type IndicadorPlanejado = {
+  planejadoCentavos: number;
+  realCentavos: number;
+  diferencaCentavos: number;
+  percentual: number | null;
+  dentroDoPlanejado: boolean;
+};
+
+export function indicadorVazio(): IndicadorPlanejado {
+  return {
+    planejadoCentavos: 0,
+    realCentavos: 0,
+    diferencaCentavos: 0,
+    percentual: null,
+    dentroDoPlanejado: true,
+  };
+}
+
+// Agrega o indicador de uma categoria somando planejado/real das
+// subcategorias ao indicador próprio da categoria (lançamentos sem
+// subcategoria). Diferença/percentual/dentroDoPlanejado não têm sentido
+// agregados — ficam zerados/neutros, recalculados por quem consumir o total.
+export function agregarIndicadorCategoria(
+  indicadorProprio: IndicadorPlanejado,
+  indicadoresSubcategorias: IndicadorPlanejado[],
+): IndicadorPlanejado {
+  return indicadoresSubcategorias.reduce(
+    (acc, ind) => ({
+      ...acc,
+      planejadoCentavos: acc.planejadoCentavos + ind.planejadoCentavos,
+      realCentavos: acc.realCentavos + ind.realCentavos,
+    }),
+    {
+      ...indicadorProprio,
+      diferencaCentavos: 0,
+      percentual: null,
+      dentroDoPlanejado: true,
+    },
+  );
+}
+
+// Maiores desvios: os 5 itens com mais gasto realizado, usados no card de
+// tendência do mês na tela de Orçamento.
+export function top5PorRealizado<T extends { realCentavos: number }>(
+  itens: T[],
+): T[] {
+  return [...itens]
+    .filter((item) => item.realCentavos > 0)
+    .sort((a, b) => b.realCentavos - a.realCentavos)
+    .slice(0, 5);
+}
+
+// Soma o total anual de uma categoria a partir do total anual próprio (sem
+// subcategoria) mais o total anual de cada subcategoria.
+export function totalAnualCategoria(
+  totalAnualProprio: number,
+  totaisAnuaisSubcategorias: number[],
+): number {
+  return totaisAnuaisSubcategorias.reduce(
+    (soma, total) => soma + total,
+    totalAnualProprio,
+  );
+}
+
 export const CriarOrcamentoSchema = z.object({
   // Sempre uma Pessoa INDIVIDUAL (ver validarReferencias). O orçamento de um
   // grupo (CASAL/FAMILIA/OUTRO) não é armazenado — é a soma dos orçamentos

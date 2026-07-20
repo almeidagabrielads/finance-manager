@@ -1,15 +1,14 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { RelatorioInvestimentos } from "./RelatorioInvestimentos";
-import { PosicaoMensalInline } from "./PosicaoMensalInline";
-import { FinalizarInvestimentoModal } from "./FinalizarInvestimentoModal";
-import { EditarInvestimentoModal } from "./EditarInvestimentoModal";
-import { NovoInvestimentoModal } from "./NovoInvestimentoModal";
-import { Badge } from "../components/Badge";
+import { useEffect, useMemo, useState } from "react";
+import { RelatorioInvestimentos } from "./components/RelatorioInvestimentos";
+import { FinalizarInvestimentoModal } from "./components/FinalizarInvestimentoModal";
+import { EditarInvestimentoModal } from "./components/EditarInvestimentoModal";
+import { NovoInvestimentoModal } from "./components/NovoInvestimentoModal";
+import { InvestimentosTabs } from "./components/InvestimentosTabs";
+import { CarteiraToolbar } from "./components/CarteiraToolbar";
+import { CarteiraTable } from "./components/CarteiraTable";
 import { useConfirmDialog } from "../components/ConfirmDialog";
-import { ColumnHeader } from "../components/ColumnHeader";
-import { Select } from "../components/Select";
 import { useTabela, type ColunaTabela } from "../components/useTabela";
 import { filtroEstaAtivo } from "@/lib/domain/tabela";
 import { diasAteResgate, diasParaFaixa } from "@/lib/domain/investimentos";
@@ -80,80 +79,13 @@ export function formatarReais(centavos: number): string {
   });
 }
 
-function labelVencimento(inv: Investimento): string {
+export function labelVencimento(inv: Investimento): string {
   if (inv.liquidezDias !== null) return `D+${inv.liquidezDias}`;
   if (inv.vencimento)
     return new Date(inv.vencimento).toLocaleDateString("pt-BR", {
       timeZone: "UTC",
     });
   return "Indefinido";
-}
-
-function IconePlusCirculo() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v8" />
-      <path d="M8 12h8" />
-    </svg>
-  );
-}
-
-function IconeFinalizar() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function IconeEditar() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-}
-
-function IconeChevron({ aberto }: { aberto: boolean }) {
-  return (
-    <svg
-      className={`text-on-surface-variant h-4 w-4 shrink-0 transition-transform ${aberto ? "rotate-90" : ""}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
 }
 
 export function InvestimentosClient() {
@@ -423,27 +355,7 @@ export function InvestimentosClient() {
         </p>
       )}
 
-      <nav className="gap-sm border-outline-variant flex items-center border-b">
-        {(
-          [
-            { value: "RELATORIOS", label: "Relatórios" },
-            { value: "CARTEIRA", label: "Carteira" },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setAba(tab.value)}
-            className={
-              aba === tab.value
-                ? "border-primary text-on-surface border-b-2 px-1 pb-2 text-sm font-semibold"
-                : "text-on-surface-variant hover:text-on-surface px-1 pb-2 text-sm font-medium"
-            }
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <InvestimentosTabs aba={aba} onChange={setAba} />
 
       {aba === "RELATORIOS" && (
         <RelatorioInvestimentos
@@ -457,245 +369,48 @@ export function InvestimentosClient() {
 
       {aba === "CARTEIRA" && (
         <div className={cardClass}>
-          <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-on-surface text-base font-bold">Carteira</h2>
-              <Badge>
-                {investimentos?.length ?? 0}{" "}
-                {investimentos?.length === 1
-                  ? "item cadastrado"
-                  : "itens cadastrados"}
-              </Badge>
-              <button
-                type="button"
-                onClick={() => setMostrarNovoInvestimento(true)}
-                className="bg-primary text-on-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold hover:opacity-90"
-              >
-                <IconePlusCirculo />
-                Novo Investimento
-              </button>
-            </div>
-            <div className="gap-md flex items-center">
-              {algumFiltroAtivo && (
-                <button
-                  type="button"
-                  onClick={limparTodosFiltros}
-                  className="text-primary hover:bg-primary-container rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-                >
-                  Limpar filtros
-                </button>
-              )}
-              <label className="text-on-surface-variant flex cursor-pointer items-center gap-1.5 text-xs font-semibold">
-                <input
-                  type="checkbox"
-                  checked={mostrarFinalizados}
-                  onChange={(e) => setMostrarFinalizados(e.target.checked)}
-                />
-                Mostrar finalizados
-              </label>
-              <div className="gap-sm flex items-center">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="ano-posicoes"
-                >
-                  Posições do ano
-                </label>
-                <Select
-                  id="ano-posicoes"
-                  value={String(anoPosicoes)}
-                  onChange={(v) => setAnoPosicoes(Number(v))}
-                  options={[anoAtual, anoAtual - 1, anoAtual - 2].map((a) => ({
-                    value: String(a),
-                    label: String(a),
-                  }))}
-                />
-              </div>
-            </div>
-          </div>
+          <CarteiraToolbar
+            totalItens={investimentos?.length ?? 0}
+            algumFiltroAtivo={algumFiltroAtivo}
+            onLimparFiltros={limparTodosFiltros}
+            mostrarFinalizados={mostrarFinalizados}
+            onMostrarFinalizadosChange={setMostrarFinalizados}
+            anoPosicoes={anoPosicoes}
+            anoAtual={anoAtual}
+            onAnoPosicoesChange={setAnoPosicoes}
+            onNovoInvestimento={() => setMostrarNovoInvestimento(true)}
+          />
           <p className="text-on-surface-variant px-lg pb-md text-xs">
             Clique em um investimento para informar a posição mês a mês.
           </p>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-outline-variant text-on-surface-variant border-y text-xs font-semibold tracking-wide uppercase">
-                  <th className="p-md text-left"></th>
-                  <ColumnHeader
-                    label="Banco"
-                    chave="banco"
-                    tipo="opcoes"
-                    opcoes={opcoesColunasInvestimentos.banco}
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.banco}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <ColumnHeader
-                    label="Tipo"
-                    chave="tipo"
-                    tipo="opcoes"
-                    opcoes={opcoesColunasInvestimentos.tipo}
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.tipo}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <ColumnHeader
-                    label="Produto"
-                    chave="produto"
-                    tipo="texto"
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.produto}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <ColumnHeader
-                    label="Titular"
-                    chave="titular"
-                    tipo="opcoes"
-                    opcoes={opcoesColunasInvestimentos.titular}
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.titular}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <ColumnHeader
-                    label="Vencimento/liquidez"
-                    chave="vencimento"
-                    tipo="texto"
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.vencimento}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <ColumnHeader
-                    label="Valor"
-                    chave="valor"
-                    tipo="numero"
-                    align="right"
-                    ordenacao={ordenacao}
-                    onOrdenar={alternarOrdenacao}
-                    filtro={filtros.valor}
-                    onFiltrar={definirFiltro}
-                    onLimparFiltro={limparFiltro}
-                  />
-                  <th className="p-md text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {investimentosParaExibir.map((inv) => {
-                  const banco = bancos.find((b) => b.id === inv.bancoId);
-                  const pessoa = pessoas.find((p) => p.id === inv.pessoaId);
-                  const expandido = investimentoExpandidoId === inv.id;
-                  return (
-                    <Fragment key={inv.id}>
-                      <tr
-                        onClick={() =>
-                          setInvestimentoExpandidoId(expandido ? null : inv.id)
-                        }
-                        aria-expanded={expandido}
-                        className="border-outline-variant/60 hover:bg-surface-container-low cursor-pointer border-b"
-                      >
-                        <td className="p-md">
-                          <IconeChevron aberto={expandido} />
-                        </td>
-                        <td className="p-md text-on-surface-variant">
-                          {banco?.nome ?? "—"}
-                        </td>
-                        <td className="p-md text-on-surface-variant">
-                          {labelTipo(inv.tipo)}
-                        </td>
-                        <td className="p-md">
-                          <div className="text-on-surface flex items-center gap-2 font-medium">
-                            {inv.produto}
-                            {inv.status === "FINALIZADO" && (
-                              <Badge
-                                variant="neutral-high"
-                                size="2xs"
-                                className="uppercase"
-                              >
-                                Finalizado
-                              </Badge>
-                            )}
-                          </div>
-                          {inv.observacao && (
-                            <div className="text-on-surface-variant text-xs">
-                              {inv.observacao}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-md text-on-surface-variant">
-                          {pessoa?.nome ?? "—"}
-                        </td>
-                        <td className="p-md text-on-surface-variant whitespace-nowrap">
-                          {labelVencimento(inv)}
-                        </td>
-                        <td className="data-tabular p-md text-right font-medium">
-                          {formatarReais(inv.valorAtualCentavos)}
-                        </td>
-                        <td className="p-md">
-                          <div className="flex justify-end gap-1">
-                            <button
-                              className="text-on-surface-variant hover:bg-surface-container-high rounded-full p-1.5 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setInvestimentoParaEditar(inv);
-                              }}
-                              title="Editar"
-                              aria-label="Editar"
-                            >
-                              <IconeEditar />
-                            </button>
-                            {inv.status === "ATIVO" && (
-                              <button
-                                className="text-primary hover:bg-primary-container rounded-full p-1.5 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setInvestimentoParaFinalizar(inv);
-                                }}
-                                title="Finalizar"
-                                aria-label="Finalizar"
-                              >
-                                <IconeFinalizar />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                      {expandido && (
-                        <tr className="border-outline-variant/60 bg-surface-container-low border-b">
-                          <td colSpan={8} className="p-0">
-                            <PosicaoMensalInline
-                              investimentoId={inv.id}
-                              ano={anoPosicoes}
-                              posicoes={posicoesMensais}
-                              onAlterado={() => {
-                                setReloadPosicoesToken((t) => t + 1);
-                                setReloadToken((t) => t + 1);
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {investimentosParaExibir.length === 0 && (
+          {investimentosParaExibir.length === 0 &&
+          investimentos?.length === 0 ? (
             <p className="p-lg text-on-surface-variant text-sm">
-              {investimentos?.length === 0
-                ? "Nenhum investimento cadastrado."
-                : "Nenhum investimento corresponde aos filtros das colunas."}
+              Nenhum investimento cadastrado.
             </p>
+          ) : (
+            <CarteiraTable
+              investimentos={investimentosParaExibir}
+              bancos={bancos}
+              pessoas={pessoas}
+              ordenacao={ordenacao}
+              alternarOrdenacao={alternarOrdenacao}
+              filtros={filtros}
+              definirFiltro={definirFiltro}
+              limparFiltro={limparFiltro}
+              opcoesColunas={opcoesColunasInvestimentos}
+              investimentoExpandidoId={investimentoExpandidoId}
+              onToggleExpandir={setInvestimentoExpandidoId}
+              anoPosicoes={anoPosicoes}
+              posicoesMensais={posicoesMensais}
+              onPosicaoAlterada={() => {
+                setReloadPosicoesToken((t) => t + 1);
+                setReloadToken((t) => t + 1);
+              }}
+              onEditar={setInvestimentoParaEditar}
+              onFinalizar={setInvestimentoParaFinalizar}
+            />
           )}
         </div>
       )}

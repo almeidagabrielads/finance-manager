@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ColumnHeader } from "../components/ColumnHeader";
-import { Select } from "../components/Select";
-import { useTabela, type ColunaTabela } from "../components/useTabela";
-import { FAIXAS_LABEL } from "./InvestimentosClient";
+import { ColumnHeader } from "../../components/ColumnHeader";
+import { Select } from "../../components/Select";
+import { useTabela, type ColunaTabela } from "../../components/useTabela";
+import { FAIXAS_LABEL } from "../InvestimentosClient";
 
 const TIPOS_INVESTIMENTO = [
   { value: "RENDA_FIXA", label: "Renda Fixa", cor: "var(--color-primary)" },
