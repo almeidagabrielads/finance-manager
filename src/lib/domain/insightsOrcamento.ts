@@ -19,7 +19,10 @@ export function gerarInsightMensal(
   categorias: CategoriaMesParaInsight[],
 ): string | null {
   const comVariacao = categorias
-    .map((c) => ({ ...c, diferencaCentavos: c.planejadoCentavos - c.realCentavos }))
+    .map((c) => ({
+      ...c,
+      diferencaCentavos: c.planejadoCentavos - c.realCentavos,
+    }))
     .filter((c) => c.planejadoCentavos > 0 || c.realCentavos > 0);
 
   if (comVariacao.length === 0) return null;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { unicosPorId } from "@/lib/dedupe";
 import { valorLiquidoCentavos } from "@/lib/domain/lancamentos";
+import { Badge } from "./components/Badge";
 import { Select } from "./components/Select";
 
 type SaldoMensal = {
@@ -463,12 +464,12 @@ export function DashboardMensal({ ano, mes }: { ano: number; mes: number }) {
                   <span className="text-on-surface truncate">
                     {l.descricaoPropria || l.descricaoOrigem || "—"}
                   </span>
-                  <span className="bg-surface-container px-sm text-on-surface-variant justify-self-start rounded-full py-0.5 text-xs font-semibold">
+                  <Badge className="justify-self-start">
                     {nomePessoa(l.pessoaPagouId)}
-                  </span>
-                  <span className="bg-surface-container px-sm text-on-surface-variant justify-self-start rounded-full py-0.5 text-xs font-semibold">
+                  </Badge>
+                  <Badge className="justify-self-start">
                     {nomePessoa(l.pessoaDivisaoId)}
-                  </span>
+                  </Badge>
                   <span className="data-tabular text-on-surface justify-self-end font-semibold">
                     {centavosParaReais(valorAtribuido(l))}
                   </span>

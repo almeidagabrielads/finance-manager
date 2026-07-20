@@ -121,7 +121,11 @@ describe("GET /api/parcelamentos/[id]", () => {
   it("retorna o parcelamento com as parcelas", async () => {
     const { household, cookie } = await criarHouseholdComSessao();
     const { banco, pessoa } = await criarBancoEPessoa(household.id);
-    const parcelamento = await criarParcelamentoDireto(household.id, banco.id, pessoa.id);
+    const parcelamento = await criarParcelamentoDireto(
+      household.id,
+      banco.id,
+      pessoa.id,
+    );
 
     const response = await GET(req("GET", cookie), ctx(parcelamento.id));
     const body = await response.json();
@@ -134,7 +138,11 @@ describe("PATCH /api/parcelamentos/[id]", () => {
   it("atualiza metadados", async () => {
     const { household, cookie } = await criarHouseholdComSessao();
     const { banco, pessoa } = await criarBancoEPessoa(household.id);
-    const parcelamento = await criarParcelamentoDireto(household.id, banco.id, pessoa.id);
+    const parcelamento = await criarParcelamentoDireto(
+      household.id,
+      banco.id,
+      pessoa.id,
+    );
 
     const response = await PATCH(
       req("PATCH", cookie, { descricaoPropria: "Novo nome" }),
@@ -159,7 +167,11 @@ describe("DELETE /api/parcelamentos/[id]", () => {
   it("apaga quando não há parcelas realizadas", async () => {
     const { household, cookie } = await criarHouseholdComSessao();
     const { banco, pessoa } = await criarBancoEPessoa(household.id);
-    const parcelamento = await criarParcelamentoDireto(household.id, banco.id, pessoa.id);
+    const parcelamento = await criarParcelamentoDireto(
+      household.id,
+      banco.id,
+      pessoa.id,
+    );
     // Remove a parcela realizada (previsto=false) para simular estado "só previsão".
     await prismaTest.lancamento.deleteMany({
       where: { parcelamentoId: parcelamento.id, previsto: false },
@@ -172,7 +184,11 @@ describe("DELETE /api/parcelamentos/[id]", () => {
   it("retorna 409 quando há parcelas realizadas", async () => {
     const { household, cookie } = await criarHouseholdComSessao();
     const { banco, pessoa } = await criarBancoEPessoa(household.id);
-    const parcelamento = await criarParcelamentoDireto(household.id, banco.id, pessoa.id);
+    const parcelamento = await criarParcelamentoDireto(
+      household.id,
+      banco.id,
+      pessoa.id,
+    );
 
     const response = await DELETE(req("DELETE", cookie), ctx(parcelamento.id));
     expect(response.status).toBe(409);

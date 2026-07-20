@@ -42,7 +42,8 @@ async function montarBase() {
 
 describe("buscarControlePagamento", () => {
   it("soma lançamentos por divisão x pagador dentro do período, por mês", async () => {
-    const { household, isa, gabi, familia, categoria, banco } = await montarBase();
+    const { household, isa, gabi, familia, categoria, banco } =
+      await montarBase();
 
     await prismaTest.lancamento.create({
       data: {
@@ -102,11 +103,22 @@ describe("buscarControlePagamento", () => {
   });
 
   it("pagouPor inclui a fatia da outra pessoa nos gastos de grupo, rateada por peso", async () => {
-    const { household, isa, gabi, familia, categoria, banco } = await montarBase();
+    const { household, isa, gabi, familia, categoria, banco } =
+      await montarBase();
     await prismaTest.integranteGrupo.createMany({
       data: [
-        { grupoId: familia.id, pessoaId: isa.id, peso: 1, householdId: household.id },
-        { grupoId: familia.id, pessoaId: gabi.id, peso: 1, householdId: household.id },
+        {
+          grupoId: familia.id,
+          pessoaId: isa.id,
+          peso: 1,
+          householdId: household.id,
+        },
+        {
+          grupoId: familia.id,
+          pessoaId: gabi.id,
+          peso: 1,
+          householdId: household.id,
+        },
       ],
     });
 
@@ -155,11 +167,22 @@ describe("buscarControlePagamento", () => {
   });
 
   it("gastoTotal segue a regra do dashboard: divisão própria + fração nos grupos, sem repasses", async () => {
-    const { household, isa, gabi, familia, categoria, banco } = await montarBase();
+    const { household, isa, gabi, familia, categoria, banco } =
+      await montarBase();
     await prismaTest.integranteGrupo.createMany({
       data: [
-        { grupoId: familia.id, pessoaId: isa.id, peso: 1, householdId: household.id },
-        { grupoId: familia.id, pessoaId: gabi.id, peso: 1, householdId: household.id },
+        {
+          grupoId: familia.id,
+          pessoaId: isa.id,
+          peso: 1,
+          householdId: household.id,
+        },
+        {
+          grupoId: familia.id,
+          pessoaId: gabi.id,
+          peso: 1,
+          householdId: household.id,
+        },
       ],
     });
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "../components/Badge";
 import { corPessoa } from "../components/PessoaBadge";
 import { RegistrarRepasseModal } from "./RegistrarRepasseModal";
 import { ControlePagamentoCard } from "./ControlePagamentoCard";
@@ -196,7 +197,7 @@ export function DivisaoClient() {
         if (cancelado || !response.ok) return;
         setHistorico(await response.json());
       })
-      .catch(() => { });
+      .catch(() => {});
     return () => {
       cancelado = true;
     };
@@ -384,8 +385,8 @@ export function DivisaoClient() {
 
           {resumo.insight && (
             <p className="text-on-surface-variant text-sm">
-              No acumulado, {nome(resumo.insight.pessoaId)} cobriu a maior
-              parte das despesas em {resumo.insight.categoriaNome}.
+              No acumulado, {nome(resumo.insight.pessoaId)} cobriu a maior parte
+              das despesas em {resumo.insight.categoriaNome}.
             </p>
           )}
 
@@ -426,9 +427,9 @@ export function DivisaoClient() {
                       <span className="text-success text-sm font-semibold">
                         {centavosParaReais(a.valorCentavos)}
                       </span>
-                      <span className="bg-success/15 text-success rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                      <Badge variant="success" size="2xs">
                         PAGO
-                      </span>
+                      </Badge>
                     </div>
                   </li>
                 ))}

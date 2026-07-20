@@ -111,7 +111,12 @@ describe("POST /api/acertos", () => {
     const { cookie } = await criarHouseholdComSessao();
     const response = await POST(
       postRequest(
-        { deId: "a", paraId: "b", valorCentavos: "não é número", data: "2026-01-05" },
+        {
+          deId: "a",
+          paraId: "b",
+          valorCentavos: "não é número",
+          data: "2026-01-05",
+        },
         cookie,
       ),
     );
@@ -123,7 +128,12 @@ describe("POST /api/acertos", () => {
     const { gabi } = await criarDuasPessoas(household.id);
     const response = await POST(
       postRequest(
-        { deId: gabi.id, paraId: gabi.id, valorCentavos: 1000, data: "2026-01-05" },
+        {
+          deId: gabi.id,
+          paraId: gabi.id,
+          valorCentavos: 1000,
+          data: "2026-01-05",
+        },
         cookie,
       ),
     );

@@ -180,4 +180,3 @@ describe("PATCH /api/investimentos/[id]", () => {
     expect(response.status).toBe(400);
   });
 });
-

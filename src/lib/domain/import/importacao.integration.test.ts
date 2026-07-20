@@ -431,9 +431,9 @@ describe("confirmarImportacao — parcelamento", () => {
       include: { lancamentos: true },
     });
     expect(parcelamentos).toHaveLength(1);
-    expect(parcelamentos[0].lancamentos.map((l) => l.numeroParcela).sort()).toEqual([
-      3, 4,
-    ]);
+    expect(
+      parcelamentos[0].lancamentos.map((l) => l.numeroParcela).sort(),
+    ).toEqual([3, 4]);
   });
 
   it("ignora silenciosamente se a mesma parcela já foi anexada antes", async () => {

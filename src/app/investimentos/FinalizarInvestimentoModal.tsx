@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "../components/Button";
+import { Modal } from "../components/Modal";
 import { Select } from "../components/Select";
 import {
   TIPOS_INVESTIMENTO,
@@ -101,234 +103,224 @@ export function FinalizarInvestimentoModal({
   }
 
   return (
-    <div className="bg-on-surface/40 p-lg fixed inset-0 z-[100] flex items-center justify-center">
-      <div className="gap-md p-lg border-outline-variant bg-surface-container-lowest flex w-full max-w-[32rem] flex-col rounded-2xl border shadow-lg">
-        <h2 className="text-on-surface text-base font-bold">
-          Finalizar &quot;{investimento.produto}&quot;
-        </h2>
+    <Modal>
+      <h2 className="text-on-surface text-base font-bold">
+        Finalizar &quot;{investimento.produto}&quot;
+      </h2>
 
-        {erro && (
-          <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
-            {erro}
-          </p>
-        )}
+      {erro && (
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+          {erro}
+        </p>
+      )}
 
-        <form onSubmit={finalizar} className="gap-md flex flex-col">
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="valor-resgatado"
-            >
-              Valor resgatado (R$)
-            </label>
-            <input
-              id="valor-resgatado"
-              type="number"
-              step="0.01"
-              className={inputClass}
-              value={valorResgatado}
-              onChange={(e) => setValorResgatado(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label
-              className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="data-resgate"
-            >
-              Data do resgate/reinvestimento
-            </label>
-            <input
-              id="data-resgate"
-              type="date"
-              className={inputClass}
-              value={dataResgate}
-              onChange={(e) => setDataResgate(e.target.value)}
-              required
-            />
-          </div>
-
-          <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={reinvestir}
-              onChange={(e) => setReinvestir(e.target.checked)}
-            />
-            Reinvestir parte do valor
+      <form onSubmit={finalizar} className="gap-md flex flex-col">
+        <div className="flex flex-col gap-1">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="valor-resgatado"
+          >
+            Valor resgatado (R$)
           </label>
+          <input
+            id="valor-resgatado"
+            type="number"
+            step="0.01"
+            className={inputClass}
+            value={valorResgatado}
+            onChange={(e) => setValorResgatado(e.target.value)}
+            required
+          />
+        </div>
 
-          {reinvestir && (
-            <div className="gap-sm border-outline-variant p-md flex flex-col rounded-lg border">
+        <div className="flex flex-col gap-1">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="data-resgate"
+          >
+            Data do resgate/reinvestimento
+          </label>
+          <input
+            id="data-resgate"
+            type="date"
+            className={inputClass}
+            value={dataResgate}
+            onChange={(e) => setDataResgate(e.target.value)}
+            required
+          />
+        </div>
+
+        <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={reinvestir}
+            onChange={(e) => setReinvestir(e.target.checked)}
+          />
+          Reinvestir parte do valor
+        </label>
+
+        {reinvestir && (
+          <div className="gap-sm border-outline-variant p-md flex flex-col rounded-lg border">
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="valor-reinvestido"
+              >
+                Valor reinvestido (R$)
+              </label>
+              <input
+                id="valor-reinvestido"
+                type="number"
+                step="0.01"
+                className={inputClass}
+                value={valorReinvestido}
+                onChange={(e) => setValorReinvestido(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="gap-sm flex flex-wrap items-end">
               <div className="flex flex-col gap-1">
                 <label
                   className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="valor-reinvestido"
+                  htmlFor="novo-banco"
                 >
-                  Valor reinvestido (R$)
+                  Banco
                 </label>
-                <input
-                  id="valor-reinvestido"
-                  type="number"
-                  step="0.01"
-                  className={inputClass}
-                  value={valorReinvestido}
-                  onChange={(e) => setValorReinvestido(e.target.value)}
-                  required
+                <Select
+                  id="novo-banco"
+                  value={novoBancoId}
+                  onChange={setNovoBancoId}
+                  options={bancos.map((b) => ({
+                    value: b.id,
+                    label: b.nome,
+                  }))}
                 />
               </div>
 
-              <div className="gap-sm flex flex-wrap items-end">
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="novo-tipo"
+                >
+                  Tipo
+                </label>
+                <Select
+                  id="novo-tipo"
+                  value={novoTipo}
+                  onChange={(v) => setNovoTipo(v as TipoInvestimento)}
+                  options={TIPOS_INVESTIMENTO.map((t) => ({
+                    value: t.value,
+                    label: t.label,
+                  }))}
+                />
+              </div>
+
+              <div className="flex min-w-[140px] flex-1 flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="novo-produto"
+                >
+                  Produto
+                </label>
+                <input
+                  id="novo-produto"
+                  className={inputClass}
+                  value={novoProduto}
+                  onChange={(e) => setNovoProduto(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="gap-sm flex flex-wrap items-end">
+              <div className="flex flex-col gap-1">
+                <label
+                  className="text-on-surface-variant text-xs font-semibold"
+                  htmlFor="novo-modo-liquidez"
+                >
+                  Vencimento/liquidez
+                </label>
+                <Select
+                  id="novo-modo-liquidez"
+                  value={modoLiquidez}
+                  onChange={(v) =>
+                    setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")
+                  }
+                  options={[
+                    { value: "DIAS", label: "Prazo (D+n)" },
+                    { value: "DATA", label: "Data de vencimento" },
+                    { value: "NENHUM", label: "Indefinido" },
+                  ]}
+                />
+              </div>
+
+              {modoLiquidez === "DIAS" && (
                 <div className="flex flex-col gap-1">
                   <label
                     className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-banco"
+                    htmlFor="novo-liquidez-dias"
                   >
-                    Banco
-                  </label>
-                  <Select
-                    id="novo-banco"
-                    value={novoBancoId}
-                    onChange={setNovoBancoId}
-                    options={bancos.map((b) => ({
-                      value: b.id,
-                      label: b.nome,
-                    }))}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-tipo"
-                  >
-                    Tipo
-                  </label>
-                  <Select
-                    id="novo-tipo"
-                    value={novoTipo}
-                    onChange={(v) => setNovoTipo(v as TipoInvestimento)}
-                    options={TIPOS_INVESTIMENTO.map((t) => ({
-                      value: t.value,
-                      label: t.label,
-                    }))}
-                  />
-                </div>
-
-                <div className="flex min-w-[140px] flex-1 flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-produto"
-                  >
-                    Produto
+                    Dias (D+n)
                   </label>
                   <input
-                    id="novo-produto"
+                    id="novo-liquidez-dias"
+                    type="number"
+                    min={0}
+                    className={`w-24 ${inputClass}`}
+                    value={liquidezDias}
+                    onChange={(e) => setLiquidezDias(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {modoLiquidez === "DATA" && (
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-on-surface-variant text-xs font-semibold"
+                    htmlFor="novo-vencimento"
+                  >
+                    Data
+                  </label>
+                  <input
+                    id="novo-vencimento"
+                    type="date"
                     className={inputClass}
-                    value={novoProduto}
-                    onChange={(e) => setNovoProduto(e.target.value)}
+                    value={vencimento}
+                    onChange={(e) => setVencimento(e.target.value)}
                     required
                   />
                 </div>
-              </div>
-
-              <div className="gap-sm flex flex-wrap items-end">
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-on-surface-variant text-xs font-semibold"
-                    htmlFor="novo-modo-liquidez"
-                  >
-                    Vencimento/liquidez
-                  </label>
-                  <Select
-                    id="novo-modo-liquidez"
-                    value={modoLiquidez}
-                    onChange={(v) =>
-                      setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")
-                    }
-                    options={[
-                      { value: "DIAS", label: "Prazo (D+n)" },
-                      { value: "DATA", label: "Data de vencimento" },
-                      { value: "NENHUM", label: "Indefinido" },
-                    ]}
-                  />
-                </div>
-
-                {modoLiquidez === "DIAS" && (
-                  <div className="flex flex-col gap-1">
-                    <label
-                      className="text-on-surface-variant text-xs font-semibold"
-                      htmlFor="novo-liquidez-dias"
-                    >
-                      Dias (D+n)
-                    </label>
-                    <input
-                      id="novo-liquidez-dias"
-                      type="number"
-                      min={0}
-                      className={`w-24 ${inputClass}`}
-                      value={liquidezDias}
-                      onChange={(e) => setLiquidezDias(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {modoLiquidez === "DATA" && (
-                  <div className="flex flex-col gap-1">
-                    <label
-                      className="text-on-surface-variant text-xs font-semibold"
-                      htmlFor="novo-vencimento"
-                    >
-                      Data
-                    </label>
-                    <input
-                      id="novo-vencimento"
-                      type="date"
-                      className={inputClass}
-                      value={vencimento}
-                      onChange={(e) => setVencimento(e.target.value)}
-                      required
-                    />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-          )}
-
-          <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={criarReceita}
-              onChange={(e) => setCriarReceita(e.target.checked)}
-            />
-            Criar receita automaticamente com o valor resgatado
-          </label>
-
-          <p className="text-on-surface-variant text-xs">
-            Valor líquido que entra como receita:{" "}
-            <span className="text-on-surface font-semibold">
-              {formatarReais(Math.max(valorLiquidoCentavos, 0))}
-            </span>
-          </p>
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="border-outline-variant text-on-surface px-md hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={enviando}
-              className="bg-primary text-on-primary px-md rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-60"
-            >
-              Finalizar
-            </button>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <label className="text-on-surface flex cursor-pointer items-center gap-1.5 text-sm">
+          <input
+            type="checkbox"
+            checked={criarReceita}
+            onChange={(e) => setCriarReceita(e.target.checked)}
+          />
+          Criar receita automaticamente com o valor resgatado
+        </label>
+
+        <p className="text-on-surface-variant text-xs">
+          Valor líquido que entra como receita:{" "}
+          <span className="text-on-surface font-semibold">
+            {formatarReais(Math.max(valorLiquidoCentavos, 0))}
+          </span>
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={enviando}>
+            Finalizar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

@@ -18,7 +18,11 @@ export async function GET(
   }
 
   const { id } = await ctx.params;
-  const investimento = await buscarInvestimento(prisma, session.householdId, id);
+  const investimento = await buscarInvestimento(
+    prisma,
+    session.householdId,
+    id,
+  );
   if (!investimento) {
     return NextResponse.json(
       { error: "Investimento não encontrado." },

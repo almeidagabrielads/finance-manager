@@ -195,7 +195,11 @@ describe("finalizarInvestimento", () => {
       prismaTest,
       household.id,
       investimento!.id,
-      { valorResgatadoCentavos: 100000, valorReinvestidoCentavos: 0, criarReceita: true },
+      {
+        valorResgatadoCentavos: 100000,
+        valorReinvestidoCentavos: 0,
+        criarReceita: true,
+      },
     );
 
     expect(resultado?.investimento.status).toBe("FINALIZADO");
@@ -258,7 +262,11 @@ describe("finalizarInvestimento", () => {
       prismaTest,
       household.id,
       investimento!.id,
-      { valorResgatadoCentavos: 100000, valorReinvestidoCentavos: 0, criarReceita: false },
+      {
+        valorResgatadoCentavos: 100000,
+        valorReinvestidoCentavos: 0,
+        criarReceita: false,
+      },
     );
 
     expect(resultado?.receita).toBeNull();
@@ -325,7 +333,11 @@ describe("finalizarInvestimento", () => {
       prismaTest,
       household.id,
       "id-fake",
-      { valorResgatadoCentavos: 100, valorReinvestidoCentavos: 0, criarReceita: false },
+      {
+        valorResgatadoCentavos: 100,
+        valorReinvestidoCentavos: 0,
+        criarReceita: false,
+      },
     );
     expect(resultado).toBeNull();
   });
@@ -499,8 +511,7 @@ describe("liquidezConsolidada", () => {
       dataReferencia,
     });
 
-    const faixa = (nome: string) =>
-      resultado.find((r) => r.faixa === nome)!;
+    const faixa = (nome: string) => resultado.find((r) => r.faixa === nome)!;
 
     expect(faixa("IMEDIATO").totalCentavos).toBe(6737056);
     expect(faixa("ATE_30_DIAS").totalCentavos).toBe(4947343 + 123013);

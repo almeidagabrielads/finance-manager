@@ -100,7 +100,10 @@ export type ResumoDivisaoGrupo = SaldoDivisaoGrupo & {
  * vão para as partes com maior resto fracionário (empate: primeiro índice).
  * Pesos iguais reproduzem uma divisão igualitária.
  */
-export function dividirPorPeso(valorCentavos: number, pesos: number[]): number[] {
+export function dividirPorPeso(
+  valorCentavos: number,
+  pesos: number[],
+): number[] {
   const somaPesos = pesos.reduce((soma, peso) => soma + peso, 0);
   if (somaPesos <= 0) return pesos.map(() => 0);
 
@@ -307,11 +310,11 @@ export async function buscarSaldoDivisaoGrupo(
       householdId,
       ...(opts.dataInicio || opts.dataFim
         ? {
-          data: {
-            ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
-            ...(opts.dataFim ? { lte: opts.dataFim } : {}),
-          },
-        }
+            data: {
+              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+            },
+          }
         : {}),
     },
     orderBy: { data: "desc" },
@@ -373,7 +376,9 @@ export async function buscarSaldoDivisaoGrupo(
       .map((l) => l.pessoaDivisaoId),
   );
   const gruposSemComposicao: GrupoSemComposicao[] = grupos
-    .filter((g) => gruposComLancamento.has(g.id) && g.integrantesDoGrupo.length === 0)
+    .filter(
+      (g) => gruposComLancamento.has(g.id) && g.integrantesDoGrupo.length === 0,
+    )
     .map((g) => ({ pessoaId: g.id, nome: g.nome }));
 
   const totalPagoPorPessoa: TotalPagoPessoa[] = participanteIds.map(

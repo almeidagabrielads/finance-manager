@@ -34,13 +34,17 @@ const receitas: ReceitaSeed[] = [
     pessoa: "Gabi",
     subtipo: "SALARIO",
     descricao: null,
-    valoresReal: [49131.62, 46397.55, 42159.71, 32028.89, 9357.38, 13205.41, 9617.38],
+    valoresReal: [
+      49131.62, 46397.55, 42159.71, 32028.89, 9357.38, 13205.41, 9617.38,
+    ],
   },
   {
     pessoa: "Isa",
     subtipo: "SALARIO",
     descricao: null,
-    valoresReal: [6969.38, 7036.86, 7984.07, 11502.29, 6958.68, 8189.02, 7052.25],
+    valoresReal: [
+      6969.38, 7036.86, 7984.07, 11502.29, 6958.68, 8189.02, 7052.25,
+    ],
   },
   {
     pessoa: "Isa",
@@ -74,7 +78,8 @@ async function main() {
   const household = await prisma.household.findUnique({
     where: { nome: HOUSEHOLD_NOME },
   });
-  if (!household) throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
+  if (!household)
+    throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
 
   const pessoas = await prisma.pessoa.findMany({
     where: {
@@ -90,16 +95,18 @@ async function main() {
     }
   }
 
-  const candidatas = receitas.flatMap((receita) =>
-    receita.valoresReal.map((valor, indice) => ({
-      pessoaId: pessoaPorNome.get(receita.pessoa)!,
-      subtipo: receita.subtipo,
-      descricao: receita.descricao,
-      valorCentavos: centavos(valor),
-      mes: mes2026(indice + 1),
-      householdId: household.id,
-    })),
-  ).filter((receita) => receita.valorCentavos > 0);
+  const candidatas = receitas
+    .flatMap((receita) =>
+      receita.valoresReal.map((valor, indice) => ({
+        pessoaId: pessoaPorNome.get(receita.pessoa)!,
+        subtipo: receita.subtipo,
+        descricao: receita.descricao,
+        valorCentavos: centavos(valor),
+        mes: mes2026(indice + 1),
+        householdId: household.id,
+      })),
+    )
+    .filter((receita) => receita.valorCentavos > 0);
 
   const existentes = await prisma.receita.findMany({
     where: {
@@ -130,7 +137,9 @@ async function main() {
     ].join("|");
 
   const chavesExistentes = new Set(existentes.map(chave));
-  const novas = candidatas.filter((receita) => !chavesExistentes.has(chave(receita)));
+  const novas = candidatas.filter(
+    (receita) => !chavesExistentes.has(chave(receita)),
+  );
 
   console.log(`Household: ${household.nome}`);
   console.log(`Receitas válidas: ${candidatas.length}`);

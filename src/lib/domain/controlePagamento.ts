@@ -59,7 +59,9 @@ function mesDe(data: Date): string {
 
 function mesesEntre(inicio: Date, fim: Date): string[] {
   const meses: string[] = [];
-  const cursor = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), 1));
+  const cursor = new Date(
+    Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), 1),
+  );
   const limite = new Date(Date.UTC(fim.getUTCFullYear(), fim.getUTCMonth(), 1));
   while (cursor <= limite) {
     meses.push(mesDe(cursor));
@@ -73,63 +75,74 @@ export async function buscarControlePagamento(
   householdId: string,
   opts: { dataInicio?: Date; dataFim?: Date } = {},
 ): Promise<ControlePagamento> {
-  const [pessoas, individuais, grupos, lancamentos, repasses] = await Promise.all([
-    prisma.pessoa.findMany({
-      where: { householdId },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-    prisma.pessoa.findMany({
-      where: { householdId, tipo: "INDIVIDUAL" },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-    prisma.pessoa.findMany({
-      where: { householdId, tipo: { in: ["CASAL", "FAMILIA"] } },
-      select: {
-        id: true,
-        integrantesDoGrupo: { select: { pessoaId: true, peso: true } },
-      },
-    }),
-    prisma.lancamento.findMany({
-      where: {
-        householdId,
-        ...(opts.dataInicio || opts.dataFim
-          ? {
-            data: {
-              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
-              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
-            },
-          }
-          : {}),
-      },
-      select: {
-        data: true,
-        valorCentavos: true,
-        descontoCentavos: true,
-        pessoaDivisaoId: true,
-        pessoaPagouId: true,
-        pessoaDivisao: { select: { tipo: true } },
-      },
-    }),
-    prisma.acertoContas.findMany({
-      where: {
-        householdId,
-        ...(opts.dataInicio || opts.dataFim
-          ? {
-            dataInicio: {
-              ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
-              ...(opts.dataFim ? { lte: opts.dataFim } : {}),
-            },
-          }
-          : {}),
-      },
-      select: { dataInicio: true, valorCentavos: true, deId: true, paraId: true },
-    }),
-  ]);
+  const [pessoas, individuais, grupos, lancamentos, repasses] =
+    await Promise.all([
+      prisma.pessoa.findMany({
+        where: { householdId },
+        orderBy: { nome: "asc" },
+        select: { id: true, nome: true },
+      }),
+      prisma.pessoa.findMany({
+        where: { householdId, tipo: "INDIVIDUAL" },
+        orderBy: { nome: "asc" },
+        select: { id: true, nome: true },
+      }),
+      prisma.pessoa.findMany({
+        where: { householdId, tipo: { in: ["CASAL", "FAMILIA"] } },
+        select: {
+          id: true,
+          integrantesDoGrupo: { select: { pessoaId: true, peso: true } },
+        },
+      }),
+      prisma.lancamento.findMany({
+        where: {
+          householdId,
+          ...(opts.dataInicio || opts.dataFim
+            ? {
+                data: {
+                  ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+                  ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+                },
+              }
+            : {}),
+        },
+        select: {
+          data: true,
+          valorCentavos: true,
+          descontoCentavos: true,
+          pessoaDivisaoId: true,
+          pessoaPagouId: true,
+          pessoaDivisao: { select: { tipo: true } },
+        },
+      }),
+      prisma.acertoContas.findMany({
+        where: {
+          householdId,
+          ...(opts.dataInicio || opts.dataFim
+            ? {
+                dataInicio: {
+                  ...(opts.dataInicio ? { gte: opts.dataInicio } : {}),
+                  ...(opts.dataFim ? { lte: opts.dataFim } : {}),
+                },
+              }
+            : {}),
+        },
+        select: {
+          dataInicio: true,
+          valorCentavos: true,
+          deId: true,
+          paraId: true,
+        },
+      }),
+    ]);
 
   const somaPorLinha = new Map<string, Map<string, number>>();
-  function somar(divisaoId: string, pagadorId: string, mes: string, valor: number) {
+  function somar(
+    divisaoId: string,
+    pagadorId: string,
+    mes: string,
+    valor: number,
+  ) {
     const chave = `${divisaoId}::${pagadorId}`;
     if (!somaPorLinha.has(chave)) somaPorLinha.set(chave, new Map());
     const porMes = somaPorLinha.get(chave)!;
@@ -178,14 +191,21 @@ export async function buscarControlePagamento(
   }
 
   for (const l of lancamentos) {
-    somar(l.pessoaDivisaoId, l.pessoaPagouId, mesDe(l.data), valorLiquidoCentavos(l));
+    somar(
+      l.pessoaDivisaoId,
+      l.pessoaPagouId,
+      mesDe(l.data),
+      valorLiquidoCentavos(l),
+    );
 
     for (const pessoa of individuais) {
       if (l.pessoaDivisaoId === pessoa.id) {
         somarGastoTotal(pessoa.id, mesDe(l.data), valorLiquidoCentavos(l));
         continue;
       }
-      const fracao = fracaoPorGrupoPessoa.get(`${l.pessoaDivisaoId}::${pessoa.id}`);
+      const fracao = fracaoPorGrupoPessoa.get(
+        `${l.pessoaDivisaoId}::${pessoa.id}`,
+      );
       if (fracao === undefined) continue;
       somarGastoTotal(
         pessoa.id,
@@ -201,7 +221,12 @@ export async function buscarControlePagamento(
     const valorLiquido = valorLiquidoCentavos(l);
     if (tipo === "INDIVIDUAL") {
       if (l.pessoaDivisaoId !== l.pessoaPagouId) {
-        somarPagouPor(l.pessoaDivisaoId, l.pessoaPagouId, mesDe(l.data), valorLiquido);
+        somarPagouPor(
+          l.pessoaDivisaoId,
+          l.pessoaPagouId,
+          mesDe(l.data),
+          valorLiquido,
+        );
       }
     } else if (tipo === "CASAL" || tipo === "FAMILIA") {
       const integrantes = integrantesPorGrupo.get(l.pessoaDivisaoId) ?? [];
@@ -212,7 +237,12 @@ export async function buscarControlePagamento(
         );
         integrantes.forEach((integrante, idx) => {
           if (integrante.pessoaId === l.pessoaPagouId) return;
-          somarPagouPor(integrante.pessoaId, l.pessoaPagouId, mesDe(l.data), partes[idx]);
+          somarPagouPor(
+            integrante.pessoaId,
+            l.pessoaPagouId,
+            mesDe(l.data),
+            partes[idx],
+          );
         });
       }
     }

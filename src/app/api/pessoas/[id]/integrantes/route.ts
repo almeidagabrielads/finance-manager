@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as z from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifySession } from "@/lib/auth/dal";
-import { DefinirIntegrantesSchema, definirIntegrantes } from "@/lib/domain/pessoas";
+import {
+  DefinirIntegrantesSchema,
+  definirIntegrantes,
+} from "@/lib/domain/pessoas";
 
 export async function PUT(
   request: NextRequest,

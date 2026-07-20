@@ -73,7 +73,11 @@ describe("GET /api/orcamentos", () => {
     });
     const { household: outraHousehold } = await criarHouseholdComSessao();
     const gabi = await prismaTest.pessoa.create({
-      data: { nome: "Gabi", tipo: "INDIVIDUAL", householdId: outraHousehold.id },
+      data: {
+        nome: "Gabi",
+        tipo: "INDIVIDUAL",
+        householdId: outraHousehold.id,
+      },
     });
     const outraCategoria = await prismaTest.categoria.create({
       data: { nome: "Moradia", householdId: outraHousehold.id },
@@ -163,7 +167,9 @@ describe("GET /api/orcamentos", () => {
       },
     });
 
-    const response = await GET(getRequest(cookie, `?ano=2026&pessoaId=${isa.id}`));
+    const response = await GET(
+      getRequest(cookie, `?ano=2026&pessoaId=${isa.id}`),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);

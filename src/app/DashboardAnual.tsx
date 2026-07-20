@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { unicosPorChave, unicosPorId } from "@/lib/dedupe";
+import { Badge } from "./components/Badge";
 import { Select } from "./components/Select";
 
 const MESES = [
@@ -490,16 +491,13 @@ export function DashboardAnual({ ano }: { ano: number }) {
             {formatarReais(saldo.receitaCentavos)}
           </p>
           {variacaoReceita !== null && (
-            <span
-              className={`px-sm w-fit rounded-full py-0.5 text-xs font-semibold ${
-                variacaoReceita >= 0
-                  ? "bg-success/15 text-success"
-                  : "bg-danger-container text-on-danger-container"
-              }`}
+            <Badge
+              variant={variacaoReceita >= 0 ? "success" : "danger"}
+              className="w-fit"
             >
               {variacaoReceita >= 0 ? "+" : ""}
               {variacaoReceita.toFixed(0)}% vs. {ano - 1}
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex flex-col gap-1">

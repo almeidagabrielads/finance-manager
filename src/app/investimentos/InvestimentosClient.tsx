@@ -6,6 +6,7 @@ import { PosicaoMensalInline } from "./PosicaoMensalInline";
 import { FinalizarInvestimentoModal } from "./FinalizarInvestimentoModal";
 import { EditarInvestimentoModal } from "./EditarInvestimentoModal";
 import { NovoInvestimentoModal } from "./NovoInvestimentoModal";
+import { Badge } from "../components/Badge";
 import { useConfirmDialog } from "../components/ConfirmDialog";
 import { ColumnHeader } from "../components/ColumnHeader";
 import { Select } from "../components/Select";
@@ -459,12 +460,12 @@ export function InvestimentosClient() {
           <div className="gap-md p-lg pb-md flex flex-wrap items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-on-surface text-base font-bold">Carteira</h2>
-              <span className="bg-surface-container px-sm text-on-surface-variant rounded-full py-0.5 text-xs font-semibold">
+              <Badge>
                 {investimentos?.length ?? 0}{" "}
                 {investimentos?.length === 1
                   ? "item cadastrado"
                   : "itens cadastrados"}
-              </span>
+              </Badge>
               <button
                 type="button"
                 onClick={() => setMostrarNovoInvestimento(true)}
@@ -614,9 +615,13 @@ export function InvestimentosClient() {
                           <div className="text-on-surface flex items-center gap-2 font-medium">
                             {inv.produto}
                             {inv.status === "FINALIZADO" && (
-                              <span className="bg-surface-container-high text-on-surface-variant rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase">
+                              <Badge
+                                variant="neutral-high"
+                                size="2xs"
+                                className="uppercase"
+                              >
                                 Finalizado
-                              </span>
+                              </Badge>
                             )}
                           </div>
                           {inv.observacao && (

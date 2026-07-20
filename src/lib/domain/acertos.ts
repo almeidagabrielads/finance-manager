@@ -93,7 +93,11 @@ export async function registrarRepasse(
     dataInicio: input.data,
     dataFim: input.data,
     transferencias: [
-      { deId: input.deId, paraId: input.paraId, valorCentavos: input.valorCentavos },
+      {
+        deId: input.deId,
+        paraId: input.paraId,
+        valorCentavos: input.valorCentavos,
+      },
     ],
     resolvidoPorUserId: input.resolvidoPorUserId,
   });

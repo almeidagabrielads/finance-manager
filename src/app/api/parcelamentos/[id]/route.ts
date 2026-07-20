@@ -20,7 +20,11 @@ export async function GET(
   }
 
   const { id } = await ctx.params;
-  const parcelamento = await buscarParcelamento(prisma, session.householdId, id);
+  const parcelamento = await buscarParcelamento(
+    prisma,
+    session.householdId,
+    id,
+  );
   if (!parcelamento) {
     return NextResponse.json(
       { error: "Parcelamento não encontrado." },
@@ -80,7 +84,11 @@ export async function DELETE(
   const { id } = await ctx.params;
 
   try {
-    const parcelamento = await removerParcelamento(prisma, session.householdId, id);
+    const parcelamento = await removerParcelamento(
+      prisma,
+      session.householdId,
+      id,
+    );
     if (!parcelamento) {
       return NextResponse.json(
         { error: "Parcelamento não encontrado." },

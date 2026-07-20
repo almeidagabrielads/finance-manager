@@ -142,9 +142,7 @@ async function main() {
       if (sub) {
         subcategoriaId = sub.id;
       } else {
-        subcategoriaNaoMapeada.push(
-          `${categoria.nome} / ${subcategoriaNome}`,
-        );
+        subcategoriaNaoMapeada.push(`${categoria.nome} / ${subcategoriaNome}`);
       }
     }
 
@@ -153,12 +151,16 @@ async function main() {
     if (!banco) motivos.push(`banco desconhecido "${bancoNome}"`);
 
     const divisaoNome = normalizar(campos["Divisão"]);
-    const pessoaDivisao = divisaoNome ? pessoaPorNome.get(divisaoNome) : undefined;
-    if (!pessoaDivisao) motivos.push(`pessoa (divisão) desconhecida "${divisaoNome}"`);
+    const pessoaDivisao = divisaoNome
+      ? pessoaPorNome.get(divisaoNome)
+      : undefined;
+    if (!pessoaDivisao)
+      motivos.push(`pessoa (divisão) desconhecida "${divisaoNome}"`);
 
     const pagouNome = normalizar(campos["Quem pagou"]);
     const pessoaPagou = pagouNome ? pessoaPorNome.get(pagouNome) : undefined;
-    if (!pessoaPagou) motivos.push(`pessoa (quem pagou) desconhecida "${pagouNome}"`);
+    if (!pessoaPagou)
+      motivos.push(`pessoa (quem pagou) desconhecida "${pagouNome}"`);
 
     const valorRaw = normalizar(campos["Valor"]);
     const descontoRaw = normalizar(campos["Desconto"]);
@@ -245,7 +247,9 @@ async function main() {
     console.log(`  ... e mais ${ignorados.length - 30} linha(s) ignorada(s).`);
   }
   if (subcategoriasNaoMapeadas.size > 0) {
-    console.log("Subcategorias não mapeadas (lançamento importado sem subcategoria):");
+    console.log(
+      "Subcategorias não mapeadas (lançamento importado sem subcategoria):",
+    );
     for (const [chave, count] of subcategoriasNaoMapeadas) {
       console.log(`  ${chave}: ${count}x`);
     }

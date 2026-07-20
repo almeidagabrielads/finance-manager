@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "../components/Button";
+import { Modal } from "../components/Modal";
 import { Select } from "../components/Select";
 import {
   TIPOS_INVESTIMENTO,
@@ -82,199 +84,187 @@ export function EditarInvestimentoModal({
   }
 
   return (
-    <div className="bg-on-surface/40 p-lg fixed inset-0 z-[100] flex items-center justify-center">
-      <div className="gap-md p-lg border-outline-variant bg-surface-container-lowest flex w-full max-w-[36rem] flex-col rounded-2xl border shadow-lg">
-        <h2 className="text-on-surface text-base font-bold">
-          Editar &quot;{investimento.produto}&quot;
-        </h2>
+    <Modal maxWidthClass="max-w-[36rem]">
+      <h2 className="text-on-surface text-base font-bold">
+        Editar &quot;{investimento.produto}&quot;
+      </h2>
 
-        {erro && (
-          <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
-            {erro}
-          </p>
-        )}
+      {erro && (
+        <p className="border-danger/30 bg-danger-container p-sm text-on-danger-container rounded-lg border text-sm">
+          {erro}
+        </p>
+      )}
 
-        <form onSubmit={salvar} className="gap-md flex flex-col">
-          <div className="gap-sm flex flex-wrap items-end">
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-banco"
-              >
-                Banco
-              </label>
-              <Select
-                id="editar-banco"
-                value={bancoId}
-                onChange={setBancoId}
-                options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-titular"
-              >
-                Titular
-              </label>
-              <Select
-                id="editar-titular"
-                value={pessoaId}
-                onChange={setPessoaId}
-                options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-tipo"
-              >
-                Tipo
-              </label>
-              <Select
-                id="editar-tipo"
-                value={tipo}
-                onChange={(v) => setTipo(v as TipoInvestimento)}
-                options={TIPOS_INVESTIMENTO.map((t) => ({
-                  value: t.value,
-                  label: t.label,
-                }))}
-              />
-            </div>
-          </div>
-
-          <div className="gap-sm flex flex-wrap items-end">
-            <div className="flex min-w-[160px] flex-1 flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-produto"
-              >
-                Produto
-              </label>
-              <input
-                id="editar-produto"
-                className={inputClass}
-                value={produto}
-                onChange={(e) => setProduto(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-valor"
-              >
-                Valor atual (R$)
-              </label>
-              <input
-                id="editar-valor"
-                type="number"
-                step="0.01"
-                className={`w-32 text-right ${inputClass}`}
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="gap-sm flex flex-wrap items-end">
-            <div className="flex flex-col gap-1">
-              <label
-                className="text-on-surface-variant text-xs font-semibold"
-                htmlFor="editar-modo-liquidez"
-              >
-                Vencimento/liquidez
-              </label>
-              <Select
-                id="editar-modo-liquidez"
-                value={modoLiquidez}
-                onChange={(v) =>
-                  setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")
-                }
-                options={[
-                  { value: "DIAS", label: "Prazo (D+n)" },
-                  { value: "DATA", label: "Data de vencimento" },
-                  { value: "NENHUM", label: "Indefinido" },
-                ]}
-              />
-            </div>
-
-            {modoLiquidez === "DIAS" && (
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="editar-liquidez-dias"
-                >
-                  Dias (D+n)
-                </label>
-                <input
-                  id="editar-liquidez-dias"
-                  type="number"
-                  min={0}
-                  className={`w-24 ${inputClass}`}
-                  value={liquidezDias}
-                  onChange={(e) => setLiquidezDias(e.target.value)}
-                />
-              </div>
-            )}
-
-            {modoLiquidez === "DATA" && (
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-on-surface-variant text-xs font-semibold"
-                  htmlFor="editar-vencimento"
-                >
-                  Data
-                </label>
-                <input
-                  id="editar-vencimento"
-                  type="date"
-                  className={inputClass}
-                  value={vencimento}
-                  onChange={(e) => setVencimento(e.target.value)}
-                  required
-                />
-              </div>
-            )}
+      <form onSubmit={salvar} className="gap-md flex flex-col">
+        <div className="gap-sm flex flex-wrap items-end">
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="editar-banco"
+            >
+              Banco
+            </label>
+            <Select
+              id="editar-banco"
+              value={bancoId}
+              onChange={setBancoId}
+              options={bancos.map((b) => ({ value: b.id, label: b.nome }))}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
             <label
               className="text-on-surface-variant text-xs font-semibold"
-              htmlFor="editar-observacao"
+              htmlFor="editar-titular"
             >
-              Observação (Opcional)
+              Titular
             </label>
-            <input
-              id="editar-observacao"
-              className={inputClass}
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
+            <Select
+              id="editar-titular"
+              value={pessoaId}
+              onChange={setPessoaId}
+              options={pessoas.map((p) => ({ value: p.id, label: p.nome }))}
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="border-outline-variant text-on-surface px-md hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="editar-tipo"
             >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={enviando}
-              className="bg-primary text-on-primary px-md rounded-full py-1.5 text-xs font-semibold hover:opacity-90 disabled:opacity-60"
-            >
-              Salvar
-            </button>
+              Tipo
+            </label>
+            <Select
+              id="editar-tipo"
+              value={tipo}
+              onChange={(v) => setTipo(v as TipoInvestimento)}
+              options={TIPOS_INVESTIMENTO.map((t) => ({
+                value: t.value,
+                label: t.label,
+              }))}
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="gap-sm flex flex-wrap items-end">
+          <div className="flex min-w-[160px] flex-1 flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="editar-produto"
+            >
+              Produto
+            </label>
+            <input
+              id="editar-produto"
+              className={inputClass}
+              value={produto}
+              onChange={(e) => setProduto(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="editar-valor"
+            >
+              Valor atual (R$)
+            </label>
+            <input
+              id="editar-valor"
+              type="number"
+              step="0.01"
+              className={`w-32 text-right ${inputClass}`}
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="gap-sm flex flex-wrap items-end">
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-on-surface-variant text-xs font-semibold"
+              htmlFor="editar-modo-liquidez"
+            >
+              Vencimento/liquidez
+            </label>
+            <Select
+              id="editar-modo-liquidez"
+              value={modoLiquidez}
+              onChange={(v) => setModoLiquidez(v as "DIAS" | "DATA" | "NENHUM")}
+              options={[
+                { value: "DIAS", label: "Prazo (D+n)" },
+                { value: "DATA", label: "Data de vencimento" },
+                { value: "NENHUM", label: "Indefinido" },
+              ]}
+            />
+          </div>
+
+          {modoLiquidez === "DIAS" && (
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="editar-liquidez-dias"
+              >
+                Dias (D+n)
+              </label>
+              <input
+                id="editar-liquidez-dias"
+                type="number"
+                min={0}
+                className={`w-24 ${inputClass}`}
+                value={liquidezDias}
+                onChange={(e) => setLiquidezDias(e.target.value)}
+              />
+            </div>
+          )}
+
+          {modoLiquidez === "DATA" && (
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-on-surface-variant text-xs font-semibold"
+                htmlFor="editar-vencimento"
+              >
+                Data
+              </label>
+              <input
+                id="editar-vencimento"
+                type="date"
+                className={inputClass}
+                value={vencimento}
+                onChange={(e) => setVencimento(e.target.value)}
+                required
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label
+            className="text-on-surface-variant text-xs font-semibold"
+            htmlFor="editar-observacao"
+          >
+            Observação (Opcional)
+          </label>
+          <input
+            id="editar-observacao"
+            className={inputClass}
+            value={observacao}
+            onChange={(e) => setObservacao(e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={enviando}>
+            Salvar
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

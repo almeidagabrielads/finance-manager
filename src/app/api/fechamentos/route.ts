@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as z from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifySession } from "@/lib/auth/dal";
-import { SalvarFechamentoSchema, salvarFechamento } from "@/lib/domain/fechamentos";
+import {
+  SalvarFechamentoSchema,
+  salvarFechamento,
+} from "@/lib/domain/fechamentos";
 
 export async function POST(request: NextRequest) {
   const session = verifySession(request);

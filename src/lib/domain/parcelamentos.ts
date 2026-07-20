@@ -2,7 +2,11 @@ import * as z from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { TipoGastoSchema } from "./tipoGasto";
 
-export const ModoParcelamentoValues = ["GRADUAL", "AVISTA", "PREVISAO"] as const;
+export const ModoParcelamentoValues = [
+  "GRADUAL",
+  "AVISTA",
+  "PREVISAO",
+] as const;
 export const ModoParcelamentoSchema = z.enum(ModoParcelamentoValues);
 export type ModoParcelamento = z.infer<typeof ModoParcelamentoSchema>;
 
@@ -25,10 +29,7 @@ export function dividirParcelas(
 // Data da parcela de índice `indice` (0 = primeira parcela), somando meses em
 // UTC a partir de dataPrimeiraParcela. Mantém o dia de dataPrimeiraParcela,
 // limitado ao último dia do mês de destino (ex.: 31/jan -> 28-29/fev).
-export function dataDaParcela(
-  dataPrimeiraParcela: Date,
-  indice: number,
-): Date {
+export function dataDaParcela(dataPrimeiraParcela: Date, indice: number): Date {
   const ano = dataPrimeiraParcela.getUTCFullYear();
   const mes = dataPrimeiraParcela.getUTCMonth() + indice;
   const dia = dataPrimeiraParcela.getUTCDate();
@@ -192,7 +193,12 @@ export function listarParcelamentos(
       householdId,
       ...(opts.bancoId ? { bancoId: opts.bancoId } : {}),
       ...(opts.pessoaId
-        ? { OR: [{ pessoaDivisaoId: opts.pessoaId }, { pessoaPagouId: opts.pessoaId }] }
+        ? {
+            OR: [
+              { pessoaDivisaoId: opts.pessoaId },
+              { pessoaPagouId: opts.pessoaId },
+            ],
+          }
         : {}),
       ...(opts.incluirQuitados ? {} : { quitadoEm: null }),
     },
@@ -318,7 +324,9 @@ export async function atualizarParcelamento(
     pessoaDivisaoId: input.pessoaDivisaoId ?? existente.pessoaDivisaoId,
     pessoaPagouId: input.pessoaPagouId ?? existente.pessoaPagouId,
     categoriaId:
-      input.categoriaId !== undefined ? input.categoriaId : existente.categoriaId,
+      input.categoriaId !== undefined
+        ? input.categoriaId
+        : existente.categoriaId,
     subcategoriaId:
       input.subcategoriaId !== undefined
         ? input.subcategoriaId
@@ -351,7 +359,9 @@ export async function atualizarParcelamento(
         ...(input.pessoaPagouId !== undefined
           ? { pessoaPagouId: input.pessoaPagouId }
           : {}),
-        ...(input.tipoGasto !== undefined ? { tipoGasto: input.tipoGasto } : {}),
+        ...(input.tipoGasto !== undefined
+          ? { tipoGasto: input.tipoGasto }
+          : {}),
       },
     });
     return tx.parcelamento.findUniqueOrThrow({
@@ -448,7 +458,9 @@ export async function alterarModoParcelamento(
       // Consolida tudo (parcelas já realizadas e previstas) num único
       // lançamento com o valor total — mesmo resultado de ter criado o
       // parcelamento direto em modo AVISTA.
-      await tx.lancamento.deleteMany({ where: { parcelamentoId: existente.id } });
+      await tx.lancamento.deleteMany({
+        where: { parcelamentoId: existente.id },
+      });
       await tx.lancamento.create({
         data: {
           ...dadosLancamentoBase,

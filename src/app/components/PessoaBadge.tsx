@@ -1,3 +1,5 @@
+import { Badge } from "./Badge";
+
 const PALETA = [
   "bg-secondary-container text-on-secondary-container",
   "bg-tertiary-container text-on-tertiary-container",
@@ -47,10 +49,8 @@ export function PessoaBadge({
   compartilhado?: boolean;
 }) {
   return (
-    <span
-      className={`px-sm inline-flex items-center rounded-full py-0.5 text-xs font-semibold ${corPessoa(pessoaId, compartilhado)}`}
-    >
+    <Badge variant="none" className={corPessoa(pessoaId, compartilhado)}>
       {nome}
-    </span>
+    </Badge>
   );
 }

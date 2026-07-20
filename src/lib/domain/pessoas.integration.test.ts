@@ -170,7 +170,9 @@ describe("definirIntegrantes", () => {
       { pessoaId: gabi.id, peso: 40 },
     ]);
     const segunda = await listarPessoas(prismaTest, h.id);
-    const integrantes = segunda.find((p) => p.id === familia.id)?.integrantesDoGrupo;
+    const integrantes = segunda.find(
+      (p) => p.id === familia.id,
+    )?.integrantesDoGrupo;
     expect(integrantes).toHaveLength(2);
     expect(integrantes).toEqual(
       expect.arrayContaining([
@@ -297,9 +299,7 @@ describe("resolverPessoasEfetivas", () => {
       h.id,
       familia.id,
     );
-    expect(resultado.sort()).toEqual(
-      [familia.id, isa.id, gabi.id].sort(),
-    );
+    expect(resultado.sort()).toEqual([familia.id, isa.id, gabi.id].sort());
   });
 });
 

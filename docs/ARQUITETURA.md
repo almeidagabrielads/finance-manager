@@ -65,19 +65,19 @@ Actions diretamente — fica em `lib/domain/*`, testável isoladamente e reutili
 
 ## 4. Mapeamento dos módulos de REQUISITOS.md para a arquitetura
 
-| Requisitos                                                    | Módulo                   | Onde vive                                                                                                                                 |
-| ------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| RF01-RF03 (Cadastros: Categoria, Subcategoria, Banco, Pessoa) | Cadastros                | CRUD simples via Prisma, telas de admin                                                                                                   |
-| RF04-RF05 (Lançamentos, estornos)                             | Lançamentos              | Server Actions + `lib/domain/lancamentos.ts`                                                                                              |
-| RF06 (Importação CSV/OFX + sugestão de categoria)             | Importação               | Route Handler de upload + `lib/domain/import/` (parser + matcher por histórico)                                                           |
-| RF07 (Receitas)                                               | Lançamentos (receita)    | Mesma tabela de lançamento, `tipo = receita`, ou tabela própria `Receita`                                                                 |
-| RF08-RF09 (Orçamento planejado x real)                        | Orçamento                | `lib/domain/orcamento.ts` — agregações planejado vs. real                                                                                 |
-| RF10 (Relatórios por categoria/subcategoria)                  | Relatórios               | Queries agregadas (Prisma `groupBy`) + `lib/domain/relatorios.ts`                                                                         |
-| RF11 (Acerto de contas entre as pessoas da casa)               | Divisão de despesas      | `lib/domain/split.ts` — calcula saldo a acertar entre N Pessoas de um Household                                                           |
-| RF12-RF13 (Investimentos, histórico de patrimônio)            | Investimentos/Patrimônio | CRUD + `lib/domain/patrimonio.ts` para série histórica                                                                                    |
+| Requisitos                                                    | Módulo                   | Onde vive                                                                                                                     |
+| ------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| RF01-RF03 (Cadastros: Categoria, Subcategoria, Banco, Pessoa) | Cadastros                | CRUD simples via Prisma, telas de admin                                                                                       |
+| RF04-RF05 (Lançamentos, estornos)                             | Lançamentos              | Server Actions + `lib/domain/lancamentos.ts`                                                                                  |
+| RF06 (Importação CSV/OFX + sugestão de categoria)             | Importação               | Route Handler de upload + `lib/domain/import/` (parser + matcher por histórico)                                               |
+| RF07 (Receitas)                                               | Lançamentos (receita)    | Mesma tabela de lançamento, `tipo = receita`, ou tabela própria `Receita`                                                     |
+| RF08-RF09 (Orçamento planejado x real)                        | Orçamento                | `lib/domain/orcamento.ts` — agregações planejado vs. real                                                                     |
+| RF10 (Relatórios por categoria/subcategoria)                  | Relatórios               | Queries agregadas (Prisma `groupBy`) + `lib/domain/relatorios.ts`                                                             |
+| RF11 (Acerto de contas entre as pessoas da casa)              | Divisão de despesas      | `lib/domain/split.ts` — calcula saldo a acertar entre N Pessoas de um Household                                               |
+| RF12-RF13 (Investimentos, histórico de patrimônio)            | Investimentos/Patrimônio | CRUD + `lib/domain/patrimonio.ts` para série histórica                                                                        |
 | RF14 (Rendimento real vs. esperado vs. CDI, projeção)         | Investimentos            | `lib/domain/rendimento.ts` (cálculo puro) + `lib/domain/cdi.ts` (busca e cacheia o CDI mensal via API do BCB, série SGS 4391) |
-| RF15 (Liquidez consolidada)                                   | Investimentos            | Query agregada por prazo de resgate sobre `Investimento`                                                                                  |
-| Multiusuário/Household, auditoria (NFR)                       | Transversal              | Auth.js (sessão), `householdId` em todas as entidades, campos `createdBy`/`updatedBy`/timestamps em Lançamento                            |
+| RF15 (Liquidez consolidada)                                   | Investimentos            | Query agregada por prazo de resgate sobre `Investimento`                                                                      |
+| Multiusuário/Household, auditoria (NFR)                       | Transversal              | Auth.js (sessão), `householdId` em todas as entidades, campos `createdBy`/`updatedBy`/timestamps em Lançamento                |
 
 ## 5. Modelo de dados (alto nível)
 

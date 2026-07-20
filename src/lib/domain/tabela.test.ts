@@ -12,9 +12,9 @@ describe("filtroVazio / filtroEstaAtivo", () => {
   });
 
   it("filtro de opções com seleção está ativo", () => {
-    expect(
-      filtroEstaAtivo({ tipo: "opcoes", selecionadas: ["Mercado"] }),
-    ).toBe(true);
+    expect(filtroEstaAtivo({ tipo: "opcoes", selecionadas: ["Mercado"] })).toBe(
+      true,
+    );
   });
 });
 
@@ -33,7 +33,11 @@ describe("valorPassaFiltro", () => {
   });
 
   it("data respeita intervalo de/até", () => {
-    const filtro = { tipo: "data" as const, de: "2026-01-01", ate: "2026-01-31" };
+    const filtro = {
+      tipo: "data" as const,
+      de: "2026-01-01",
+      ate: "2026-01-31",
+    };
     expect(valorPassaFiltro("2026-01-15", filtro)).toBe(true);
     expect(valorPassaFiltro("2025-12-31", filtro)).toBe(false);
     expect(valorPassaFiltro("2026-02-01", filtro)).toBe(false);

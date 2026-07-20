@@ -61,9 +61,7 @@ const receitas: ReceitaSeed[] = [
     pessoa: "Gabi",
     subtipo: "VOUCHER",
     descricao: null,
-    valoresReal: [
-      1083, 1140, 912, 1026, 1026, 1197, 1311, 0, 588, 644, 560, 0,
-    ],
+    valoresReal: [1083, 1140, 912, 1026, 1026, 1197, 1311, 0, 588, 644, 560, 0],
   },
   {
     pessoa: "Isa",
@@ -85,7 +83,8 @@ async function main() {
   const household = await prisma.household.findUnique({
     where: { nome: HOUSEHOLD_NOME },
   });
-  if (!household) throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
+  if (!household)
+    throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
 
   const pessoas = await prisma.pessoa.findMany({
     where: {
@@ -101,16 +100,18 @@ async function main() {
     }
   }
 
-  const candidatas = receitas.flatMap((receita) =>
-    receita.valoresReal.map((valor, indice) => ({
-      pessoaId: pessoaPorNome.get(receita.pessoa)!,
-      subtipo: receita.subtipo,
-      descricao: receita.descricao,
-      valorCentavos: centavos(valor),
-      mes: mes2025(indice + 1),
-      householdId: household.id,
-    })),
-  ).filter((receita) => receita.valorCentavos > 0);
+  const candidatas = receitas
+    .flatMap((receita) =>
+      receita.valoresReal.map((valor, indice) => ({
+        pessoaId: pessoaPorNome.get(receita.pessoa)!,
+        subtipo: receita.subtipo,
+        descricao: receita.descricao,
+        valorCentavos: centavos(valor),
+        mes: mes2025(indice + 1),
+        householdId: household.id,
+      })),
+    )
+    .filter((receita) => receita.valorCentavos > 0);
 
   const existentes = await prisma.receita.findMany({
     where: {
@@ -141,7 +142,9 @@ async function main() {
     ].join("|");
 
   const chavesExistentes = new Set(existentes.map(chave));
-  const novas = candidatas.filter((receita) => !chavesExistentes.has(chave(receita)));
+  const novas = candidatas.filter(
+    (receita) => !chavesExistentes.has(chave(receita)),
+  );
 
   console.log(`Household: ${household.nome}`);
   console.log(`Receitas válidas: ${candidatas.length}`);

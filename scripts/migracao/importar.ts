@@ -177,8 +177,7 @@ async function run(commit: boolean) {
     } | null {
       const p = pessoaPorNome.get(nome);
       if (p) return p;
-      if (nome === "Família" && commit && pessoaFamilia)
-        return pessoaFamilia;
+      if (nome === "Família" && commit && pessoaFamilia) return pessoaFamilia;
       if (nome === "Família" && !commit)
         return { id: "(nova) Família", tipo: "FAMILIA" };
       return null;
@@ -274,9 +273,7 @@ async function run(commit: boolean) {
         motivos.push(`pessoa (divisão) desconhecida "${divisaoNome}"`);
 
       const quemPagouNome = normalizar(l.quemPagou);
-      const pessoaPagou = quemPagouNome
-        ? resolverPessoa(quemPagouNome)
-        : null;
+      const pessoaPagou = quemPagouNome ? resolverPessoa(quemPagouNome) : null;
       if (!pessoaPagou)
         motivos.push(`pessoa (quem pagou) desconhecida "${quemPagouNome}"`);
 
@@ -378,7 +375,8 @@ async function run(commit: boolean) {
         continue;
       }
 
-      const texto = `${inv.produto ?? ""} ${inv.observacao ?? ""}`.toLowerCase();
+      const texto =
+        `${inv.produto ?? ""} ${inv.observacao ?? ""}`.toLowerCase();
       let nomePessoaInferida: string;
       let comoInferiu: string;
       if (texto.includes("gabi")) {
@@ -466,9 +464,7 @@ async function run(commit: boolean) {
       posicoesParaImportar.push({
         bancoId: banco.id,
         pessoaId: pessoa.id,
-        mes: new Date(
-          Date.UTC(ANO_REFERENCIA_PATRIMONIO, mesNumero - 1, 1),
-        ),
+        mes: new Date(Date.UTC(ANO_REFERENCIA_PATRIMONIO, mesNumero - 1, 1)),
         valorCentavos: centavos(p.valor),
       });
     }
@@ -479,7 +475,9 @@ async function run(commit: boolean) {
     const dataMax = datas.length ? new Date(Math.max(...datas)) : null;
 
     console.log("\n=== RESUMO DA MIGRAÇÃO ===\n");
-    console.log(`Modo: ${commit ? "COMMIT (grava no banco)" : "DRY-RUN (nada será gravado)"}`);
+    console.log(
+      `Modo: ${commit ? "COMMIT (grava no banco)" : "DRY-RUN (nada será gravado)"}`,
+    );
     console.log(`Household: ${household.nome}\n`);
 
     console.log(`Lançamentos a importar: ${lancamentosParaImportar.length}`);
@@ -488,7 +486,9 @@ async function run(commit: boolean) {
         `  Período: ${dataMin.toISOString().slice(0, 10)} a ${dataMax.toISOString().slice(0, 10)}`,
       );
     }
-    console.log(`  Ignorados (dados incompletos): ${lancamentosIgnorados.length}`);
+    console.log(
+      `  Ignorados (dados incompletos): ${lancamentosIgnorados.length}`,
+    );
     for (const ig of lancamentosIgnorados) {
       console.log(`    linha ${ig.linha}: ${ig.motivo}`);
     }
@@ -508,7 +508,9 @@ async function run(commit: boolean) {
       }
     }
 
-    console.log(`\nInvestimentos a importar: ${investimentosParaImportar.length}`);
+    console.log(
+      `\nInvestimentos a importar: ${investimentosParaImportar.length}`,
+    );
     for (const inv of investimentosParaImportar) {
       console.log(
         `  linha ${inv.linhaOrigem}: ${inv.produto} — R$ ${(inv.valorAtualCentavos / 100).toFixed(2)} — titular: ${inv.pessoaInferida}`,
@@ -519,7 +521,9 @@ async function run(commit: boolean) {
       console.log(`    linha ${ig.linha}: ${ig.motivo}`);
     }
 
-    console.log(`\nPosições de patrimônio a importar: ${posicoesParaImportar.length}`);
+    console.log(
+      `\nPosições de patrimônio a importar: ${posicoesParaImportar.length}`,
+    );
     console.log(`  Ignoradas: ${posicoesIgnoradas.length}`);
     for (const ig of posicoesIgnoradas) console.log(`    ${ig.motivo}`);
 
@@ -532,7 +536,9 @@ async function run(commit: boolean) {
     );
 
     if (bancosNovos.length > 0) {
-      console.log(`\nBancos novos ${commit ? "criados" : "que seriam criados"}:`);
+      console.log(
+        `\nBancos novos ${commit ? "criados" : "que seriam criados"}:`,
+      );
       for (const b of bancosNovos) console.log(`  ${b.nome} (${b.tipo})`);
     }
     if (precisaCriarFamilia) {
@@ -549,7 +555,9 @@ async function run(commit: boolean) {
     );
 
     if (!commit) {
-      console.log("\nNada foi gravado (--dry-run). Rode com --commit para gravar.");
+      console.log(
+        "\nNada foi gravado (--dry-run). Rode com --commit para gravar.",
+      );
       return;
     }
 
@@ -572,7 +580,9 @@ async function run(commit: boolean) {
       })),
       skipDuplicates: true,
     });
-    console.log(`  ${resultadoLancamentos.count} lançamentos gravados (duplicados pelo hash foram pulados).`);
+    console.log(
+      `  ${resultadoLancamentos.count} lançamentos gravados (duplicados pelo hash foram pulados).`,
+    );
 
     // ── Reconciliação: alguns lançamentos são duplicatas legítimas na
     // planilha original (mesma data + descrição + valor + banco — ex.: duas
@@ -678,7 +688,9 @@ async function run(commit: boolean) {
       });
       posicoesGravadas++;
     }
-    console.log(`  ${posicoesGravadas} posições de patrimônio gravadas (upsert).`);
+    console.log(
+      `  ${posicoesGravadas} posições de patrimônio gravadas (upsert).`,
+    );
 
     console.log("\nMigração concluída.");
   } finally {

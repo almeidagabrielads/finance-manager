@@ -20,7 +20,10 @@ export type AtualizarPessoaInput = z.infer<typeof AtualizarPessoaSchema>;
 
 export const IntegranteInputSchema = z.object({
   pessoaId: z.string().trim().min(1, "Pessoa é obrigatória."),
-  peso: z.number().int("Peso deve ser um inteiro.").positive("Peso deve ser positivo."),
+  peso: z
+    .number()
+    .int("Peso deve ser um inteiro.")
+    .positive("Peso deve ser positivo."),
 });
 
 export const DefinirIntegrantesSchema = z.array(IntegranteInputSchema);
@@ -70,7 +73,9 @@ export async function atualizarPessoa(
   const tipoVirouIndividual =
     input.tipo === "INDIVIDUAL" && existente.tipo !== "INDIVIDUAL";
   const tipoDeixouDeSerIndividual =
-    !!input.tipo && input.tipo !== "INDIVIDUAL" && existente.tipo === "INDIVIDUAL";
+    !!input.tipo &&
+    input.tipo !== "INDIVIDUAL" &&
+    existente.tipo === "INDIVIDUAL";
 
   if (!tipoVirouIndividual && !tipoDeixouDeSerIndividual) {
     return prisma.pessoa.update({ where: { id }, data: input });
@@ -199,7 +204,10 @@ export async function resolverFracaoPorGrupo(
 
   const fracaoPorGrupo = new Map<string, number>();
   for (const p of participacoes) {
-    const somaPesos = p.grupo.integrantesDoGrupo.reduce((s, i) => s + i.peso, 0);
+    const somaPesos = p.grupo.integrantesDoGrupo.reduce(
+      (s, i) => s + i.peso,
+      0,
+    );
     if (somaPesos > 0) {
       fracaoPorGrupo.set(p.grupoId, p.peso / somaPesos);
     }

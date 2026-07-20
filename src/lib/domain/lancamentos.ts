@@ -246,11 +246,7 @@ export type SugestaoDescricao = {
 // Normaliza para comparação de descrições ignorando maiúsculas/minúsculas e
 // acentos gráficos (autocomplete não deve diferenciá-los).
 export function normalizarDescricaoParaBusca(descricao: string): string {
-  return descricao
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+  return descricao.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
 const MAX_LANCAMENTOS_HISTORICO_DESCRICAO = 500;

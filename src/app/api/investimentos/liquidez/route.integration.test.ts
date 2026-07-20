@@ -84,7 +84,9 @@ describe("GET /api/investimentos/liquidez", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    const imediato = body.find((g: { faixa: string }) => g.faixa === "IMEDIATO");
+    const imediato = body.find(
+      (g: { faixa: string }) => g.faixa === "IMEDIATO",
+    );
     const indefinido = body.find(
       (g: { faixa: string }) => g.faixa === "INDEFINIDO",
     );

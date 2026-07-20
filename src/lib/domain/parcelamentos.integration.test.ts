@@ -77,7 +77,11 @@ describe("criarParcelamento", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
 
     expect(parcelamento?.valorTotalCentavos).toBe(120000);
@@ -156,10 +160,16 @@ describe("escopo por household", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
 
-    expect(await buscarParcelamento(prismaTest, outro.id, parcelamento!.id)).toBeNull();
+    expect(
+      await buscarParcelamento(prismaTest, outro.id, parcelamento!.id),
+    ).toBeNull();
     expect(
       await atualizarParcelamento(prismaTest, outro.id, parcelamento!.id, {
         descricaoPropria: "hack",
@@ -234,7 +244,11 @@ describe("alterarModoParcelamento", () => {
     );
     // Lança mais uma parcela antes de trocar de modo, pra garantir que a
     // consolidação apaga TODAS as parcelas (não só as futuras/previstas).
-    await lancarProximaParcelaGradual(prismaTest, household.id, parcelamento!.id);
+    await lancarProximaParcelaGradual(
+      prismaTest,
+      household.id,
+      parcelamento!.id,
+    );
 
     const atualizado = await alterarModoParcelamento(
       prismaTest,
@@ -290,7 +304,12 @@ describe("alterarModoParcelamento", () => {
     );
 
     await expect(
-      alterarModoParcelamento(prismaTest, household.id, parcelamento!.id, "GRADUAL"),
+      alterarModoParcelamento(
+        prismaTest,
+        household.id,
+        parcelamento!.id,
+        "GRADUAL",
+      ),
     ).rejects.toThrow(ParcelamentoModoInvalidoError);
   });
 
@@ -299,14 +318,23 @@ describe("alterarModoParcelamento", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
     await quitarAntecipadamente(prismaTest, household.id, parcelamento!.id, {
       descontoCentavos: 0,
     });
 
     await expect(
-      alterarModoParcelamento(prismaTest, household.id, parcelamento!.id, "PREVISAO"),
+      alterarModoParcelamento(
+        prismaTest,
+        household.id,
+        parcelamento!.id,
+        "PREVISAO",
+      ),
     ).rejects.toThrow(ParcelamentoJaQuitadoError);
   });
 });
@@ -365,7 +393,11 @@ describe("lancarProximaParcelaGradual", () => {
         quantidadeParcelas: 2,
       }),
     );
-    await lancarProximaParcelaGradual(prismaTest, household.id, parcelamento!.id);
+    await lancarProximaParcelaGradual(
+      prismaTest,
+      household.id,
+      parcelamento!.id,
+    );
 
     await expect(
       lancarProximaParcelaGradual(prismaTest, household.id, parcelamento!.id),
@@ -443,7 +475,11 @@ describe("quitarAntecipadamente", () => {
       { descontoCentavos: 0 },
     );
 
-    const busca = await buscarParcelamento(prismaTest, household.id, parcelamento!.id);
+    const busca = await buscarParcelamento(
+      prismaTest,
+      household.id,
+      parcelamento!.id,
+    );
     // 1 realizada (mantida) + 1 de quitação = 2 (as 2 previstas foram apagadas)
     expect(busca?.lancamentos).toHaveLength(2);
     expect(resultado?.lancamentoQuitacao?.valorCentavos).toBe(20000);
@@ -454,7 +490,11 @@ describe("quitarAntecipadamente", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
     await quitarAntecipadamente(prismaTest, household.id, parcelamento!.id, {
       descontoCentavos: 0,
@@ -489,7 +529,9 @@ describe("removerParcelamento", () => {
     });
 
     await removerParcelamento(prismaTest, household.id, parcelamento!.id);
-    expect(await buscarParcelamento(prismaTest, household.id, parcelamento!.id)).toBeNull();
+    expect(
+      await buscarParcelamento(prismaTest, household.id, parcelamento!.id),
+    ).toBeNull();
   });
 
   it("lança erro se já existem parcelas realizadas", async () => {
@@ -497,7 +539,11 @@ describe("removerParcelamento", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
 
     await expect(
@@ -512,7 +558,11 @@ describe("encontrarParcelamentoCorrespondente", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
 
     const encontrado = await encontrarParcelamentoCorrespondente(
@@ -534,7 +584,11 @@ describe("encontrarParcelamentoCorrespondente", () => {
     const parcelamento = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
     await quitarAntecipadamente(prismaTest, household.id, parcelamento!.id, {
       descontoCentavos: 0,
@@ -561,12 +615,20 @@ describe("listarParcelamentos", () => {
     const p1 = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
     const p2 = await criarParcelamento(
       prismaTest,
       household.id,
-      inputBase({ bancoId: banco.id, pessoaDivisaoId: isa.id, pessoaPagouId: isa.id }),
+      inputBase({
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+      }),
     );
     await quitarAntecipadamente(prismaTest, household.id, p2!.id, {
       descontoCentavos: 0,

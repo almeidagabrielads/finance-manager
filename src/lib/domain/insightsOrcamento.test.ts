@@ -13,8 +13,16 @@ describe("gerarInsightMensal", () => {
 
   it("combina maior economia e maior estouro na mesma frase", () => {
     const texto = gerarInsightMensal([
-      { nome: "Alimentação", planejadoCentavos: 220_000, realCentavos: 185_040 },
-      { nome: "Lazer & Viagem", planejadoCentavos: 150_000, realCentavos: 182_000 },
+      {
+        nome: "Alimentação",
+        planejadoCentavos: 220_000,
+        realCentavos: 185_040,
+      },
+      {
+        nome: "Lazer & Viagem",
+        planejadoCentavos: 150_000,
+        realCentavos: 182_000,
+      },
     ]);
     expect(texto).toContain("Alimentação");
     expect(texto).toContain("Lazer & Viagem");

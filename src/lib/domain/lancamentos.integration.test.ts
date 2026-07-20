@@ -684,7 +684,11 @@ describe("buscarSugestoesDescricao", () => {
       tipoGasto: "FIXO",
     });
 
-    const sugestoes = await buscarSugestoesDescricao(prismaTest, h.id, "acucar");
+    const sugestoes = await buscarSugestoesDescricao(
+      prismaTest,
+      h.id,
+      "acucar",
+    );
 
     expect(sugestoes).toHaveLength(1);
     expect(sugestoes[0].descricao).toBe("Padaria Açúcar");

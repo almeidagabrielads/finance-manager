@@ -35,10 +35,13 @@ function ctx(id: string) {
 }
 
 function req(cookie?: string) {
-  return new NextRequest("http://localhost/api/parcelamentos/x/proxima-parcela", {
-    method: "POST",
-    headers: cookie ? { cookie } : {},
-  });
+  return new NextRequest(
+    "http://localhost/api/parcelamentos/x/proxima-parcela",
+    {
+      method: "POST",
+      headers: cookie ? { cookie } : {},
+    },
+  );
 }
 
 beforeAll(async () => {

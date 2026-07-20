@@ -38,7 +38,10 @@ export async function PATCH(
   }
   if (!(await autorizarGestor(session))) {
     return NextResponse.json(
-      { error: "Apenas proprietários ou administradores podem alterar o acesso." },
+      {
+        error:
+          "Apenas proprietários ou administradores podem alterar o acesso.",
+      },
       { status: 403 },
     );
   }
@@ -100,7 +103,9 @@ export async function DELETE(
   }
   if (!(await autorizarGestor(session))) {
     return NextResponse.json(
-      { error: "Apenas proprietários ou administradores podem remover membros." },
+      {
+        error: "Apenas proprietários ou administradores podem remover membros.",
+      },
       { status: 403 },
     );
   }

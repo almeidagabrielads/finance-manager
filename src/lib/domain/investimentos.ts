@@ -17,7 +17,9 @@ export const CriarInvestimentoSchema = z
     bancoId: z.string().trim().min(1, "Banco é obrigatório."),
     tipo: z.enum(TipoInvestimentoValues),
     produto: z.string().trim().min(1, "Produto é obrigatório."),
-    valorAtualCentavos: z.number().int("Valor deve ser um inteiro em centavos."),
+    valorAtualCentavos: z
+      .number()
+      .int("Valor deve ser um inteiro em centavos."),
     vencimento: z.coerce.date().nullish(),
     liquidezDias: z.number().int().nonnegative().nullish(),
     observacao: z.string().trim().nullish(),
@@ -297,8 +299,7 @@ export function diasAteResgate(
   if (investimento.vencimento !== null) {
     const msPorDia = 1000 * 60 * 60 * 24;
     const diff = Math.ceil(
-      (investimento.vencimento.getTime() - dataReferencia.getTime()) /
-        msPorDia,
+      (investimento.vencimento.getTime() - dataReferencia.getTime()) / msPorDia,
     );
     return Math.max(diff, 0);
   }
@@ -327,7 +328,14 @@ export async function liquidezConsolidada(
 
   const porFaixa = new Map<
     FaixaLiquidez,
-    { totalCentavos: number; investimentos: { id: string; produto: string; valorAtualCentavos: number }[] }
+    {
+      totalCentavos: number;
+      investimentos: {
+        id: string;
+        produto: string;
+        valorAtualCentavos: number;
+      }[];
+    }
   >();
   for (const faixa of FAIXAS_LIQUIDEZ) {
     porFaixa.set(faixa, { totalCentavos: 0, investimentos: [] });

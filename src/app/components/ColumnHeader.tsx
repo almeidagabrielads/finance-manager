@@ -43,7 +43,10 @@ export function ColumnHeader({
   useEffect(() => {
     if (!aberto) return;
     function aoClicarFora(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node)
+      ) {
         setAberto(false);
       }
     }
@@ -65,7 +68,7 @@ export function ColumnHeader({
         <button
           type="button"
           onClick={() => onOrdenar(chave)}
-          className="flex cursor-pointer items-center gap-1 hover:text-on-surface"
+          className="hover:text-on-surface flex cursor-pointer items-center gap-1"
           title={`Ordenar por ${label}`}
         >
           <span>{label}</span>
@@ -80,7 +83,7 @@ export function ColumnHeader({
             onClick={() => setAberto((v) => !v)}
             title={`Filtrar por ${label}`}
             aria-label={`Filtrar por ${label}`}
-            className={`rounded p-0.5 hover:bg-surface-container ${
+            className={`hover:bg-surface-container rounded p-0.5 ${
               filtroAtivo ? "text-primary" : "text-on-surface-variant/60"
             }`}
           >
@@ -100,7 +103,7 @@ export function ColumnHeader({
           {aberto && (
             <div
               ref={popoverRef}
-              className={`absolute top-full z-20 mt-1 min-w-[180px] rounded-lg border border-outline-variant bg-surface-container-lowest p-sm text-left shadow-lg ${
+              className={`border-outline-variant bg-surface-container-lowest p-sm absolute top-full z-20 mt-1 min-w-[180px] rounded-lg border text-left shadow-lg ${
                 align === "right" ? "right-0" : "left-0"
               }`}
             >
@@ -117,7 +120,7 @@ export function ColumnHeader({
                     onLimparFiltro(chave);
                     setAberto(false);
                   }}
-                  className="mt-1.5 cursor-pointer text-xs font-medium text-on-surface-variant underline"
+                  className="text-on-surface-variant mt-1.5 cursor-pointer text-xs font-medium underline"
                 >
                   Limpar filtro
                 </button>
@@ -197,14 +200,14 @@ function CampoFiltro({
     return (
       <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
         {opcoes.length === 0 && (
-          <p className="text-xs text-on-surface-variant">Sem opções.</p>
+          <p className="text-on-surface-variant text-xs">Sem opções.</p>
         )}
         {opcoes.map((op) => {
           const marcado = filtro.selecionadas.includes(op);
           return (
             <label
               key={op}
-              className="flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap text-on-surface"
+              className="text-on-surface flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap"
             >
               <input
                 type="checkbox"

@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
   });
   if (!solicitante || !PAPEIS_GESTORES.includes(solicitante.role)) {
     return NextResponse.json(
-      { error: "Apenas proprietários ou administradores podem convidar membros." },
+      {
+        error:
+          "Apenas proprietários ou administradores podem convidar membros.",
+      },
       { status: 403 },
     );
   }

@@ -14,7 +14,9 @@ import {
 import { parseCsv, linhasParaObjetos } from "../src/lib/domain/import/csv";
 
 const CSV_PATH =
-  process.argv.find((arg) => arg.startsWith("--file="))?.slice("--file=".length) ??
+  process.argv
+    .find((arg) => arg.startsWith("--file="))
+    ?.slice("--file=".length) ??
   "/Users/isalodi/Downloads/Finanças 2025 - Lançamentos.csv";
 const APPLY = process.argv.includes("--apply");
 const HOUSEHOLD_NOME =
@@ -171,7 +173,8 @@ async function main() {
   const household = await prisma.household.findUnique({
     where: { nome: HOUSEHOLD_NOME },
   });
-  if (!household) throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
+  if (!household)
+    throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
 
   const csvTextoBruto = readFileSync(CSV_PATH, "utf8");
   const csvTexto = corrigirMojibake(csvTextoBruto);
@@ -181,7 +184,9 @@ async function main() {
   const pessoas = [
     ...new Set(validas.flatMap((l) => [l.divisao, l.pagador])),
   ].sort();
-  const categorias = [...new Set(validas.map((l) => l.categoria).filter(Boolean))].sort();
+  const categorias = [
+    ...new Set(validas.map((l) => l.categoria).filter(Boolean)),
+  ].sort();
 
   console.log(`Arquivo: ${CSV_PATH}`);
   console.log(`Household: ${household.nome}`);
@@ -238,7 +243,9 @@ async function main() {
   if (familiaId) {
     for (const pessoa of individuais) {
       await prisma.integranteGrupo.upsert({
-        where: { grupoId_pessoaId: { grupoId: familiaId, pessoaId: pessoa.id } },
+        where: {
+          grupoId_pessoaId: { grupoId: familiaId, pessoaId: pessoa.id },
+        },
         update: {},
         create: {
           grupoId: familiaId,
@@ -295,10 +302,14 @@ async function main() {
     descricaoPropria: linha.descricaoPropria,
     valorCentavos: linha.valorCentavos,
     descontoCentavos: linha.descontoCentavos,
-    categoriaId: linha.categoria ? categoriaPorNome.get(linha.categoria) ?? null : null,
+    categoriaId: linha.categoria
+      ? (categoriaPorNome.get(linha.categoria) ?? null)
+      : null,
     subcategoriaId:
       linha.categoria && linha.subcategoria
-        ? subcategoriaPorChave.get(`${linha.categoria}::${linha.subcategoria}`) ?? null
+        ? (subcategoriaPorChave.get(
+            `${linha.categoria}::${linha.subcategoria}`,
+          ) ?? null)
         : null,
     bancoId: bancoPorNome.get(linha.banco)!,
     pessoaDivisaoId: pessoaPorNome.get(linha.divisao)!,

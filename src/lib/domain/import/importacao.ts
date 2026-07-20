@@ -441,7 +441,10 @@ export async function confirmarImportacao(
 
   const resultado =
     dados.length > 0
-      ? await prisma.lancamento.createMany({ data: dados, skipDuplicates: true })
+      ? await prisma.lancamento.createMany({
+          data: dados,
+          skipDuplicates: true,
+        })
       : { count: 0 };
 
   let parcelamentosCriados = 0;
@@ -450,7 +453,12 @@ export async function confirmarImportacao(
   // Cada linha marcada como parcelamento é processada sequencialmente (não
   // numa única transaction para todas) — a falha de uma compra não deve
   // reverter as demais linhas já confirmadas.
-  for (const { linha, bancoFinal, pessoaDivisaoFinal, pessoaPagouFinal } of linhasParcelamento) {
+  for (const {
+    linha,
+    bancoFinal,
+    pessoaDivisaoFinal,
+    pessoaPagouFinal,
+  } of linhasParcelamento) {
     const data = new Date(linha.data);
     const atual = linha.parcelaAtual!;
     const total = linha.parcelaTotal!;

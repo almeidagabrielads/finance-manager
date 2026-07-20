@@ -73,6 +73,8 @@ describe("gerarInsightComprometido", () => {
   it("retorna frase formatada em reais", () => {
     const frase = gerarInsightComprometido(110000);
     expect(frase).toMatch(/R\$\s*1\.100,00/);
-    expect(frase).toContain("comprometidos em parcelas futuras (modo gradual).");
+    expect(frase).toContain(
+      "comprometidos em parcelas futuras (modo gradual).",
+    );
   });
 });

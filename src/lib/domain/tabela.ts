@@ -48,9 +48,7 @@ export function valorPassaFiltro(
   switch (filtro.tipo) {
     case "texto":
       if (filtro.valor.trim() === "") return true;
-      return normalizar(String(valor ?? "")).includes(
-        normalizar(filtro.valor),
-      );
+      return normalizar(String(valor ?? "")).includes(normalizar(filtro.valor));
     case "opcoes":
       if (filtro.selecionadas.length === 0) return true;
       return filtro.selecionadas.includes(String(valor ?? ""));
@@ -88,7 +86,8 @@ export function ordenarLinhas<T>(
 ): T[] {
   const copia = [...linhas];
   copia.sort(
-    (a, b) => compararValores(acessor(a), acessor(b)) * (direcao === "asc" ? 1 : -1),
+    (a, b) =>
+      compararValores(acessor(a), acessor(b)) * (direcao === "asc" ? 1 : -1),
   );
   return copia;
 }

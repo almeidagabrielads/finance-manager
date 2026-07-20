@@ -27,7 +27,8 @@ export function useTabela<T>(linhas: T[], colunas: ColunaTabela<T>[]) {
 
   function alternarOrdenacao(chave: string) {
     setOrdenacao((atual) => {
-      if (!atual || atual.coluna !== chave) return { coluna: chave, direcao: "asc" };
+      if (!atual || atual.coluna !== chave)
+        return { coluna: chave, direcao: "asc" };
       if (atual.direcao === "asc") return { coluna: chave, direcao: "desc" };
       return null;
     });
@@ -61,7 +62,8 @@ export function useTabela<T>(linhas: T[], colunas: ColunaTabela<T>[]) {
     }
     if (ordenacao) {
       const coluna = mapaColunas.get(ordenacao.coluna);
-      if (coluna) resultado = ordenarLinhas(resultado, coluna.acessor, ordenacao.direcao);
+      if (coluna)
+        resultado = ordenarLinhas(resultado, coluna.acessor, ordenacao.direcao);
     }
     return resultado;
   }, [linhas, filtros, ordenacao, mapaColunas]);

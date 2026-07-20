@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Button } from "./Button";
+import { Modal } from "./Modal";
 
 type ConfirmOptions = {
   title?: string;
@@ -33,30 +35,20 @@ export function useConfirmDialog() {
   }
 
   const dialog = pendente ? (
-    <div className="bg-on-surface/40 p-lg fixed inset-0 z-[110] flex items-center justify-center">
-      <div className="gap-md border-outline-variant bg-surface-container-lowest p-lg flex w-full max-w-[24rem] flex-col rounded-2xl border shadow-lg">
-        <h2 className="text-on-surface text-base font-bold">
-          {pendente.title ?? "Confirmar ação"}
-        </h2>
-        <p className="text-on-surface-variant text-sm">{pendente.message}</p>
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => responder(false)}
-            className="border-outline-variant px-md text-on-surface hover:bg-surface-container-low rounded-full border py-1.5 text-xs font-semibold"
-          >
-            {pendente.cancelLabel ?? "Cancelar"}
-          </button>
-          <button
-            type="button"
-            onClick={() => responder(true)}
-            className="bg-danger px-md text-on-danger rounded-full py-1.5 text-xs font-semibold hover:opacity-90"
-          >
-            {pendente.confirmLabel ?? "Remover"}
-          </button>
-        </div>
+    <Modal maxWidthClass="max-w-[24rem]" zIndexClass="z-[110]">
+      <h2 className="text-on-surface text-base font-bold">
+        {pendente.title ?? "Confirmar ação"}
+      </h2>
+      <p className="text-on-surface-variant text-sm">{pendente.message}</p>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={() => responder(false)}>
+          {pendente.cancelLabel ?? "Cancelar"}
+        </Button>
+        <Button variant="danger" onClick={() => responder(true)}>
+          {pendente.confirmLabel ?? "Remover"}
+        </Button>
       </div>
-    </div>
+    </Modal>
   ) : null;
 
   return { confirmar, dialog };

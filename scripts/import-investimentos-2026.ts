@@ -226,7 +226,8 @@ async function main() {
   const household = await prisma.household.findUnique({
     where: { nome: HOUSEHOLD_NOME },
   });
-  if (!household) throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
+  if (!household)
+    throw new Error(`Household não encontrado: ${HOUSEHOLD_NOME}`);
 
   const pessoas = await prisma.pessoa.findMany({
     where: { householdId: household.id, nome: { in: ["Isa", "Gabi"] } },

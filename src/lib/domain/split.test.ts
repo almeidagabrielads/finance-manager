@@ -130,8 +130,20 @@ describe("calcularSaldoDivisaoGrupo — casal (2 pessoas)", () => {
     ];
 
     const integrantesPorGrupo = new Map([
-      ["casal", [{ pessoaId: ISA, peso: 100 }, { pessoaId: GABI, peso: 100 }]],
-      ["familia", [{ pessoaId: ISA, peso: 100 }, { pessoaId: GABI, peso: 100 }]],
+      [
+        "casal",
+        [
+          { pessoaId: ISA, peso: 100 },
+          { pessoaId: GABI, peso: 100 },
+        ],
+      ],
+      [
+        "familia",
+        [
+          { pessoaId: ISA, peso: 100 },
+          { pessoaId: GABI, peso: 100 },
+        ],
+      ],
     ]);
 
     const saldo = calcularSaldoDivisaoGrupo(
@@ -255,11 +267,17 @@ describe("calcularSaldoDivisaoGrupo — dois grupos distintos no mesmo household
     const integrantesPorGrupo = new Map([
       [
         "casal",
-        [{ pessoaId: ISA_ID, peso: 100 }, { pessoaId: GABI_ID, peso: 100 }],
+        [
+          { pessoaId: ISA_ID, peso: 100 },
+          { pessoaId: GABI_ID, peso: 100 },
+        ],
       ],
       [
         "republica",
-        [{ pessoaId: ISA_ID, peso: 70 }, { pessoaId: CAIO_ID, peso: 30 }],
+        [
+          { pessoaId: ISA_ID, peso: 70 },
+          { pessoaId: CAIO_ID, peso: 30 },
+        ],
       ],
     ]);
 
