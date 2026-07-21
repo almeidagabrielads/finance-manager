@@ -12,6 +12,7 @@ import {
   criarLancamento,
   listarLancamentos,
   removerLancamento,
+  LancamentoParcelaValorError,
 } from "./lancamentos";
 
 async function criarHousehold(nome = "Isa & Gabi") {
@@ -343,6 +344,82 @@ describe("atualizarLancamento", () => {
     );
     expect(desmarcado?.pagoComResgateInvestimento).toBe(false);
     expect(desmarcado?.investimentoResgateId).toBeNull();
+  });
+
+  it("lança erro ao tentar alterar o valor de uma parcela de um Parcelamento", async () => {
+    const h = await criarHousehold();
+    const { banco, isa } = await montarCadastros(h.id);
+    const parcelamento = await prismaTest.parcelamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        valorTotalCentavos: 10000,
+        quantidadeParcelas: 5,
+        dataPrimeiraParcela: new Date("2026-06-10"),
+        modo: "GRADUAL",
+      },
+    });
+    const parcela = await prismaTest.lancamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        data: new Date("2026-06-10"),
+        valorCentavos: 2000,
+        numeroParcela: 1,
+        previsto: false,
+        parcelamentoId: parcelamento.id,
+        tipoGasto: "VARIAVEL",
+      },
+    });
+
+    await expect(
+      atualizarLancamento(prismaTest, h.id, parcela.id, {
+        valorCentavos: 3000,
+      }),
+    ).rejects.toThrow(LancamentoParcelaValorError);
+  });
+
+  it("permite atualizar outros campos de uma parcela sem alterar o valor", async () => {
+    const h = await criarHousehold();
+    const { categoria, banco, isa } = await montarCadastros(h.id);
+    const parcelamento = await prismaTest.parcelamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        valorTotalCentavos: 10000,
+        quantidadeParcelas: 5,
+        dataPrimeiraParcela: new Date("2026-06-10"),
+        modo: "GRADUAL",
+      },
+    });
+    const parcela = await prismaTest.lancamento.create({
+      data: {
+        householdId: h.id,
+        bancoId: banco.id,
+        pessoaDivisaoId: isa.id,
+        pessoaPagouId: isa.id,
+        data: new Date("2026-06-10"),
+        valorCentavos: 2000,
+        numeroParcela: 1,
+        previsto: false,
+        parcelamentoId: parcelamento.id,
+        tipoGasto: "VARIAVEL",
+      },
+    });
+
+    const atualizado = await atualizarLancamento(prismaTest, h.id, parcela.id, {
+      categoriaId: categoria.id,
+      valorCentavos: 2000,
+    });
+
+    expect(atualizado?.categoriaId).toBe(categoria.id);
+    expect(atualizado?.valorCentavos).toBe(2000);
   });
 });
 

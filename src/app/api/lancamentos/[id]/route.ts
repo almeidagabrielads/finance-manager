@@ -7,6 +7,7 @@ import {
   atualizarLancamento,
   buscarLancamento,
   removerLancamento,
+  LancamentoParcelaValorError,
 } from "@/lib/domain/lancamentos";
 
 export async function GET(
@@ -57,12 +58,20 @@ export async function PATCH(
     );
   }
 
-  const lancamento = await atualizarLancamento(
-    prisma,
-    session.householdId,
-    id,
-    validatedFields.data,
-  );
+  let lancamento;
+  try {
+    lancamento = await atualizarLancamento(
+      prisma,
+      session.householdId,
+      id,
+      validatedFields.data,
+    );
+  } catch (error) {
+    if (error instanceof LancamentoParcelaValorError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
   if (!lancamento) {
     return NextResponse.json(
       {

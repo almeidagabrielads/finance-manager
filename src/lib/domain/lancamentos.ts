@@ -26,6 +26,20 @@ export const CriarLancamentoSchema = z.object({
 
 export const AtualizarLancamentoSchema = CriarLancamentoSchema.partial();
 
+// Editar o valor de uma parcela avulsa pela rota genérica dessincronizaria o
+// Parcelamento: alterarModoParcelamento/quitarAntecipadamente recalculam os
+// valores restantes a partir de Parcelamento.valorTotalCentavos, ignorando
+// qualquer edição manual feita aqui. Use os endpoints dedicados de
+// /api/parcelamentos/[id] para isso.
+export class LancamentoParcelaValorError extends Error {
+  constructor() {
+    super(
+      "Não é possível alterar o valor de uma parcela diretamente. Use as opções do parcelamento.",
+    );
+    this.name = "LancamentoParcelaValorError";
+  }
+}
+
 // descontoCentavos e pagoComResgateInvestimento ficam opcionais aqui (mesmo com
 // default no schema Zod) — o valor default é aplicado tanto pelo zod (na rota)
 // quanto pelo Prisma (no schema).
@@ -179,6 +193,14 @@ export async function atualizarLancamento(
 ) {
   const existente = await buscarLancamento(prisma, householdId, id);
   if (!existente) return null;
+
+  if (
+    existente.parcelamentoId &&
+    input.valorCentavos !== undefined &&
+    input.valorCentavos !== existente.valorCentavos
+  ) {
+    throw new LancamentoParcelaValorError();
+  }
 
   const refs: ReferenciasLancamento = {
     bancoId: input.bancoId ?? existente.bancoId,
