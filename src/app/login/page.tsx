@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { House } from "lucide-react";
 import { LoginClient } from "./LoginClient";
 
 export default function LoginPage() {
@@ -6,18 +7,7 @@ export default function LoginPage() {
     <main className="flex flex-1">
       <section className="bg-primary p-xl text-on-primary hidden flex-1 flex-col justify-between lg:flex">
         <div className="gap-sm flex items-center">
-          <svg
-            className="h-6 w-6 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 9.5V21h14V9.5" />
-          </svg>
+          <House className="h-6 w-6 shrink-0" />
           <div>
             <h1 className="text-4xl leading-tight font-bold">Revanto</h1>
           </div>

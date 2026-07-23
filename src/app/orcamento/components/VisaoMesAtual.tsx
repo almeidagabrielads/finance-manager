@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { CalendarDays, Landmark, TrendingUp, TrendingDown } from "lucide-react";
 import { unicosPorChave } from "@/lib/dedupe";
 import { formatarMoeda, reaisParaCentavos } from "@/lib/domain/formatacao";
 import { gerarInsightMensal } from "@/lib/domain/insightsOrcamento";
@@ -42,55 +43,18 @@ type Props = {
 };
 
 function IconeCalendario() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
+  return <CalendarDays className="h-5 w-5" />;
 }
 
 function IconeBanco() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 21h18M3 10h18M5 6l7-4 7 4M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
-    </svg>
-  );
+  return <Landmark className="h-5 w-5" />;
 }
 
 function IconeTendencia({ positiva }: { positiva: boolean }) {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {positiva ? (
-        <path d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6" />
-      ) : (
-        <path d="M23 18l-9.5-9.5-5 5L1 6M17 18h6v-6" />
-      )}
-    </svg>
+  return positiva ? (
+    <TrendingUp className="h-5 w-5" />
+  ) : (
+    <TrendingDown className="h-5 w-5" />
   );
 }
 

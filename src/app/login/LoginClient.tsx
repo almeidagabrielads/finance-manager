@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 async function parseErro(response: Response): Promise<string> {
   const body = await response.json().catch(() => null);
@@ -86,33 +87,9 @@ export function LoginClient() {
             className="px-sm text-on-surface-variant absolute inset-y-0 right-0 flex items-center"
           >
             {mostrarSenha ? (
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 3l18 18" />
-                <path d="M10.6 10.6a2 2 0 0 0 2.83 2.83" />
-                <path d="M9.5 4.6A9.8 9.8 0 0 1 12 4.5c5 0 9 3.5 10.5 7.5a11.7 11.7 0 0 1-2.9 4" />
-                <path d="M6.4 6.4A11.7 11.7 0 0 0 1.5 12c1.5 4 5.5 7.5 10.5 7.5 1.4 0 2.7-.27 3.9-.75" />
-              </svg>
+              <EyeOff className="h-5 w-5" />
             ) : (
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M1.5 12c1.5-4 5.5-7.5 10.5-7.5s9 3.5 10.5 7.5c-1.5 4-5.5 7.5-10.5 7.5S3 16 1.5 12Z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
+              <Eye className="h-5 w-5" />
             )}
           </button>
         </div>

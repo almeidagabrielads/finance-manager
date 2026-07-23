@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { X } from "lucide-react";
 import { Select } from "../../components/Select";
 import {
   DescricaoAutocomplete,
@@ -67,18 +68,7 @@ export function NovoLancamentoModal({
             aria-label="Fechar"
             className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5"
           >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            <X className="h-5 w-5" />
           </button>
         </div>
 

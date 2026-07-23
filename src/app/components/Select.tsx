@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 export type SelectOption = {
   value: string;
@@ -77,17 +78,9 @@ export function Select({
         >
           {selecionada ? selecionada.label : placeholder}
         </span>
-        <svg
+        <ChevronDown
           className={`h-4 w-4 shrink-0 transition-transform ${aberto ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        />
       </button>
 
       {aberto && (

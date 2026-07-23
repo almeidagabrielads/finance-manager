@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { Pencil } from "lucide-react";
 import { formatarReais } from "./formatoAnual";
 
 type SaldoAnoAnterior = {
@@ -50,18 +51,7 @@ export function SaldoAnoAnteriorForm({
                 aria-label="Editar saldo do ano anterior"
                 className="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors"
               >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                  <path d="m15 5 4 4" />
-                </svg>
+                <Pencil className="h-4 w-4" />
               </button>
             </div>
             <span className="text-on-surface-variant text-xs">

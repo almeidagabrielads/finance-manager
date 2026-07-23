@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TriangleAlert, X } from "lucide-react";
 import { Select } from "../../components/Select";
 import { useConfirmDialog } from "../../components/ConfirmDialog";
 
@@ -214,20 +215,7 @@ export function ParcelamentosPanel({
         onClick={() => setDrawerAberto(true)}
         className="border-outline-variant bg-surface-container-lowest px-lg text-on-surface hover:bg-surface-container-low flex items-center gap-1.5 rounded-full border py-2 text-sm font-semibold"
       >
-        <svg
-          className="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-        </svg>
+        <TriangleAlert className="h-4 w-4" aria-hidden />
         Parcelamentos
         {total > 0 && (
           <span className="bg-primary text-on-primary flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold">
@@ -256,19 +244,7 @@ export function ParcelamentosPanel({
                 aria-label="Fechar"
                 className="text-on-surface-variant hover:bg-surface-container rounded-full p-1.5"
               >
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
 

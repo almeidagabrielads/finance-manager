@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import { Badge } from "../../components/Badge";
 import { formatarMoeda } from "@/lib/domain/formatacao";
 
@@ -28,21 +29,7 @@ function nomeMes(iso: string): string {
 }
 
 function IconeHistorico() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v5h5" />
-      <path d="M3.05 13a9 9 0 1 0 .5-4.5L3 8" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  );
+  return <History className="h-4 w-4" />;
 }
 
 type Props = {
